@@ -42,7 +42,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '3.1.x'
+          dotnet-version: "3.1.x"
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v0
@@ -52,6 +52,9 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
 
       - name: Build and push images
         # if: github.ref == 'refs/heads/latest'
