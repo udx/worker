@@ -29,6 +29,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           token_format: "access_token"
+          create_credentials_file: false
           workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
