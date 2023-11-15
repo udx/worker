@@ -38,14 +38,9 @@ jobs:
           gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
           docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
           
-      - name: Install GitVersion
-        # if: github.ref == 'refs/heads/latest'
-        run: dotnet tool install --global GitVersion.Tool
-
-      - name: Use GitVersion
-        # if: github.ref == 'refs/heads/latest'
-        id: version
-        run: echo ::set-output name=VERSION::$(dotnet gitversion /showvariable SemVer)
+      - name: Determine Version
+        id:   gitversion 
+        uses: gittools/actions/gitversion/execute@v0
 
       - name: Build and push images
         # if: github.ref == 'refs/heads/latest'
@@ -55,7 +50,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}:${{ steps.version.outputs.VERSION }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}:${{ steps.gitversion.outputs.semVer }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}:latest
 
       - name: Generate changelog
