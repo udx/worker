@@ -24,8 +24,8 @@ jobs:
         if: github.ref == 'refs/heads/latest'
         uses: google-github-actions/auth@v1
         with:
-          workload_identity_provider: ${{ vars.DEPLOY_AUTH_PROVIDER }}
-          service_account: ${{ vars.DEPLOY_CLOUD_ACCOUNT }}
+          workload_identity_provider: ${{ vars.AUTH_PROVIDER }}
+          service_account: ${{ vars.SERVICE_ACCOUNT }}
 
       - name: Login to Google Artifact Registry
         if: github.ref == 'refs/heads/latest'
