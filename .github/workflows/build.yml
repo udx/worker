@@ -34,7 +34,7 @@ jobs:
         # if: github.ref == 'refs/heads/latest'
         run: |
           gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
-          docker login -u oauth2accesstoken -p "$(gcloud auth print-access-token)" ${{ vars.GCP_REGION }}-docker.pkg.dev
+          docker login -u oauth2accesstoken -p "$(gcloud auth print-access-token ${{ vars.GCP_SERVICE_ACCOUNT }} --impersonate-service-account)" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Install GitVersion
         # if: github.ref == 'refs/heads/latest'
