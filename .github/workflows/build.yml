@@ -1,0 +1,72 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        if: github.ref != 'refs/heads/latest'
+        run: docker build .
+
+      - name: Authenticate to Google Cloud
+        if: github.ref == 'refs/heads/latest'
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ vars.DEPLOY_AUTH_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_CLOUD_ACCOUNT }}
+
+      - name: Login to Google Artifact Registry
+        if: github.ref == 'refs/heads/latest'
+        run: |
+          gcloud auth configure-docker LOCATION-docker.pkg.dev
+          docker login -u oauth2accesstoken -p "$(gcloud auth print-access-token)" LOCATION-docker.pkg.dev
+
+      - name: Install GitVersion
+        if: github.ref == 'refs/heads/latest'
+        run: dotnet tool install --global GitVersion.Tool
+
+      - name: Use GitVersion
+        if: github.ref == 'refs/heads/latest'
+        id: version
+        run: echo ::set-output name=VERSION::$(dotnet gitversion /showvariable SemVer)
+
+      - name: Build and push images
+        if: github.ref == 'refs/heads/latest'
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: |
+            LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME:${{ steps.version.outputs.VERSION }}
+            LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY_NAME:latest
+
+      - name: Generate changelog
+        if: github.ref == 'refs/heads/latest'
+        id: changelog
+        run: |
+          echo "::set-output name=changelog::$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")"
+
+      - name: Create GitHub release
+        if: github.ref == 'refs/heads/latest'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          release_name: Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            Release Notes:
+            ${{ steps.changelog.outputs.changelog }}
