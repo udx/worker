@@ -25,21 +25,6 @@ jobs:
         if: github.ref != 'refs/heads/latest'
         run: docker build .
 
-      - name: Authenticate to Google Cloud
-        id: google_auth
-        # if: github.ref == 'refs/heads/latest'
-        uses: google-github-actions/auth@v1
-        with:
-          token_format: "access_token"
-          workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-
-      - name: Login to Google Artifact Registry
-        # if: github.ref == 'refs/heads/latest'
-        run: |
-          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
-          docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
-
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: "3.1.x"
@@ -55,6 +40,27 @@ jobs:
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
+
+      - name: Authenticate to Google Cloud
+        id: google_auth
+        # if: github.ref == 'refs/heads/latest'
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: "access_token"
+          workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Login to Google Artifact Registry
+        # if: github.ref == 'refs/heads/latest'
+        run: |
+          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Login to Login to Google Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.GCP_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.google_auth.outputs.access_token }}
 
       - name: Build and push images
         # if: github.ref == 'refs/heads/latest'
