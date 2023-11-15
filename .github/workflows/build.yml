@@ -40,6 +40,10 @@ jobs:
           gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
           docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '3.1.x'
+
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v0
         with:
