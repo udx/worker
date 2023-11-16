@@ -72,7 +72,7 @@ jobs:
         # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         run: |
           gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
-          docker login -u oauth2accesstoken -p "${{ secrets.GCP_SA_KEY }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
+          docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Build and push images
         # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
