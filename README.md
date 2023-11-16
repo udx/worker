@@ -1,8 +1,9 @@
+
 # UDX Docker Builder
 
 UDX Docker Builder is a robust Docker-in-Docker image that is used to create consistent build environments for cloud applications. This tool ensures that all our Docker builds are performed in a consistent environment, both locally and in our CI/CD pipelines.
 
-In addition to creating Docker images, this tool can also generate various configuration files essential for your development and deployment workflow. It supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby and more. UDX Docker Builder also handles authorization and programmatic secrets management, integrating with Google Cloud Platform's Workflow Identity for secure access management.
+This tool focuses specifically on the "Build" phase of the software development lifecycle. It automates the generation of various configuration files essential for your build process. It supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby and more. UDX Docker Builder also handles authorization and programmatic secrets management, integrating with Google Cloud Platform's Workflow Identity for secure access management.
 
 All this power is bundled into a cloud-native toolset that helps teams transition away from older CI/CD tools like Jenkins, enabling them to leverage modern development practices and technologies.
 
@@ -20,15 +21,7 @@ Here's how it works:
    - The continuous integration (CI) process creates the application components.
    - These are then stored and distributed via an Artifact Registry.
 
-2. **Manage Phase:**
-   - Project Management (PM) tools, chat applications, documentation platforms, and ticketing systems enable effective team collaboration and issue tracking.
-
-3. **Release Phase:**
-   - The Gates orchestrate the delivery of the application.
-   - Continuous Deployment (CD) handles tasks such as managing workers, security, Infrastructure as Code (IaC), and end-to-end testing.
-   - The infrastructure setup includes components like vNets, WAF, environments, and variables.
-   - The apps are built following the 12-Factor App methodology using Docker and YAML configurations.
-   - A Comprehensive Quality (CQ) system manages telemetry, metadata, SBOM, lead times, and provides a user interface.
+The other phases (Manage & Release) are not handled by UDX Docker Builder but can be managed by other tools or services as per your workflow requirements.
 
 ## Benefits
 
