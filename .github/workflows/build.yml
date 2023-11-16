@@ -66,7 +66,15 @@ jobs:
 
       - name: Delete previous latest image
         # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
-        run: gcloud container images delete ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest --force-delete-tags --quiet
+        run: |
+          IMAGE_NAME="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}"
+          IMAGE_TAG="latest"
+          IMAGE_DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format='get(digest)')
+          if [ -n "$IMAGE_DIGEST" ]; then
+            gcloud container images delete "${IMAGE_NAME}@${IMAGE_DIGEST}" --force-delete-tags --quiet
+          else
+            echo "Image with tag 'latest' does not exist. Skipping delete."
+          fi
 
       - name: Docker Login
         # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
