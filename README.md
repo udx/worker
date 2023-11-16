@@ -2,21 +2,45 @@
 
 UDX Docker Builder is a robust Docker-in-Docker image that is used to create consistent build environments for cloud applications. This tool ensures that all our Docker builds are performed in a consistent environment, both locally and in our CI/CD pipelines.
 
-In addition to creating Docker images, this tool can also generate various configuration files essential for your development and deployment workflow. It supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby and more.
+In addition to creating Docker images, this tool can also generate various configuration files essential for your development and deployment workflow. It supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby and more. UDX Docker Builder also handles authorization and programmatic secrets management, integrating with Google Cloud Platform's Workflow Identity for secure access management.
 
-The UDX Docker Builder also handles authorization and programmatic secrets management. It integrates with Google Cloud Platform's Workflow Identity for secure access management. By creating a provider, mapping attributes such as `assertion.repository`, connecting service accounts and creating a workflow identity user, it provides secure access control for your cloud resources.
+All this power is bundled into a cloud-native toolset that helps teams transition away from older CI/CD tools like Jenkins, enabling them to leverage modern development practices and technologies.
 
-All this power is bundled into a cloud-native toolset that helps teams transition away from older CI/CD tools like Jenkins.
+## Approach
 
-## Features
+![12-factor process](https://storage.googleapis.com/stateless-udx-io/2023/11/9b02b516-enterprise-12-factor-sdlc-build-udx.png)
 
-- Generates Dockerfiles following best practices for your application.
-- Generates GitHub Actions workflow file that can automate CI/CD processes like building, testing, and deploying your application.
-- Generates `ecosystem.config.js` file for PM2, a process manager for Node.js applications.
-- Generates Kubernetes (K8s) YAML configuration files for setting up your application as a service in a Kubernetes cluster.
-- Handles authorization and programmatic secrets management.
-- Integrates with Google Cloud Platform's Workflow Identity for secure access management.
-- Provides a cloud-native toolset to help teams transition away from older CI/CD tools like Jenkins.
+UDX Docker Builder adopts an approach that emphasizes the 12-factor methodology while adding the "Manage" phase. It connects work items, release packages, Jira Stories, and Metadata to create a Software Bill of Materials (SBOM), helping measure lead times and visualize workflows.
+
+Here's how it works:
+
+1. **Build Phase:**
+   - The input is your code hosted on platforms like GitHub.
+   - It performs code scanning using tools such as Trivy to ensure security.
+   - The continuous integration (CI) process creates the application components.
+   - These are then stored and distributed via an Artifact Registry.
+
+2. **Manage Phase:**
+   - Project Management (PM) tools, chat applications, documentation platforms, and ticketing systems enable effective team collaboration and issue tracking.
+
+3. **Release Phase:**
+   - The Gates orchestrate the delivery of the application.
+   - Continuous Deployment (CD) handles tasks such as managing workers, security, Infrastructure as Code (IaC), and end-to-end testing.
+   - The infrastructure setup includes components like vNets, WAF, environments, and variables.
+   - The apps are built following the 12-Factor App methodology using Docker and YAML configurations.
+   - A Comprehensive Quality (CQ) system manages telemetry, metadata, SBOM, lead times, and provides a user interface.
+
+## Benefits
+
+1. **Consistent Environment:** Eliminates the "it works on my machine" problem and ensures that the application behaves the same way in all environments.
+
+2. **Automated Configuration:** Saves developers time by automating the generation of various configuration files such as Dockerfiles, GitHub Actions workflows, Kubernetes configuration files.
+
+3. **Versatile Language Support:** Supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby.
+
+4. **Secure Access Management:** Handles authorization and programmatic secrets management by integrating with Google Cloud Platform's Workflow Identity.
+
+5. **Cloud-Native Transition:** Provides a cloud-native toolset that helps teams transition away from older CI/CD tools to leverage modern development practices and technologies.
 
 ## Usage
 
@@ -45,11 +69,3 @@ Here are some examples:
    ```bash
    udx.tooling generate --type=java --include=dockerfile,github-workflow,k8-app
    ```
-
-## Contribution
-
-We welcome contributions from the community. Feel free to submit issues or pull requests!
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
