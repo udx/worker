@@ -5,15 +5,14 @@ on:
     branches:
       - "**"
 
-env:
-  RELEASE_BRANCH_REF: refs/heads/latest
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
+    env:
+      RELEASE_BRANCH_REF: refs/heads/latest
 
     steps:
       - name: Checkout code
@@ -25,22 +24,22 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build test image
-        if: success() && github.ref != ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref != ${{ env.RELEASE_BRANCH_REF }}
         run: docker build .
 
       - uses: actions/setup-dotnet@v3
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         with:
           dotnet-version: "3.1.x"
 
       - name: Install GitVersion
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         uses: gittools/actions/gitversion/setup@v0
         with:
           versionSpec: "5.5.0"
 
       - name: Determine Version
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
         with:
@@ -49,7 +48,7 @@ jobs:
 
       - name: Authenticate to Google Cloud
         id: google_auth
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         uses: google-github-actions/auth@v1
         with:
           token_format: "access_token"
@@ -57,23 +56,26 @@ jobs:
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Google Cloud SDK
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         uses: google-github-actions/setup-gcloud@v1
 
-      - name: Delete previous latest image
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
-        run: |
-          gcloud auth configure-docker
-          gcloud container images delete ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest --force-delete-tags --quiet
-
       - name: Login to Google Artifact Registry
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        run: |
+          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Delete previous latest image
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        run: gcloud container images delete ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest --force-delete-tags --quiet
+
+      - name: Docker Login
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         run: |
           gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
           docker login -u oauth2accesstoken -p "${{ secrets.GCP_SA_KEY }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Build and push images
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         id: docker_build
         uses: docker/build-push-action@v5
         with:
@@ -84,13 +86,13 @@ jobs:
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
       - name: Generate changelog
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         id: changelog
         run: |
           echo "::set-output name=changelog::$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")"
 
       - name: Create GitHub release
-        if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
+        # if: success() && github.ref == ${{ env.RELEASE_BRANCH_REF }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
