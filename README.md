@@ -9,7 +9,7 @@ All this power is bundled into a cloud-native toolset that helps teams transitio
 
 ## Approach
 
-![12-factor process](https://storage.googleapis.com/stateless-udx-io/2023/11/9b02b516-enterprise-12-factor-sdlc-build-udx.png)
+![Atlas 12-Factor Value Stream for Software Development](https://storage.googleapis.com/stateless-udx-io/2023/11/39a1d248-atlas-left-shifted-enterprise-value-stack-for-software-development-v1.png)
 
 UDX Docker Builder adopts an approach that emphasizes the 12-factor methodology while adding the "Manage" phase. It connects work items, release packages, Jira Stories, and Metadata to create a Software Bill of Materials (SBOM), helping measure lead times and visualize workflows.
 
