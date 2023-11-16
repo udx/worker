@@ -6,6 +6,8 @@ In addition to creating Docker images, this tool can also generate various confi
 
 The UDX Docker Builder also handles authorization and programmatic secrets management. It integrates with Google Cloud Platform's Workflow Identity for secure access management. By creating a provider, mapping attributes such as `assertion.repository`, connecting service accounts and creating a workflow identity user, it provides secure access control for your cloud resources.
 
+All this power is bundled into a cloud-native toolset that helps teams transition away from older CI/CD tools like Jenkins.
+
 ## Features
 
 - Generates Dockerfiles following best practices for your application.
@@ -14,6 +16,7 @@ The UDX Docker Builder also handles authorization and programmatic secrets manag
 - Generates Kubernetes (K8s) YAML configuration files for setting up your application as a service in a Kubernetes cluster.
 - Handles authorization and programmatic secrets management.
 - Integrates with Google Cloud Platform's Workflow Identity for secure access management.
+- Provides a cloud-native toolset to help teams transition away from older CI/CD tools like Jenkins.
 
 ## Usage
 
@@ -25,10 +28,10 @@ udx.tooling generate --type=<language> --include=<config-file1>,<config-file2>,.
 
 Here are some examples:
 
-1. To generate Dockerfile and Jenkins pipeline config for a C# (.NET Core) application:
+1. To generate Dockerfile and GitHub Actions workflow for a C# (.NET Core) application:
 
    ```bash
-   udx.tooling generate --type=csharp --include=dockerfile,jenkins-pipeline
+   udx.tooling generate --type=csharp --include=dockerfile,github-workflow
    ```
 
 2. To generate PM2 ecosystem config and K8s service config for a Python (Django) application:
@@ -41,3 +44,12 @@ Here are some examples:
 
    ```bash
    udx.tooling generate --type=java --include=dockerfile,github-workflow,k8-app
+   ```
+
+## Contribution
+
+We welcome contributions from the community. Feel free to submit issues or pull requests!
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
