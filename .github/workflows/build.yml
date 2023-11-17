@@ -105,7 +105,7 @@ jobs:
           IMAGE_TAG="latest"
           IMAGE_DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format='get(digest)')
           if [ -n "$IMAGE_DIGEST" ]; then
-            gcloud container images delete "${IMAGE_NAME}@${IMAGE_DIGEST}" --quiet
+            gcloud container images delete "${IMAGE_NAME}@${IMAGE_DIGEST}" --quiet --force-delete-tags
           else
             echo "Image with tag 'latest' does not exist. Skipping delete."
           fi
