@@ -71,7 +71,7 @@ jobs:
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: gittools/actions/gitversion/setup@v0
         with:
-          versionSpec: "5.5.0"
+          versionSpec: "5.12.0"
 
       - name: Determine Version
         if: success() && github.ref == env.RELEASE_BRANCH_REF
