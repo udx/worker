@@ -100,8 +100,7 @@ jobs:
 
       - name: Login to Google Artifact Registry
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        run: |
-          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Delete previous "latest" image
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -117,9 +116,7 @@ jobs:
 
       - name: Docker Login
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        run: |
-          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
-          docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
+        run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Build and push
         if: success() && github.ref == env.RELEASE_BRANCH_REF
