@@ -66,11 +66,6 @@ jobs:
         if: success() && github.ref != env.RELEASE_BRANCH_REF
         run: docker build .
 
-      - uses: actions/setup-dotnet@v3
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
-        with:
-          dotnet-version: "3.1.x"
-
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: gittools/actions/gitversion/setup@v0
