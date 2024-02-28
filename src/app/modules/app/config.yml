@@ -1,0 +1,36 @@
+command: app
+actions:
+  create:
+    params:
+      - type:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the type of app to create
+    example: docker-builder app create react-app
+  test:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the app to test
+    example: docker-builder app test react-app
+  build:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the app to build
+    example: docker-builder app build react-app
+  deploy:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the app to deploy
+    example: docker-builder app deploy react-app
+description: App Commands Helper
+module: App

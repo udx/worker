@@ -1,0 +1,25 @@
+{
+  "name": "cli-application",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A CLI application for managing Docker images and applications.",
+  "main": "cli.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "cli",
+    "docker",
+    "application"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "chalk": "^5.3.0",
+    "fs": "0.0.1-security",
+    "js-yaml": "^4.1.0",
+    "path": "^0.12.7",
+    "root-require": "^0.3.1",
+    "yargs": "^17.7.2"
+  }
+}

@@ -1,0 +1,15 @@
+version: "1"
+services:
+  cli:
+    container_name: docker-builder-cli
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER=docker-builder
+    volumes:
+      - ./src/app:/home/app
+    ports:
+      - 8080:8080
+    tty: true
+    stdin_open: true

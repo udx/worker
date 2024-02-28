@@ -1,0 +1,60 @@
+command: docker
+actions:
+  generate:
+    params:
+      - type:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the type of Docker image to generate
+    example: docker-builder docker generate cloud-app
+  test:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the Docker image to test
+    example: docker-builder docker test cloud-app
+  build:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the Docker image to build
+    example: docker-builder docker build cloud-app
+  start:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the Docker image to start
+    example: docker-builder docker start cloud-app
+  stop:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the Docker image to stop
+    example: docker-builder docker stop cloud-app
+  push:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the Docker image to push
+    example: docker-builder docker push cloud-app
+  pull:
+    params:
+      - name:
+          isrequired: true
+          prompt:
+            type: text
+            message: Please enter the name of the Docker image to pull
+    example: docker-builder docker pull cloud-app
+description: Docker Commands Helper
+module: Docker

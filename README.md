@@ -1,4 +1,10 @@
 
+docker-compose up --build -d 
+docker-compose up --build -d && container_id=$(docker-compose ps -q app) && docker attach $container_id
+
+
+
+
 # UDX Docker Builder
 
 UDX Docker Builder is a robust Docker-in-Docker image that is used to create consistent build environments for cloud applications. This tool ensures that all our Docker builds are performed in a consistent environment, both locally and in our CI/CD pipelines.
