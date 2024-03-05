@@ -29,9 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: gcr.io/\${{ vars.GCP_PROJECT }}/udx-worker
-      env:
-        type: operational
-        language: nodejs
 
     steps:
       - name: Checkout code
@@ -40,7 +37,7 @@ jobs:
       - name: Run task 
         run: |
           echo "Running task"
-          cli app run`)
+          cli app run --type=operational --language=nodejs`)
     );
     console.log("\n");
     console.log("-----------------------------------");

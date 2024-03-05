@@ -6,7 +6,14 @@
 
 echo "${GREEN}Call the Node.js CLI script with the passed arguments${RESET}"
 
-node index.js "$@"
+if [ $TYPE == "cli" ]; then
+    echo "cli"
+    node index.js "$@"
+else
+    echo "env"
+    # node ./src/app/index.js "$@"
+    node ./test/index.js "$@"
+fi
 
 sleep infinity
 

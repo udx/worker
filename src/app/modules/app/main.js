@@ -2,6 +2,15 @@
 import chalk from "chalk";
 
 export default {
+  run: async (argv) => {
+    console.log(chalk.green(`Running task ${argv.name}`));
+
+    // Implement the logic to run script inside the container
+    let type = process.env.TYPE;
+    let language = process.env.LANGUAGE;
+
+    
+  },
   generate: async (argv) => {
     console.log(
       chalk.green(`Generating Dockerfile for application ${argv.type}`)

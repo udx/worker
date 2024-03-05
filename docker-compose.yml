@@ -7,9 +7,10 @@ services:
       dockerfile: Dockerfile
       args:
         - USER=udx-worker
+    environment:
+      TYPE: cli #env
     volumes:
       - ./src/app:/home/app
-    ports:
-      - 8080:8080
     tty: true
     stdin_open: true
+    command: tail -f /dev/null

@@ -67,7 +67,7 @@ async function runModuleAction(argv) {
   } = argv;
 
   if (!moduleName || !action) {
-    console.log(chalk.red("Module and action are required."));
+    console.log(chalk.yellow("Module and action are required."));
     return;
   }
 

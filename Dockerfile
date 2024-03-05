@@ -2,6 +2,7 @@
 FROM ubuntu:latest
 
 ARG USER
+ENV TYPE=env
 
 # Install curl and other dependencies
 RUN apt-get update && apt-get install -y \
@@ -41,4 +42,5 @@ RUN chmod +x /usr/local/bin/cli
 # RUN chown -R ${USER}:${USER} /home/${USER}/app
 
 # Set the entrypoint to the CLI script
-ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/cli"]
+ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/cli", "${TYPE}"]
+
