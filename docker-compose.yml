@@ -1,12 +1,12 @@
 version: "1"
 services:
-  cli:
-    container_name: docker-builder-cli
+  udx-worker:
+    container_name: udx-worker
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        - USER=docker-builder
+        - USER=udx-worker
     volumes:
       - ./src/app:/home/app
     ports:

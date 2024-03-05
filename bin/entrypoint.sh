@@ -23,25 +23,25 @@ read -r mode
 mode=${mode:-cli}
 mode=$(echo "$mode" | tr '[:lower:]' '[:upper:]')
 
-if [[ "$mode" == *"CLI"* ]]; then
-    echo "${GREEN}Starting CLI mode...${RESET}"
-    # docker-compose run -d --build --force-recreate app bash -c "$command"
-    elif [[ "$mode" == *"ENVIRONMENT"* ]]; then
-    echo "${GREEN}Starting Environment mode...${RESET}"
-    echo "${YELLOW}It's in development yet...${RESET}"
-    exit;
-else
-    echo "${GREEN}Starting Chat mode...${RESET}"
-    echo "${YELLOW}It's in development yet...${RESET}"
-    exit;
-fi
+# if [[ "$mode" == *"CLI"* ]]; then
+#     echo "${GREEN}Starting CLI mode...${RESET}"
+#     # docker-compose run -d --build --force-recreate app bash -c "$command"
+#     elif [[ "$mode" == *"ENVIRONMENT"* ]]; then
+#     echo "${GREEN}Starting Environment mode...${RESET}"
+#     echo "${YELLOW}It's in development yet...${RESET}"
+#     exit;
+# else
+#     echo "${GREEN}Starting Chat mode...${RESET}"
+#     echo "${YELLOW}It's in development yet...${RESET}"
+#     exit;
+# fi
 
-if docker ps | grep -q "app"; then
-    echo "${GREEN}$mode mode is already enabled.${RESET}"
+# if docker ps | grep -q "app"; then
+#     echo "${GREEN}$mode mode is already enabled.${RESET}"
     
-else
-    docker-compose up $mode --build -d --force-recreate > /dev/null 2>&1
-fi
+# else
+#     docker-compose up $mode --build -d --force-recreate > /dev/null 2>&1
+# fi
 
 sleep 1
 

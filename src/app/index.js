@@ -1,4 +1,3 @@
-// Import the necessary modules
 import chalk from "chalk";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -9,59 +8,80 @@ import path from "path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Define the functions for each command
-const functions = {};
-
-// Read the modules directory
 const modulesDir = "modules";
 const moduleNames = fs.readdirSync(modulesDir);
 
-// Import the modules and load the commands
-const commands = [];
+const functions = {};
+
 for (const moduleName of moduleNames) {
   const modulePath = path.resolve(__dirname, modulesDir, moduleName, "main.js");
-  if (fs.existsSync("modules/app/main.js")) {
-    (async () => {
-      const module = await import(modulePath);
-      functions[moduleName] = module.default;
-      const command = yaml.load(
-        fs.readFileSync(path.join(modulesDir, moduleName, "config.yml"), "utf8")
-      );
+  if (fs.existsSync(modulePath)) {
+    const module = await import(modulePath);
+    functions[moduleName] = module.default;
+    const command = yaml.load(
+      fs.readFileSync(path.join(modulesDir, moduleName, "config.yml"), "utf8")
+    );
 
-      console.log(chalk.green(`Command initialized: ${command.command}`));
-      commands.push(command);
-    })();
+    console.log(chalk.green(`Command initialized: ${command.command}`));
+
+    yargs(hideBin(process.argv)).command(
+      `${command.command} <action> ${Object.keys(command.actions)
+        .map((action) => `<${action}>`)
+        .join(" ")}`,
+      command.description,
+      (yargs) => {
+        for (const action of command.actions) {
+          const actionName = Object.keys(action)[0];
+          const params = action[actionName].params;
+          for (const param of params) {
+            const paramName = Object.keys(param)[0];
+            yargs.positional(paramName, {
+              describe: `The ${paramName} argument`,
+              type: "string",
+              demandOption: param[paramName].isrequired,
+            });
+          }
+        }
+      },
+      async (argv) => {
+        const { action } = argv;
+        await functions[command.module][action](argv);
+      }
+    );
   } else {
     console.log(chalk.red(`Module file not found: ${modulePath}`));
   }
 }
 
-// Define the command
-const yargsInstance = yargs(hideBin(process.argv));
-for (const command of commands) {
-  for (const action of Object.keys(command.actions)) {
-    const fullCommand = `${command.command} ${action} ${command.actions[
-      action
-    ].params
-      .map((param) => `<${Object.keys(param)[0]}>`)
-      .join(" ")}`;
-    yargsInstance.command(
-      fullCommand,
-      command.description,
-      (yargs) => {
-        for (const param of command.actions[action].params) {
-          const paramName = Object.keys(param)[0];
-          yargs.positional(paramName, {
-            describe: `The ${paramName} argument`,
-            type: "string",
-            demandOption: param[paramName].isrequired,
-          });
-        }
-      },
-      async (argv) => {
-        await functions[command.module][action](argv);
-      }
-    );
+console.log(chalk.green("CLI initialized"));
+
+runModuleAction(yargs(hideBin(process.argv)).argv);
+
+async function runModuleAction(argv) {
+
+  console.log(argv);
+
+  const {
+    _: [moduleName, action],
+    ...params
+  } = argv;
+
+  if (!moduleName || !action) {
+    console.log(chalk.red("Module and action are required."));
+    return;
   }
+
+  if (!functions[moduleName]) {
+    console.log(chalk.red(`Module not found: ${moduleName}`));
+    return;
+  }
+
+  const module = functions[moduleName];
+
+  if (!module[action]) {
+    console.log(chalk.red(`Action not found: ${action}`));
+    return;
+  }
+
+  await module[action](params);
 }
-yargsInstance.argv;

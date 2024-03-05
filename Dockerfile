@@ -20,10 +20,7 @@ RUN useradd -m ${USER}
 USER ${USER}
 
 # Create a new directory for your application
-WORKDIR /home/${USER}/app
-
-# Switch back to root to copy files and change ownership
-USER root
+WORKDIR /home/app
 
 # Copy package.json and package-lock.json
 COPY /src/app/package*.json ./
@@ -32,16 +29,16 @@ COPY /src/app/package*.json ./
 RUN npm install
 
 # Copy the rest of the application
-COPY /src/app .
-
-COPY /docker-compose.yml .
+COPY --chown=${USER}:${USER} /src/app .
 
 # Copy the CLI script and make it executable
-COPY bin/cli.sh /usr/local/bin/cli
+COPY --chown=${USER}:${USER} bin/cli.sh /usr/local/bin/cli
+
+# Make the CLI script executable
 RUN chmod +x /usr/local/bin/cli
 
 # Change the ownership of the app directory to the new user
-RUN chown -R ${USER}:${USER} /home/${USER}/app
+# RUN chown -R ${USER}:${USER} /home/${USER}/app
 
-# Switch back to the non-root user
-USER ${USER}
+# Set the entrypoint to the CLI script
+ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/cli"]

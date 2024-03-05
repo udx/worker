@@ -1,5 +1,8 @@
 command: docker
 actions:
+  github:
+    params: []
+    example: udx-worker docker github
   generate:
     params:
       - type:
@@ -7,7 +10,7 @@ actions:
           prompt:
             type: text
             message: Please enter the type of Docker image to generate
-    example: docker-builder docker generate cloud-app
+    example: udx-worker docker generate cloud-app
   test:
     params:
       - name:
@@ -15,7 +18,7 @@ actions:
           prompt:
             type: text
             message: Please enter the name of the Docker image to test
-    example: docker-builder docker test cloud-app
+    example: udx-worker docker test cloud-app
   build:
     params:
       - name:
@@ -23,7 +26,7 @@ actions:
           prompt:
             type: text
             message: Please enter the name of the Docker image to build
-    example: docker-builder docker build cloud-app
+    example: udx-worker docker build cloud-app
   start:
     params:
       - name:
@@ -31,7 +34,7 @@ actions:
           prompt:
             type: text
             message: Please enter the name of the Docker image to start
-    example: docker-builder docker start cloud-app
+    example: udx-worker docker start cloud-app
   stop:
     params:
       - name:
@@ -39,7 +42,7 @@ actions:
           prompt:
             type: text
             message: Please enter the name of the Docker image to stop
-    example: docker-builder docker stop cloud-app
+    example: udx-worker docker stop cloud-app
   push:
     params:
       - name:
@@ -47,7 +50,7 @@ actions:
           prompt:
             type: text
             message: Please enter the name of the Docker image to push
-    example: docker-builder docker push cloud-app
+    example: udx-worker docker push cloud-app
   pull:
     params:
       - name:
@@ -55,6 +58,6 @@ actions:
           prompt:
             type: text
             message: Please enter the name of the Docker image to pull
-    example: docker-builder docker pull cloud-app
+    example: udx-worker docker pull cloud-app
 description: Docker Commands Helper
 module: Docker

@@ -7,4 +7,7 @@
 echo "${GREEN}Call the Node.js CLI script with the passed arguments${RESET}"
 
 node index.js "$@"
+
+sleep infinity
+
 # ls -la
