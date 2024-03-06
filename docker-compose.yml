@@ -1,16 +1,31 @@
 version: "1"
 services:
-  udx-worker:
-    container_name: udx-worker
+  udx-worker-service:
+    container_name: udx-worker-service
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ./src/templates/Dockerfile.service
       args:
         - USER=udx-worker
     environment:
-      TYPE: cli #env
+      ENV_TYPE: serice
     volumes:
       - ./src/app:/home/app
     tty: true
     stdin_open: true
-    command: tail -f /dev/null
+    # command: tail -f /dev/null
+  udx-worker-task:
+    container_name: udx-worker-task
+    build:
+      context: .
+      dockerfile: ./src/templates/Dockerfile.task
+      args:
+        - USER=udx-worker
+    environment:
+      ENV_TYPE: task
+      TOOL: NodeJS
+    volumes:
+      - ./src/task:/home/app
+    tty: true
+    stdin_open: true
+  #   command: tail -f /dev/null

@@ -9,7 +9,7 @@ import { spawnSync } from "child_process";
 // Get the command line arguments
 const args = process.argv.slice(2);
 
-if (args.length !== 0 && args.includes("--help")) {
+if (args.length === 0 || args.includes("--help")) {
   console.log("");
   console.log(chalk.blueBright("Welcome to the UDX Worker CLI"));
   console.log("---------------------------------");

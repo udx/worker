@@ -1,4 +1,22 @@
 
+Env:
+- Web Service/API/Server (NodeJS, PHP)
+- Operational tasks (bash, powershell, NodeJS, terraform ...)
+
+CLI:
+- Github Actions (workflow config integration, worker image)
+- App:
+   - New (js, ts, php, reactjs) including yml manifests 
+   - Tests
+
+
+
+
+
+
+
+
+
 docker-compose up --build -d 
 docker-compose up --build -d && container_id=$(docker-compose ps -q app) && docker attach $container_id
 

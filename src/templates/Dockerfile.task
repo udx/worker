@@ -2,7 +2,6 @@
 FROM ubuntu:latest
 
 ARG USER
-ENV TYPE=env
 
 # Install curl and other dependencies
 RUN apt-get update && apt-get install -y \
@@ -14,8 +13,20 @@ RUN apt-get update && apt-get install -y \
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 
+RUN \
+    npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
+
+# Install PM2 globally in the container
+RUN npm install pm2 -g    
+
 # Create a new user
 RUN useradd -m ${USER}
+
+RUN \
+    mkdir -p /etc/logrotate.d/pm2 && \
+    ln -sf /etc/logrotate.d /etc/logrotate.d/pm2 && \
+    chown -R ${USER}:${USER} /etc/logrotate.d/pm2 && \
+    pm2 install pm2-logrotate
 
 # Switch to the non-root user after all commands that require root permissions have been executed
 USER ${USER}
@@ -24,23 +35,14 @@ USER ${USER}
 WORKDIR /home/app
 
 # Copy package.json and package-lock.json
-COPY /src/app/package*.json ./
+COPY /src/task/package*.json ./
 
 # Install application dependencies
 RUN npm install
 
 # Copy the rest of the application
-COPY --chown=${USER}:${USER} ./src/app .
+COPY /src/task .
 
-# Copy the CLI script and make it executable
-COPY --chown=${USER}:${USER} bin/cli.sh /usr/local/bin/cli
-
-# Make the CLI script executable
-RUN chmod +x /usr/local/bin/cli
-
-# Change the ownership of the app directory to the new user
-# RUN chown -R ${USER}:${USER} /home/${USER}/app
-
-# Set the entrypoint to the CLI script
-ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/cli", "${TYPE}"]
+# 
+CMD [ "node", "index.js"  ]
 
