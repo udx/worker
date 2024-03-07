@@ -1,0 +1,16 @@
+{
+  "name": "app-demo",
+  "version": "0.0.1",
+  "type": "application",
+  "description": "app-demo",
+  "main": "index.js",
+  "keywords": [
+    "cli",
+    "docker",
+    "application"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bin": {},
+  "dependencies": {}
+}

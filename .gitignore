@@ -1,6 +1,6 @@
 # Node.js
 node_modules/
-package*.json
+# package*.json
 
 # Logs
 logs/

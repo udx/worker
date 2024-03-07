@@ -1,0 +1,23 @@
+{
+  "name": "udx-worker",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Docker Builder Tool.",
+  "main": "./bin/cli.js",
+  "keywords": [
+    "cli",
+    "docker",
+    "application"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bin": {
+    "udx-worker": "./bin/cli.js"
+  },
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "docker-compose": "^0.24.6",
+    "lodash": "^4.17.21",
+    "yaml": "2.4.0"
+  }
+}

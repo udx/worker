@@ -2,7 +2,9 @@
 FROM ubuntu:latest
 
 ARG USER
-ENV TYPE=env
+
+ENV ENV_TYPE=service
+ENV USER=${USER}
 
 # Install curl and other dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,6 +15,9 @@ RUN apt-get update && apt-get install -y \
 # Install Node.js and npm
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
+
+RUN \
+    npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
 
 # Create a new user
 RUN useradd -m ${USER}
@@ -30,17 +35,9 @@ COPY /src/app/package*.json ./
 RUN npm install
 
 # Copy the rest of the application
-COPY --chown=${USER}:${USER} ./src/app .
+COPY /src/app .
 
-# Copy the CLI script and make it executable
-COPY --chown=${USER}:${USER} bin/cli.sh /usr/local/bin/cli
+COPY --chown=${USER}:${USER} bin/entrypoint.sh /home/bin/entrypoint.sh
 
-# Make the CLI script executable
-RUN chmod +x /usr/local/bin/cli
-
-# Change the ownership of the app directory to the new user
-# RUN chown -R ${USER}:${USER} /home/${USER}/app
-
-# Set the entrypoint to the CLI script
-ENTRYPOINT ["/bin/sh", "-c", "/usr/local/bin/cli", "${TYPE}"]
-
+# Set the entrypoint to run bin/entrypoint.sh
+ENTRYPOINT ["sh", "-c", "/home/bin/entrypoint.sh"]

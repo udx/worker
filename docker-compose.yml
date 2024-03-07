@@ -4,21 +4,20 @@ services:
     container_name: udx-worker-service
     build:
       context: .
-      dockerfile: ./src/templates/Dockerfile.service
+      dockerfile: Dockerfile
       args:
         - USER=udx-worker
     environment:
-      ENV_TYPE: serice
+      ENV_TYPE: service
     volumes:
       - ./src/app:/home/app
     tty: true
     stdin_open: true
-    # command: tail -f /dev/null
   udx-worker-task:
     container_name: udx-worker-task
     build:
       context: .
-      dockerfile: ./src/templates/Dockerfile.task
+      dockerfile: Dockerfile
       args:
         - USER=udx-worker
     environment:
@@ -28,4 +27,3 @@ services:
       - ./src/task:/home/app
     tty: true
     stdin_open: true
-  #   command: tail -f /dev/null
