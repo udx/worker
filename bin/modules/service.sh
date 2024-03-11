@@ -2,26 +2,36 @@
 #
 # This is the service module.
 # It is responsible for setting up the environment to run the web application, API or web service in.
-# 
+#
 #
 
 # Load the utility functions
-source "./utils.sh"
+source "/home/bin/modules/utils.sh"
 
-nice_logs "Task module loaded" "success"
-
-sleep 1
-
-nice_logs "pm2 package is required, installation..." "info"
+nice_logs "Service module loaded" "success"
 
 sleep 1
 
-# Install pm2
-npm install pm2
+# Install
+if [ -f "package.json" ]; then
+    npm install
+    
+    sleep 1
+    
+    nice_logs ""
+    
+    nice_logs "NPM packages are installed successfully." "success"
+    
+else
+    nice_logs "package.json not found." "error"
+    
+    sleep 1
+    
+    nice_logs "Exiting..." "error"
+    
+    exit 1
+fi
 
 sleep 1
 
-nice_logs "pm2 package installed successfully." "success"
-
-# Set the entrypoint to start pm2 processes
-# exec pm2-runtime start /home/etc/ecosystem.config.js
+nice_logs ""

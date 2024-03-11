@@ -8,26 +8,23 @@ services:
       dockerfile: Dockerfile
       args:
         - USER=udx-worker
+        - APP_PATH=./fixtures/apps/service/*
     environment:
       ENV_TYPE: service
-    volumes:
-      - ./fixtures/apps/service:/home/app
     tty: true
     stdin_open: true
 
   # Task (CI/CD pipelines jobs/tasks, webhooks, tooling, templates, etc.)
-  udx-worker-task:
-    container_name: udx-worker-task
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - USER=udx-worker
-    environment:
-      ENV_TYPE: task
-      APP_PATH: "./fixtures/apps/task"
-      TOOL: NodeJS
-    volumes:
-      - ./fixtures/apps/task:/home/app
-    tty: true
-    stdin_open: true
+  # udx-worker-task:
+  #   container_name: udx-worker-task
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - USER=udx-worker
+  #       - APP_PATH=./fixtures/apps/task/*
+  #   environment:
+  #     ENV_TYPE: task
+  #     TOOL: NodeJS
+  #   tty: true
+  #   stdin_open: true

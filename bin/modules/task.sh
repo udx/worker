@@ -1,12 +1,28 @@
-#!/bin/bash
-#
-# This is the task module.
-# It is responsible for setting up the environment to perform CI/CD jobs, runbooks, and other operational tasks.
-#
-
-source "./utils.sh"
+# Load the utility functions
+source "/home/bin/modules/utils.sh"
 
 nice_logs "Task module loaded" "success"
 
-# Set the entrypoint to start the application
-# exec node index.js
+sleep 1
+
+# Install
+if [ -f "package.json" ]; then
+    npm install
+    
+    sleep 1
+    
+    nice_logs "NPM packages are installed successfully." "success"
+    
+else
+    nice_logs "package.json not found." "error"
+    
+    sleep 1
+    
+    nice_logs "Exiting..." "error"
+    
+    exit 1
+fi
+
+sleep 1
+
+nice_logs ""

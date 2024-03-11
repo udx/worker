@@ -10,28 +10,28 @@
 # ...
 
 # Load the utility functions
-source "bin/modules/utils.sh"
+source "/home/bin/modules/utils.sh"
 
 # Load the environment defaults
-env_defaults
+env_defaults $ENV_TYPE
 
 # Use the colors in logs
 nice_logs "Here you go, welcome to UDX Worker tool." "info"
 
-nice_logs "..." "info"
+nice_logs "..."
 
 sleep 3
 
 nice_logs "[${ENV_TYPE}] Starting the environment." "info"
 
-nice_logs "..." "info"
+nice_logs "..."
 
 sleep 3
 
 # Load the environment configuration module
-source "bin/modules/${ENV_TYPE}.sh"
+source "/home/bin/modules/${ENV_TYPE}.sh"
 
-nice_logs "[${ENV_TYPE}] The environment has started successfully." "success"
+nice_logs "The [${ENV_TYPE}] environment has started successfully." "success"
 
 ## Command pass-through.
 exec "$@"

@@ -21,20 +21,17 @@ load_colors() {
     GREEN=$(tput setaf 2)
     YELLOW=$(tput setaf 3)
     BLUE=$(tput setaf 4)
+    GREY=$(tput setaf 8)
     RESET=$(tput sgr0)
 }
 
 env_defaults() {
+    
+    env_type=$1
+    
+    nice_logs "Loading environment ${env_type} defaults..." "info"
+    
     load_colors
-    
-    # Copy package.json and package-lock.json
-    cp /home/app/package*.json ./
-    
-    # Install application dependencies
-    npm install
-    
-    # Copy the rest of the application
-    cp -r /home/app/* ./
 }
 
 nice_logs() {
@@ -43,16 +40,16 @@ nice_logs() {
     
     case $type in
         "success")
-            echo "${GREEN}${type} ${message}${RESET}"
+            echo "${GREEN} ${message}${RESET}"
         ;;
         "info")
-            echo "${BLUE}${type} ${message}${RESET}"
+            echo "${BLUE} ${message}${RESET}"
         ;;
         "warn")
-            echo "${YELLOW}${type} ${message}${RESET}"
+            echo "${YELLOW} ${message}${RESET}"
         ;;
         "error")
-            echo "${RED}${type} ${message}${RESET}"
+            echo "${RED} ${message}${RESET}"
         ;;
         *)
             echo "${type} ${message}"

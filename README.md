@@ -1,4 +1,3 @@
-
 Env:
 - Web Service/API/Server (NodeJS, PHP)
 - Operational tasks (bash, powershell, NodeJS, terraform ...)
