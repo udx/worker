@@ -3,8 +3,14 @@ FROM ubuntu:latest
 
 ARG USER
 
-ENV ENV_TYPE=service
-ENV USER=${USER}
+# Set the environment variable to service by default
+ENV ENV_TYPE service
+
+# Set NodeJS version to 20.x by default
+ARG NODE_VERSION=20.x
+
+# Copy user as an environment variable from arg
+ENV USER ${USER}
 
 # Install curl and other dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,7 +19,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js and npm
-RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash -
 RUN apt-get install -y nodejs
 
 RUN \
@@ -28,16 +34,11 @@ USER ${USER}
 # Create a new directory for your application
 WORKDIR /home/app
 
-# Copy package.json and package-lock.json
-COPY /src/app/package*.json ./
-
-# Install application dependencies
-RUN npm install
-
-# Copy the rest of the application
-COPY /src/app .
-
 COPY --chown=${USER}:${USER} bin/entrypoint.sh /home/bin/entrypoint.sh
+
+COPY --chown=${USER}:${USER} bin/modules /home/bin/modules
 
 # Set the entrypoint to run bin/entrypoint.sh
 ENTRYPOINT ["sh", "-c", "/home/bin/entrypoint.sh"]
+
+CMD ["pm2-runtime", "start", "/home/bin/ecosystem.config.js", "--env", ${ENV_TYPE}]

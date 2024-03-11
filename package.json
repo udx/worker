@@ -2,17 +2,17 @@
   "name": "udx-worker",
   "version": "0.0.1",
   "type": "module",
-  "description": "Docker Builder Tool.",
-  "main": "./bin/cli.js",
+  "description": "UDX Worker Tool.",
+  "main": "index.js",
   "keywords": [
     "cli",
-    "docker",
-    "application"
+    "development",
+    "tooling"
   ],
   "author": "",
   "license": "ISC",
   "bin": {
-    "udx-worker": "./bin/cli.js"
+    "udx-worker": "index.js"
   },
   "dependencies": {
     "chalk": "^4.1.0",

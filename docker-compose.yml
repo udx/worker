@@ -1,5 +1,6 @@
 version: "1"
 services:
+  # Service (Web Server, API, etc.)
   udx-worker-service:
     container_name: udx-worker-service
     build:
@@ -10,9 +11,11 @@ services:
     environment:
       ENV_TYPE: service
     volumes:
-      - ./src/app:/home/app
+      - ./fixtures/apps/service:/home/app
     tty: true
     stdin_open: true
+
+  # Task (CI/CD pipelines jobs/tasks, webhooks, tooling, templates, etc.)
   udx-worker-task:
     container_name: udx-worker-task
     build:
@@ -22,8 +25,9 @@ services:
         - USER=udx-worker
     environment:
       ENV_TYPE: task
+      APP_PATH: "./fixtures/apps/task"
       TOOL: NodeJS
     volumes:
-      - ./src/task:/home/app
+      - ./fixtures/apps/task:/home/app
     tty: true
     stdin_open: true
