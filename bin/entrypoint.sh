@@ -33,5 +33,9 @@ source "/home/bin/modules/${ENV_TYPE}.sh"
 
 nice_logs "The [${ENV_TYPE}] environment has started successfully." "success"
 
+# Start the application
+nice_logs "Starting the application." "info"
+pm2-runtime start /home/etc/ecosystem.config.js --env $ENV_TYPE
+
 ## Command pass-through.
 exec "$@"

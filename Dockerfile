@@ -55,17 +55,9 @@ RUN \
     npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
 
 
-ADD /bin      /opt/sources/${USER}/bin
-ADD /etc      /opt/sources/${USER}/etc
-ADD /fixtures /opt/sources/${USER}/fixtures
-ADD /lib      /opt/sources/${USER}/lib
-
-RUN \
-    ln -sf /opt/sources/${USER}/bin      /home/bin && \
-    ln -sf /opt/sources/${USER}/etc      /home/etc && \
-    ln -sf /opt/sources/${USER}/fixtures /home/fixtures && \
-    ln -sf /opt/sources/${USER}/bin      /home/bin
-
+COPY --chown=${USER}:${USER} ./bin          /home/bin
+COPY --chown=${USER}:${USER} ./etc/home     /home/etc
+COPY --chown=${USER}:${USER} ./fixtures     /home/fixtures
 
 # Create a new user
 RUN useradd -m ${USER}
@@ -80,6 +72,3 @@ COPY --chown=${USER}:${USER} ${APP_SRC_PATH} ./
 
 # Set the entrypoint to run bin/entrypoint.sh
 ENTRYPOINT ["sh", "-c", "/home/bin/entrypoint.sh"]
-
-# Start the application
-CMD ["pm2-runtime", "start", "/home/etc/ecosystem.config.js", "--env", ${ENV_TYPE}]

@@ -1,3 +1,9 @@
+/**
+ * 
+ * Mock service that logs a message every 5 seconds.
+ * 
+ */
+
 function sleep(seconds) {
   const milliseconds = seconds * 1000;
   const start = Date.now();
