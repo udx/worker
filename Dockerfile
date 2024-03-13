@@ -30,7 +30,7 @@ ARG USER=udx-worker
 ARG NODE_VERSION=20.x
 
 # Set the source path to an (current location by default)
-ARG APP_SRC_PATH ""
+ARG APP_SRC_PATH "."
 
 # Set the environment variable to service by default
 ENV ENV_TYPE service
@@ -55,6 +55,7 @@ RUN \
     npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
 
 
+# Copy the bin, etc, and fixtures directories to the image
 COPY --chown=${USER}:${USER} ./bin          /home/bin
 COPY --chown=${USER}:${USER} ./etc/home     /home/etc
 COPY --chown=${USER}:${USER} ./fixtures     /home/fixtures
@@ -68,7 +69,8 @@ USER ${USER}
 # Create a new directory for your application
 WORKDIR /home/app
 
-COPY --chown=${USER}:${USER} ${APP_SRC_PATH} ./
+# Copy the application source code
+COPY --chown=${USER}:${USER} ${APP_SRC_PATH} .
 
 # Set the entrypoint to run bin/entrypoint.sh
 ENTRYPOINT ["sh", "-c", "/home/bin/entrypoint.sh"]
