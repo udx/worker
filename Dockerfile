@@ -16,7 +16,7 @@
 # - NODE_VERSION: The version of Node.js to be installed in the image (Default: 20.x)
 # 
 # ENVs:
-# - ENV_TYPE: The environment type (Values: service/task. Default: service).
+# - ENV_TYPE: The environment type (Values: service/task/worker. Default: worker).
 # - USER: The user to be created in the image (Default: udx-worker inherited from USER arg).
 # 
 #
@@ -32,8 +32,8 @@ ARG NODE_VERSION=20.x
 # Set the source path to an (current location by default)
 ARG APP_SRC_PATH "."
 
-# Set the environment variable to service by default
-ENV ENV_TYPE service
+# Set the environment variable to worker by default
+ENV ENV_TYPE worker
 
 # Copy user as an environment variable from arg
 ENV USER ${USER}

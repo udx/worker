@@ -24,6 +24,10 @@ nice_logs "..."
 sleep 3
 
 # Load the environment configuration module
-source "/home/bin/modules/${MODULE}.sh"
+if [ -f "/home/bin/modules/${MODULE}.sh" ]; then
+    source "/home/bin/modules/${MODULE}.sh"
+else
+    bash -c "$COMMAND"
+fi
 
 nice_logs "The [${MODULE}] environment has started successfully." "success"
