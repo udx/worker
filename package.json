@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "bin": {
-    "udx-worker": "index.js"
+    "udx-worker": "./cli/index.js"
   },
   "dependencies": {
     "chalk": "^4.1.0",

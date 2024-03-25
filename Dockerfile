@@ -54,7 +54,6 @@ RUN apt-get install -y nodejs
 RUN \
     npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
 
-
 # Copy the bin, etc, and fixtures directories to the image
 COPY --chown=${USER}:${USER} ./bin          /home/bin
 COPY --chown=${USER}:${USER} ./etc/home     /home/etc
