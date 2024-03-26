@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "description": "UDX Worker Tool.",
-  "main": "index.js",
+  "main": "./cli/index.js",
   "keywords": [
     "cli",
     "development",
