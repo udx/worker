@@ -68,14 +68,14 @@ jobs:
 
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        uses: gittools/actions/gitversion/setup@v0
+        uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0
+        uses: gittools/actions/gitversion/execute@v1
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
