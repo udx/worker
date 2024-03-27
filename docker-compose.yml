@@ -1,0 +1,31 @@
+version: "1"
+services:
+  # Service (Web Server, API, etc.)
+  udx-worker-service:
+    container_name: udx-worker-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER=udx-worker
+    environment:
+      ENV_TYPE: service
+    volumes:
+      - ./fixtures/apps/service:/home/app
+    tty: true
+    stdin_open: true
+
+  # Task (CI/CD pipelines jobs/tasks, webhooks, tooling, templates, etc.)
+  udx-worker-task:
+    container_name: udx-worker-task
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER=udx-worker
+    environment:
+      ENV_TYPE: task
+    volumes:
+      - ./fixtures/apps/task:/home/app
+    tty: true
+    stdin_open: true

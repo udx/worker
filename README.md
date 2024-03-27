@@ -1,64 +1,98 @@
+# UDX Worker
 
-# UDX Docker Builder
+UDX Worker is a tool that provides a consistent interface for running any type of software or cloud applications.
 
-UDX Docker Builder is a robust Docker-in-Docker image that is used to create consistent build environments for cloud applications. This tool ensures that all our Docker builds are performed in a consistent environment, both locally and in our CI/CD pipelines.
+The UDX Worker is designed to be flexible and can be used in two different ways: as an npm cli or as a standalone Docker image.
+<br />
 
-This tool focuses specifically on the "Build" phase of the software development lifecycle. It automates the generation of various configuration files essential for your build process. It supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby and more. UDX Docker Builder also handles authorization and programmatic secrets management, integrating with Google Cloud Platform's Workflow Identity for secure access management.
+## NPM CLI
 
-All this power is bundled into a cloud-native toolset that helps teams transition away from older CI/CD tools like Jenkins, enabling them to leverage modern development practices and technologies.
+The npm package is designed for software development, environments configuration, testing.
 
-## Approach
+### Install
 
-![Atlas 12-Factor Value Stream for Software Development](https://storage.googleapis.com/stateless-udx-io/2023/11/39a1d248-atlas-left-shifted-enterprise-value-stack-for-software-development-v1.png)
+It can be installed globally on local machine and used to run and test cloud applications or scripts, generate configuration manifests, etc.
 
-UDX Docker Builder adopts an approach that emphasizes the 12-factor methodology while adding the "Manage" phase. It connects work items, release packages, Jira Stories, and Metadata to create a Software Bill of Materials (SBOM), helping measure lead times and visualize workflows.
+#### NPM Registry
 
-Here's how it works:
-
-1. **Build Phase:**
-   - The input is your code hosted on platforms like GitHub.
-   - It performs code scanning using tools such as Trivy to ensure security.
-   - The continuous integration (CI) process creates the application components.
-   - These are then stored and distributed via an Artifact Registry.
-
-The other phases (Manage & Release) are not handled by UDX Docker Builder but can be managed by other tools or services as per your workflow requirements.
-
-## Benefits
-
-1. **Consistent Environment:** Eliminates the "it works on my machine" problem and ensures that the application behaves the same way in all environments.
-
-2. **Automated Configuration:** Saves developers time by automating the generation of various configuration files such as Dockerfiles, GitHub Actions workflows, Kubernetes configuration files.
-
-3. **Versatile Language Support:** Supports applications developed in multiple languages like Node.js, C#, Java, Python, Ruby.
-
-4. **Secure Access Management:** Handles authorization and programmatic secrets management by integrating with Google Cloud Platform's Workflow Identity.
-
-5. **Cloud-Native Transition:** Provides a cloud-native toolset that helps teams transition away from older CI/CD tools to leverage modern development practices and technologies.
-
-## Usage
-
-Use the `udx.tooling` command with the `generate` option followed by `--type` to specify the language or framework of your application. Use the `--include` option to specify which configuration files to generate.
-
-```bash
-udx.tooling generate --type=<language> --include=<config-file1>,<config-file2>,...
+```
+npm install -g udx-worker
 ```
 
-Here are some examples:
+#### Repository
 
-1. To generate Dockerfile and GitHub Actions workflow for a C# (.NET Core) application:
+```
+npm install -g
+```
 
-   ```bash
-   udx.tooling generate --type=csharp --include=dockerfile,github-workflow
-   ```
+### Use (In Progress)
 
-2. To generate PM2 ecosystem config and K8s service config for a Python (Django) application:
+The npm package acts as a wrapper to the Docker CLI, providing a simplified, user-friendly interface for running Docker commands.
 
-   ```bash
-   udx.tooling generate --type=python --include=pm2-ecosystem,k8-app
-   ```
+Please see [Worker Container Use](#use-1) section for more information on what features are currently available.
 
-3. To generate Dockerfile, GitHub workflow, and K8s service config for a Java (Spring Boot) application:
+```
+udx-worker generate "staging/worker.yml"
+```
 
-   ```bash
-   udx.tooling generate --type=java --include=dockerfile,github-workflow,k8-app
-   ```
+\* _Generating /home/app/src/staging/worker.yml [ask to override if exists]_
+
+```
+udx-worker task --module=terraform
+```
+
+\* \_Start script task including terraform to perform configuration execution as one time process, expects tf configurations under ./terraform/\*
+
+```
+udx-worker service start
+```
+
+\* _Start NodeJS service as running process, expects app entrypoint is ./index.js_
+
+All this makes it easy to develop and test your applications locally, before deploying them to a production environment.
+
+## Worker Container
+
+The Worker Container provides a consistent environment for running applications.
+
+It encapsulates the operating system, system libraries, third-party modules, etc.
+
+### Use (In Progress)
+
+| Docker Compose Command Example                              | Description                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `docker-compose run udx-worker-service start`               | Starts an application as a service, keeping the worker container running        |
+| `docker-compose run udx-worker-service start php8.1`        | Starts a web application as a service using the PHP 8.1 web server package      |
+| `docker-compose run udx-worker-task start`                  | Executes a single Node.js job task                                              |
+| `docker-compose run udx-worker-task start typescript`       | Executes a task with TypeScript-based source code                               |
+| `docker-compose run udx-worker-task start terraform`        | Executes Terraform configurations (init/plan/apply,interactive/non-interactive) |
+| `docker-compose run udx-worker generate staging/worker.yml` | Generates a configuration manifest for the staging environment                  |
+
+\*\* _NodeJS by default [pm2,ecosystem.config.js,npm]_
+
+### Container File Structure
+
+- `/home/app`: This directory contains the application code.
+- `/home/bin`: This directory contains executable scripts, such as the entrypoint script.
+- `/home/etc`: This directory contains configuration files, such as the `ecosystem.config.js` file.
+- `/home/fixtures`: This directory contains any fixtures for the application.
+  <br />
+
+### Repo Structure
+
+- `./.github/workflow`: CI workflows configurations.
+
+- `./bin/entrypoint.sh`: entrypoint shell script that configure environment modules.
+- `./bin/modules/*`: shell modules that enable environment features needed for the run.
+
+- `./ci/git-version.yml`: GitVersion configuration file to generate semantic version numbers based on the state of Git repository.
+
+- `./cli/index.js`: cli program that serves as simple wrapper to to run `docker-compose` commands.
+
+- `./etc/home/ecosystem.config.js`: PM2 uses this file to manage application settings.
+
+- `./fixtures/*`: the scripts, apps and data used to create a controlled scenario to know what the output should be for certain inputs.
+
+- `./Dockerfile`: used by Docker to build an image.
+- `./docker-compose.yml`: configure docker worker containers.
+- `./package.json`: manifest file for worker cli.
