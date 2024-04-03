@@ -68,14 +68,14 @@ jobs:
 
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        uses: gittools/actions/gitversion/setup@v0
+        uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0
+        uses: gittools/actions/gitversion/execute@v1
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
@@ -83,7 +83,7 @@ jobs:
       - name: Authenticate to Google Cloud
         id: google_auth
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2
         with:
           token_format: "access_token"
           workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
@@ -91,7 +91,7 @@ jobs:
 
       - name: Set up Google Cloud SDK
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Login to Google Artifact Registry
         if: success() && github.ref == env.RELEASE_BRANCH_REF
