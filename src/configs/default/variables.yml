@@ -1,0 +1,14 @@
+---
+kind: workerVariables
+version: udx.io/worker-v1/variables
+items:
+  DOCKER_IMAGE_NAME: "docker-builder"
+
+  GCP_AUTH_PROVIDER: "projects/309037306746/locations/global/workloadIdentityPools/docker-builder-pool/providers/docker-builder-provider"
+  GCP_PROJECT: "rabbit-ci-tooling"
+  GCP_REGION: "us-central1"
+  GCP_REGISTRY_REPO: "docker-builder"
+  GCP_SERVICE_ACCOUNT: "svc-docker-builder@rabbit-ci-tooling.iam.gserviceaccount.com"
+
+  GITHUB_CONFIGS_REPO: https://github.com/udx/worker-repo-best-practice-configs
+  GITHUB_CONFIGS_BRANCH: main
