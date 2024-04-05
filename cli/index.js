@@ -1,73 +1,51 @@
 import { exec } from "child_process";
 import fs from "fs";
-import program from "commander";
+import nopt from "nopt";
 
-program
-  .version("1.0.0")
-  .description("CLI")
-  .option("-t, --type <type>", "Type of the Docker service")
-  .arguments("<cmd> [args...]")
-  .action((cmd, args, options) => {
-    const { type } = options;
+// Define options
+const options = {
+  "type": [String, null],
+  "cmd": [String, Array],
+};
 
-    // Map type to Docker service name
-    let container;
-    switch (type) {
-      case "service":
-        container = "udx-worker-service";
-        break;
-      case "task":
-        container = "udx-worker-task";
-        break;
-      default:
-        console.error(`Error: Unknown type "${type}".`);
-        return;
-    }
+// Parse command line arguments
+const parsed = nopt(options, {}, process.argv, 2);
 
-    // Check if docker-compose.yml exists
-    if (!fs.existsSync("./docker-compose.yml")) {
-      console.error("Error: docker-compose.yml does not exist.");
-      return;
-    }
+// Map type to Docker service name
+let container;
+switch (parsed.type) {
+  case "service":
+    container = "udx-worker-service";
+    break;
+  case "task":
+    container = "udx-worker-task";
+    break;
+  default:
+    console.error(`Error: Unknown type "${parsed.type}".`);
+    return;
+}
 
-    // Check if Docker containers are running
-    exec("docker-compose ps", (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`);
-        return;
-      }
+// Check if docker-compose.yml exists
+if (!fs.existsSync("./docker-compose.yml")) {
+  console.error("Error: docker-compose.yml does not exist.");
+  return;
+}
 
-      if (stderr) {
-        console.error(`Error: ${stderr}`);
-        return;
-      }
+// Check if Docker containers are running
+exec("docker-compose ps", (error, stdout, stderr) => {
+  if (error) {
+    console.error(`Error: ${error.message}`);
+    return;
+  }
 
-      // If Docker containers are not running, start them
-      if (!stdout.includes(container)) {
-        exec("docker-compose up -d", (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Error: ${error.message}`);
-            return;
-          }
+  if (stderr) {
+    console.error(`Error: ${stderr}`);
+    return;
+  }
 
-          if (stderr) {
-            console.error(`Error: ${stderr}`);
-            return;
-          }
-
-          console.log(`Output: ${stdout}`);
-        });
-      }
-    });
-
-    let dockerCommand = `docker exec ${container} ${cmd} ${args.join(" ")}`;
-
-    // If the command is a shell, run it interactively
-    if (cmd === "bash" || cmd === "sh") {
-      dockerCommand = `docker exec -it ${container} ${cmd} ${args.join(" ")}`;
-    }
-
-    exec(dockerCommand, (error, stdout, stderr) => {
+  // If Docker containers are not running, start them
+  if (!stdout.includes(container)) {
+    exec("docker-compose up -d", (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         return;
@@ -80,6 +58,26 @@ program
 
       console.log(`Output: ${stdout}`);
     });
-  });
+  }
+});
 
-program.parse(process.argv);
+let dockerCommand = `docker exec ${container} ${parsed.cmd.join(" ")}`;
+
+// If the command is a shell, run it interactively
+if (parsed.cmd[0] === "bash" || parsed.cmd[0] === "sh") {
+  dockerCommand = `docker exec -it ${container} ${parsed.cmd.join(" ")}`;
+}
+
+exec(dockerCommand, (error, stdout, stderr) => {
+  if (error) {
+    console.error(`Error: ${error.message}`);
+    return;
+  }
+
+  if (stderr) {
+    console.error(`Error: ${stderr}`);
+    return;
+  }
+
+  console.log(`Output: ${stdout}`);
+});
