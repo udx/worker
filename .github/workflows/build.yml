@@ -64,7 +64,7 @@ jobs:
 
       - name: Test build
         if: success() && github.ref != env.RELEASE_BRANCH_REF
-        run: docker build .
+        run: docker build ./docker-image
 
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -118,7 +118,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./docker-image
           push: true
           tags: |
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
