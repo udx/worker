@@ -56,3 +56,4 @@ nice_logs() {
         ;;
     esac
 }
+
