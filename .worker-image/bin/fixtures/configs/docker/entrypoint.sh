@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This is the service module.
+# This is the NodeJS task/service helper.
 # It is responsible for setting up the environment to run the web application, API or web service in.
 #
 #

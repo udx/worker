@@ -1,0 +1,144 @@
+## CI Pipeline to build and push docker images to Google Artifact Registry
+##
+## How it works:
+## -------------
+##
+## - all vars are stored as repository variables
+## - an access to google cloud is granted using a service account and workload identity provider
+## - the pipeline is triggered on every push to any branch
+## - if the push is to "release" (latest) branch, the pipeline will build and push the image
+## - published images are tagged with the version from GitVersion
+## - the pipeline will tag new version as well as "latest" tag and delete the previous "latest" image
+## - if the push is to any other branch, the pipeline will only make test build
+## - "Build" job is configured with "contents" and "id-token" write permissions to allow pushing to Google Artifact Registry
+## - the pipeline will also create a GitHub release with the changelog
+## - Github release is created with version from GitVersion
+## - the changelog is generated automatically from the commit messages between the last tag and HEAD
+## - GitVersion is configured in ci/git-version.yml. It ensures using "ContinuousDeployment" versioning mode and branching strategy (release: "latest", development: "!latest")
+##
+## Required repository variables:
+## ------------------------------
+## - GCP_PROJECT: Google Cloud project ID
+## - GCP_REGION: Google Cloud region
+## - GCP_REGISTRY_REPO: Google Artifact Registry repository name
+## - GCP_AUTH_PROVIDER: Google Cloud Workload Identity Provider
+## - GCP_SERVICE_ACCOUNT: Google Cloud service account name
+## - DOCKER_IMAGE_NAME: Docker image name
+##
+## References:
+## -----------
+##
+## - Google Cloud Workload Identity: https://cloud.google.com/blog/products/identity-security/enabling-keyless-authentication-from-github-actions
+## - GitTools actions: https://github.com/GitTools/actions
+## - Google GitHub Actions: https://github.com/google-github-actions
+## - Google Cloud SDK: https://cloud.google.com/sdk
+## - Google Artifact Registry: https://cloud.google.com/artifact-registry
+## - Docker: https://docs.docker.com/engine/reference/commandline/build/
+## - GitVersion: https://gitversion.net/docs/
+##
+
+name: Build
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      RELEASE_BRANCH_REF: refs/heads/latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test build
+        if: success() && github.ref != env.RELEASE_BRANCH_REF
+        run: docker build ./docker-image
+
+      - name: Install GitVersion
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: gittools/actions/gitversion/setup@v1
+        with:
+          versionSpec: "5.12.0"
+
+      - name: Determine Version
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v1
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
+
+      - name: Authenticate to Google Cloud
+        id: google_auth
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: "access_token"
+          workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Login to Google Artifact Registry
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Delete previous "latest" image
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        run: |
+          IMAGE_NAME="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}"
+          IMAGE_TAG="latest"
+          IMAGE_DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format='get(digest)')
+          if [ -n "$IMAGE_DIGEST" ]; then
+            gcloud container images delete "${IMAGE_NAME}@${IMAGE_DIGEST}" --quiet --force-delete-tags
+          else
+            echo "Image with tag 'latest' does not exist. Skipping delete."
+          fi
+
+      - name: Docker Login
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker-image
+          push: true
+          tags: |
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
+
+      - name: Generate changelog
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" > changelog.txt
+          echo "::set-output-file name=changelog::changelog.txt"
+
+      - name: Create GitHub release
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.gitversion.outputs.semVer }}
+          release_name: Release v${{ steps.gitversion.outputs.semVer }}
+          body: |
+            Release Notes:
+            ${{ steps.changelog.outputs.changelog }}

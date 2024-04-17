@@ -1,6 +1,7 @@
 /**
  *
  * This file is used to configure options and settings for the pm2 process manager.
+ * The pm2 process manager is used to manage the node.js application.
  *
  *
  */

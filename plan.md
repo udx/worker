@@ -1,0 +1,6 @@
+- Development
+- Testing
+- Build
+- Release
+- Deploy
+- Monitor
