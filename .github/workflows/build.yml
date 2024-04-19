@@ -52,6 +52,7 @@ jobs:
       id-token: write
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
+      IMAGE_CONTEXT: .worker-image
 
     steps:
       - name: Checkout code
@@ -64,7 +65,7 @@ jobs:
 
       - name: Test build
         if: success() && github.ref != env.RELEASE_BRANCH_REF
-        run: docker build ./docker-image
+        run: docker build ${{env.IMAGE_CONTEXT}}
 
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -118,7 +119,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v5
         with:
-          context: ./docker-image
+          context: ${{env.IMAGE_CONTEXT}}
           push: true
           tags: |
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}

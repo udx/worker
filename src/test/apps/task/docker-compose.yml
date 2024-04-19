@@ -1,8 +1,0 @@
-services:
-  udx-worker:
-    container_name: udx-worker
-    image: udx-worker-udx-worker
-    volumes:
-      - ./:/home/app
-    tty: true
-    stdin_open: true
