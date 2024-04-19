@@ -20,7 +20,11 @@
 # 
 #
 
+# Create a new image based on the latest Ubuntu image
 FROM ubuntu:latest
+
+# Set the maintainer of the image
+LABEL maintainer="UDX CAG Team"
 
 # Define arguments
 ARG USER=udx-worker
