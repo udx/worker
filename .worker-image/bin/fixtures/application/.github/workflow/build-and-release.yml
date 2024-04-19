@@ -1,0 +1,45 @@
+name: List Top Pros
+
+# @TODO - Update the event type to trigger the workflow
+# on:
+#   push:
+on: workflow_dispatch
+
+jobs:
+  list-top-pros:
+    runs-on: ubuntu-latest
+    container:
+      image: udx-worker:latest
+      volumes:
+        - bin:/step/bin
+        - static:/step/static
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      #
+      # `udx-worker hello_world`
+      #
+      # echo "Hello, world!"
+      # echo "Hello, Im inside udx worker docker container!"
+      # echo $UDX_WORKER_IMAGE_NAME
+      # echo $UDX_WORKER_COMMIT_SHA
+      # echo $UDX_WORKER_YAML_PATH
+      #
+      # `udx-worker build`
+      #
+      # `udx-worker build --build-arg key=value`
+      - name: UDX Worker Hello World
+        uses: ./.github/workflows/udx-worker.yml
+        with:
+          command: |
+            hello_world
+            build --post-validation
+          volumes: |
+            - bin:/step/bin
+            - static:/step/static
+
+      #
+      - name: Build
+        run: udx-worker build

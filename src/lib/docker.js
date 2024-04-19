@@ -10,6 +10,7 @@ export async function checkAndStartContainers(container_name) {
     if (!stdout.includes(container_name)) {
       console.log(`Container ${container_name} is not running. Starting it...`);
       await exec("docker-compose up -d");
+      console.log(`Container ${container_name} started.`);
     } else {
       console.log(`Container ${container_name} is already running.`);
     }
@@ -24,14 +25,16 @@ export async function executeDockerCommand(container_name, cmd) {
     return;
   }
 
-  let dockerCommand = `docker exec ${container_name} ${cmd}`;
+  const cmdString = cmd.join(" ");
 
-  console.log(`Executing following shell command: ${cmd}`);
+  let dockerCommand = `docker-compose up -d ${container_name} && docker exec ${container_name} ${cmdString}`;
+
+  console.log(`Executing following shell command: ${cmdString}`);
 
   // If the command is a shell, run it interactively
   if (cmd[0] === "bash" || cmd[0] === "sh") {
     console.log("Interactive mode enabled.");
-    dockerCommand = `docker exec -it ${container_name} ${cmd}`;
+    dockerCommand = `docker-compose up -d ${container_name} && docker exec -it ${container_name} ${cmdString}`;
   }
 
   try {

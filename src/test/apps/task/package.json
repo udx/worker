@@ -11,6 +11,11 @@
   ],
   "author": "",
   "license": "ISC",
-  "bin": {},
-  "dependencies": {}
+  "scripts": {
+    "postinstall": "udx-worker",
+    "udx-worker": "./node_modules/.bin/udx-worker"
+  },
+  "devDependencies": {
+    "udx-worker": "file:../../../.."
+  }
 }

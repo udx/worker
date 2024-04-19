@@ -55,7 +55,7 @@ nice_logs() {
 # Example: fetchConfigs "config.json" | jq
 #
 fetchConfigs() {
-    files=$(find ../configs/fixtures/configs/ -type f)
+    files=$(find /home/bin/fixtures/application/ -type f)
     
     if [[ -n $1 ]]; then
         filtered_files=$(echo "$files" | grep "$1")
@@ -85,7 +85,7 @@ fetchConfigs() {
 #     # alternative we use environment variables (later set via GitHub secrets)
 #     password: ${ANDYS_UDX_IO_NONINTERACTIVE_PASSWORD}
 #     domains: [cloud.google.com]
-ActorAuth() {
+ActorsAuth() {
     user=$1
     password=$2
     tenant=$3
@@ -107,6 +107,14 @@ ActorAuth() {
 
 # ---
 # kind: workerSecrets
+CleanUpActors() {
+    echo "Cleaning up actors..."
+    
+    echo "Actors cleaned up successfully."
+}
+
+# ---
+# kind: workerSecrets
 # version: udx.io/worker-v1/secrets
 # items:
 #     GOOGLE_CLOUD_SERVICE_ACCOUNT: bitwarden/svc.worker.ci
@@ -122,4 +130,90 @@ FetchSecrets(){
     echo "Kind: $kind"
     echo "Version: $version"
     echo "Items: $items"
+}
+
+# Put together and create all the necessary files and configurations for the project
+#
+InitProject() {
+    echo "Initializing project..."
+    
+    # Define the directory structure
+    declare -A dirs=(
+        ["bin"]="entrypoint.sh"
+        [".github/workflows"]="docker-build-and-release.yml"
+        ["environment/default"]="secrets.yml deployment.yml certificates.yml variables.yml"
+    )
+    
+    # Explanation for each directory and file
+    declare -A explanations=(
+        ["bin"]="Contains scripts that are run at the start of the project."
+        ["bin/entrypoint.sh"]="The script that is run when the Docker container starts."
+        [".github/workflows"]="Contains GitHub Actions workflows."
+        [".github/workflows/docker-build-and-release.yml"]="A workflow for building and releasing the Docker image."
+        ["environment/default"]="Contains configuration for the default environment."
+        ["environment/default/secrets.yml"]="Contains secrets for the default environment."
+        ["environment/default/deployment.yml"]="Contains deployment configuration for the default environment."
+        ["environment/default/certificates.yml"]="Contains certificates for the default environment."
+        ["environment/default/variables.yml"]="Contains environment variables for the default environment."
+        ["Dockerfile"]="Defines how to build the Docker image."
+        ["README.md"]="Provides information about the project."
+        [".gitignore"]="Specifies intentionally untracked files to ignore."
+        ["package.json"]="Defines the project and its dependencies."
+    )
+    
+    # Force mode: if set to true, all files will be recreated. If it's a string, only that file will be recreated.
+    force=${1:-false}
+    
+    # Loop through each directory
+    for dir in "${!dirs[@]}"; do
+        echo "${explanations[$dir]}"
+        
+        # Create the directory if it doesn't exist
+        if [[ ! -d "$dir" ]]; then
+            echo "Directory $dir does not exist. Creating..."
+            mkdir -p "$dir"
+        else
+            echo "Directory $dir already exists."
+        fi
+        
+        # Loop through each file in the directory
+        for file in ${dirs[$dir]}; do
+            echo "${explanations[$dir/$file]}"
+            
+            # Create the file if it doesn't exist or if force mode is enabled
+            if [[ ! -f "$dir/$file" ]] || [[ "$force" == true ]] || [[ "$force" == "$dir/$file" ]]; then
+                echo "File $dir/$file does not exist or force mode is enabled. Creating..."
+                touch "$dir/$file"
+            else
+                echo "File $dir/$file already exists."
+            fi
+        done
+    done
+    
+    # Create Dockerfile, README.md, .gitignore, and package.json in the root directory if they don't exist or if force mode is enabled
+    for file in "Dockerfile" "README.md" ".gitignore" "package.json"; do
+        echo "${explanations[$file]}"
+        
+        if [[ ! -f "$file" ]] || [[ "$force" == true ]] || [[ "$force" == "$file" ]]; then
+            echo "File $file does not exist or force mode is enabled. Creating..."
+            touch "$file"
+        else
+            echo "File $file already exists."
+        fi
+    done
+    
+    echo "Project initialized successfully."
+}
+
+# Fetch environment variables from variables.yml
+FetchEnvironmentVariables() {
+    echo "Fetching environment variables..."
+    
+    # @TODO 
+    # # Use yq to parse the YAML file and export the environment variables
+    # while IFS= read -r line; do
+    #     export "$line"
+    # done < <(yq e '.items | to_entries[] | "\(.key)=\(.value)"' /home/bin/fixtures/application/static/configs/default/variables.yml)
+    
+    echo "Environment variables fetched successfully."
 }

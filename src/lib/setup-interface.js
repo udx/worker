@@ -1,14 +1,19 @@
 import fs from "fs";
+import path from "path";
 import chalk from "chalk";
 import yaml from "yaml";
 import prompt from "prompt";
+import url from "url";
 
 let container_name;
 
 export async function handleSetup(
   interactive = false,
   composePath = "./docker-compose.yml",
-  templatePath = "./src/templates/docker-compose.md",
+  templatePath = path.join(
+    path.dirname(url.fileURLToPath(import.meta.url)),
+    "../templates/docker-compose.md"
+  ),
   force = false
 ) {
   // Check if docker-compose template exists
@@ -24,7 +29,15 @@ export async function handleSetup(
     container_name = Object.keys(composeFile.services)[0];
   } else {
     // Get package.json
-    const packageJson = JSON.parse(fs.readFileSync("./package.json", "utf-8"));
+    const packageJson = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          path.dirname(url.fileURLToPath(import.meta.url)),
+          "../../package.json"
+        ),
+        "utf-8"
+      )
+    );
 
     // Get config from package.json
     const config = packageJson.config;
@@ -32,6 +45,7 @@ export async function handleSetup(
     let inputs = config.environment;
 
     if (interactive) {
+      // Define the properties for the prompt
       // Define the properties for the prompt
       const properties = [
         {
@@ -48,7 +62,7 @@ export async function handleSetup(
           name: "volumes",
           description:
             "Enter multiple volumes separated by comma: ./src:/home/app,./bin:/home/bin",
-          default: config.environment.volume,
+          default: config.environment.volumes.join(","),
         },
       ];
 
@@ -77,7 +91,12 @@ export async function handleSetup(
       let value;
 
       if (variable === "volumes") {
-        value = inputs.volumes.split(",").map((volume) => volume.trim());
+        value = inputs.volumes
+          ? inputs.volumes
+              .split(",")
+              .map((volume) => `- ${volume.trim()}`)
+              .join("\n")
+          : "";
       } else {
         value = inputs[variable];
       }

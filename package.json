@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "description": "UDX Worker CLI.",
-  "main": "./src/app/index.js",
+  "main": "./src/index.js",
   "keywords": [
     "cli",
     "development",
@@ -21,7 +21,7 @@
   "author": "",
   "license": "ISC",
   "bin": {
-    "udx-worker": "./src/app/index.js"
+    "udx-worker": "./src/index.js"
   },
   "dependencies": {
     "chalk": "^5.3.0",

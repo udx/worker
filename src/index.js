@@ -4,7 +4,7 @@ import nopt from "nopt";
 
 import { handleSetup } from "./lib/setup-interface.js";
 import { checkAndStartContainers, executeDockerCommand } from "./lib/docker.js";
-import { showHelp } from "./lib/help.js";
+import help from "./lib/help.js";
 
 async function main() {
   // Setup Ephemeral Workstation with interactive mode
@@ -19,9 +19,10 @@ async function main() {
   const parsed = nopt(options, {}, process.argv, 2);
 
   // Execute Docker command
-  if (!cmd) {
-    console.log("No command provided.");
-    showHelp(container_name);
+  if (!parsed.cmd) {
+    console.log("No command provided. Configuration mode enabled.");
+    // help.showHelp(container_name);
+    await executeDockerCommand("udx-worker", ["project_init"]);
   } else {
     await executeDockerCommand("udx-worker", parsed.cmd);
   }

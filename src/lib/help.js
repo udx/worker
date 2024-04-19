@@ -1,14 +1,18 @@
 // @TODO
 // @TODO
 
-import { executeDockerCommand } from "./lib/docker.js";
+import { executeDockerCommand } from "./docker.js";
 
 function showHelp(container_name) {
-  console.log("Hello, world. This is the UDX Worker Command Line Interface.");
+  console.log("...");
+  console.log("...");
+  console.log("Hello, world.");
+  console.log("This is the UDX Worker Command Line Interface.");
+  console.log("...");
   console.log("Here are the available commands:");
 
   let command = "get_available_commands --format=json";
-  const commands = executeDockerCommand(container_name, command);
+  // const commands = executeDockerCommand(container_name, command);
 
   for (const i in commands) {
     let command = commands[i];
