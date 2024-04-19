@@ -32,32 +32,26 @@ ARG USER=udx-worker
 # Set NodeJS version to 20.x by default
 ARG NODE_VERSION=20.x
 
-# Set the source path to an (current location by default)
-ARG APP_SRC_PATH "src/app"
+# Set the source path to an application (current location by default)
+ARG APP_SRC_PATH="src/app"
+
+# Set the version of yq to be installed in the image
+ARG YQ_VERSION=v4.6.1
 
 # Copy user as an environment variable from arg
-ENV USER ${USER}
+ENV USER=${USER}
 
-# Install curl and other dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install yq
-RUN apt-get update && apt-get install -y wget && \
-    wget https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64 -O /usr/bin/yq && \
-    chmod +x /usr/bin/yq    
-
-# Install Node.js and npm
-RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash -
-
-# Install Node.js
-RUN apt-get install -y nodejs
+# Install curl, wget, gnupg, Node.js, npm and yq
+RUN apt-get update && \
+    apt-get install -y curl gnupg wget && \
+    curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get install -y nodejs && \
+    wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq && \
+    chmod +x /usr/bin/yq && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install npm packages globally
-RUN \
-    npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
+RUN npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
 
 # Copy the bin, etc directories to the image
 COPY --chown=${USER}:${USER} ./bin          /home/bin
@@ -73,7 +67,7 @@ USER ${USER}
 WORKDIR /home/app
 
 # Copy the application source code
-COPY --chown=${USER}:${USER} ${APP_SRC_PATH} /home/app
+COPY --chown=${USER}:${USER} ${APP_SRC_PATH} .
 
 # Set the entrypoint to run bin/entrypoint.sh
 ENTRYPOINT ["sh", "-c", "/home/bin/entrypoint.sh"]
