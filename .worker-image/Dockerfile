@@ -32,9 +32,6 @@ ARG USER=udx-worker
 # Set NodeJS version to 20.x by default
 ARG NODE_VERSION=20.x
 
-# Set the source path to an application (current location by default)
-ARG APP_SRC_PATH="src/app"
-
 # Set the version of yq to be installed in the image
 ARG YQ_VERSION=v4.6.1
 
@@ -53,21 +50,21 @@ RUN apt-get update && \
 # Install npm packages globally
 RUN npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
 
-# Copy the bin, etc directories to the image
-COPY --chown=${USER}:${USER} ./bin          /home/bin
-COPY --chown=${USER}:${USER} ./etc/home     /home/core
-
 # Create a new user
 RUN useradd -m ${USER}
+
+# Create a new directory for the user and change ownership
+RUN mkdir -p /home/${USER} && chown -R ${USER}:${USER} /home/${USER}
+
+# Copy the bin, etc directories to the image
+COPY --chown=${USER}:${USER} ./bin          /home/${USER}/bin-modules
+COPY --chown=${USER}:${USER} ./etc/home     /home/${USER}/etc
 
 # Switch to the non-root user after all commands that require root permissions have been executed
 USER ${USER}
 
 # Create a new directory for your application
-WORKDIR /home/app
-
-# Copy the application source code
-COPY --chown=${USER}:${USER} ${APP_SRC_PATH} .
+WORKDIR /home/${USER}
 
 # Set the entrypoint to run bin/entrypoint.sh
-ENTRYPOINT ["sh", "-c", "/home/bin/entrypoint.sh"]
+ENTRYPOINT ["sh", "-c", "/home/${USER}/bin-modules/entrypoint.sh"]

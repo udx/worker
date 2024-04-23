@@ -55,16 +55,16 @@ nice_logs() {
 # Example: fetchConfigs "config.json" | jq
 #
 fetchConfigs() {
-    files=$(find /home/bin/fixtures/application/ -type f)
+    files=$(find /home/bin-modules/fixtures/application/ -type f)
     
     if [[ -n $1 ]]; then
         filtered_files=$(echo "$files" | grep "$1")
         for file in $filtered_files; do
-            cat "$file"
+            nice_logs "$(cat "$file")" "info"
         done
     else
         for file in $files; do
-            echo "Found file: $file"
+            nice_logs "Found file: $file" "info"
         done
     fi
 }
@@ -93,24 +93,24 @@ ActorsAuth() {
     subscription=$5
     domains=$6
     
-    echo "User: $user"
-    echo "Password: $password"
-    echo "Tenant: $tenant"
-    echo "Application: $application"
-    echo "Subscription: $subscription"
-    echo "Domains: $domains"
+    nice_logs "User: $user" "info"
+    nice_logs "Password: $password" "info"
+    nice_logs "Tenant: $tenant" "info"
+    nice_logs "Application: $application" "info"
+    nice_logs "Subscription: $subscription" "info"
+    nice_logs "Domains: $domains" "info"
     
-    echo "Authenticating..."
+    nice_logs "Authenticating..." "info"
     
-    echo "Authenticated successfully."
+    nice_logs "Authenticated successfully." "success"
 }
 
 # ---
 # kind: workerSecrets
 CleanUpActors() {
-    echo "Cleaning up actors..."
+    nice_logs "Cleaning up actors..." "info"
     
-    echo "Actors cleaned up successfully."
+    nice_logs "Actors cleaned up successfully." "success"
 }
 
 # ---
@@ -127,23 +127,42 @@ FetchSecrets(){
     version=$(echo "$secrets" | yq e '.version' -)
     items=$(echo "$secrets" | yq e '.items' -)
     
-    echo "Kind: $kind"
-    echo "Version: $version"
-    echo "Items: $items"
+    nice_logs "Kind: $kind" "info"
+    nice_logs "Version: $version" "info"
+    nice_logs "Items: $items" "info"
 }
 
 # Put together and create all the necessary files and configurations for the project
 #
+# How to use:
+# 
+# [bash] InitProject [mode] [force]
+# [bash] InitProject
+# [bash] InitProject "apply"
+# [bash] InitProject "apply" "true"
+# [bash] InitProject "plan"
+# [bash] InitProject "plan" "true"
+# 
 InitProject() {
-    echo "Initializing project..."
-    
+    mode=${1:-"plan"} # Default to "plan" mode
+    force=${2:-false} # Default to not force
+
+    # Specify whether each directory is required
+    declare -A required=(
+        ["bin"]=true
+        [".github/workflows"]=false
+        ["environment/default"]=true
+    )
+
+    echo "Initializing project in $mode mode..."
+
     # Define the directory structure
     declare -A dirs=(
         ["bin"]="entrypoint.sh"
         [".github/workflows"]="docker-build-and-release.yml"
         ["environment/default"]="secrets.yml deployment.yml certificates.yml variables.yml"
     )
-    
+
     # Explanation for each directory and file
     declare -A explanations=(
         ["bin"]="Contains scripts that are run at the start of the project."
@@ -160,54 +179,70 @@ InitProject() {
         [".gitignore"]="Specifies intentionally untracked files to ignore."
         ["package.json"]="Defines the project and its dependencies."
     )
-    
-    # Force mode: if set to true, all files will be recreated. If it's a string, only that file will be recreated.
-    force=${1:-false}
-    
+
     # Loop through each directory
     for dir in "${!dirs[@]}"; do
-        echo "${explanations[$dir]}"
-        
-        # Create the directory if it doesn't exist
+        nice_logs "${explanations[$dir]}" "info"
+
+        # Check if the directory exists
         if [[ ! -d "$dir" ]]; then
-            echo "Directory $dir does not exist. Creating..."
-            mkdir -p "$dir"
+            # If the directory is required and doesn't exist, print an error and return
+            if [[ "${required[$dir]}" == true ]]; then
+                nice_logs "Required directory $dir does not exist." "error"
+                return 1
+            fi
+
+            # If we're in "apply" mode, create the directory
+            if [[ "$mode" == "apply" ]]; then
+                nice_logs "Directory $dir does not exist. Creating..." "info"
+                mkdir -p "$dir"
+            else
+                nice_logs "Directory $dir does not exist. Would create..." "info"
+            fi
         else
-            echo "Directory $dir already exists."
+            nice_logs "Directory $dir already exists." "info"
         fi
-        
+
         # Loop through each file in the directory
         for file in ${dirs[$dir]}; do
-            echo "${explanations[$dir/$file]}"
-            
+            nice_logs "${explanations[$dir/$file]}" "info"
+
             # Create the file if it doesn't exist or if force mode is enabled
             if [[ ! -f "$dir/$file" ]] || [[ "$force" == true ]] || [[ "$force" == "$dir/$file" ]]; then
-                echo "File $dir/$file does not exist or force mode is enabled. Creating..."
-                touch "$dir/$file"
+                if [[ "$mode" == "apply" ]]; then
+                    nice_logs "File $dir/$file does not exist or force mode is enabled. Creating..." "info"
+                    touch "$dir/$file"
+                else
+                    nice_logs "File $dir/$file does not exist or force mode is enabled. Would create..." "info"
+                fi
             else
-                echo "File $dir/$file already exists."
+                nice_logs "File $dir/$file already exists." "info"
             fi
         done
     done
-    
+
     # Create Dockerfile, README.md, .gitignore, and package.json in the root directory if they don't exist or if force mode is enabled
     for file in "Dockerfile" "README.md" ".gitignore" "package.json"; do
-        echo "${explanations[$file]}"
-        
+        nice_logs "${explanations[$file]}" "info"
+
         if [[ ! -f "$file" ]] || [[ "$force" == true ]] || [[ "$force" == "$file" ]]; then
-            echo "File $file does not exist or force mode is enabled. Creating..."
-            touch "$file"
+            if [[ "$mode" == "apply" ]]; then
+                nice_logs "File $file does not exist or force mode is enabled. Creating..." "info"
+                touch "$file"
+            else
+                nice_logs "File $file does not exist or force mode is enabled. Would create..." "info"
+            fi
         else
-            echo "File $file already exists."
+            nice_logs "File $file already exists." "info"
         fi
     done
-    
-    echo "Project initialized successfully."
+
+    nice_logs "Project initialization plan complete." "success"
 }
 
 # Fetch environment variables from variables.yml
 FetchEnvironmentVariables() {
-    echo "Fetching environment variables..."
+    nice_logs "Fetching environment variables..." "info"
     
     # @TODO 
     # # Use yq to parse the YAML file and export the environment variables
@@ -215,5 +250,5 @@ FetchEnvironmentVariables() {
     #     export "$line"
     # done < <(yq e '.items | to_entries[] | "\(.key)=\(.value)"' /home/bin/fixtures/application/static/configs/default/variables.yml)
     
-    echo "Environment variables fetched successfully."
+    nice_logs "Environment variables fetched successfully." "success"
 }
