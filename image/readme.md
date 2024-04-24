@@ -1,6 +1,6 @@
 # UDX Worker Image
 
-This repository contains the Docker image for the UDX Worker.
+This repository contains the base docker image for the UDX Worker.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ To use the UDX Worker Image, follow these steps:
 
 ## Development
 
-\*\* _NodeJS by default [pm2,ecosystem.config.js,npm]_
+_NodeJS by default [pm2,ecosystem.config.js,npm]_
 
 ### Container User File Structure
 

@@ -9,6 +9,7 @@
 # - GnuPG standard
 # - Node.js (20.x by default)
 # - NPM
+# - Python
 # - NPM packages globally (grunt-cli pm2 mocha should gulp-cli ionic request should-type)
 # 
 # ARGs: 
@@ -32,21 +33,20 @@ ARG USER=udx-worker
 # Set NodeJS version to 20.x by default
 ARG NODE_VERSION=20.x
 
-# Set the version of yq to be installed in the image
-ARG YQ_VERSION=v4.6.1
-
 # Copy user as an environment variable from arg
 ENV USER=${USER}
 
-# Install curl, wget, gnupg, Node.js, npm and yq
+# Set the environment variable to run Python unbuffered
+ENV PYTHONUNBUFFERED=1
+
+# Install curl, wget, gnupg, Node.js, npm and Python
 RUN apt-get update && \
-    apt-get install -y curl gnupg wget && \
+    apt-get install -y curl gnupg wget python3 python3-pip && \
     curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get install -y nodejs && \
-    YQ_VERSION=$(curl --silent "https://api.github.com/repos/mikefarah/yq/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') && \
-    wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq && \
-    chmod +x /usr/bin/yq && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    # Install pyyaml
+    pip3 install pyyaml
 
 # Install npm packages globally
 RUN npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
@@ -58,8 +58,9 @@ RUN useradd -m ${USER}
 RUN mkdir -p /home/${USER} && chown -R ${USER}:${USER} /home/${USER}
 
 # Copy the bin, etc directories to the image
-COPY --chown=${USER}:${USER} ./bin          /home/${USER}/bin-modules
-COPY --chown=${USER}:${USER} ./etc/home     /home/${USER}/etc
+COPY --chown=${USER}:${USER} ./bin              /home/${USER}/bin-modules
+COPY --chown=${USER}:${USER} ./etc/home         /home/${USER}/etc
+COPY --chown=${USER}:${USER} ./etc/configs      /home/${USER}/worker-configs
 
 # Switch to the non-root user after all commands that require root permissions have been executed
 USER ${USER}
