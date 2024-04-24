@@ -9,6 +9,15 @@
 
 set -e
 
+# Remove images
+docker_images=$(docker images -q)
+if [ -n "$docker_images" ]; then
+    echo "Removing images..."
+    docker rmi -f $docker_images
+else
+    echo "No images to remove."
+fi
+
 FORCE=0
 if [ "$1" == "-f" ]; then
     FORCE=1
@@ -26,6 +35,7 @@ fi
 # Stop running containers
 echo "Stopping running containers..."
 docker-compose down
+docker-compose rm -f
 
 # Remove images
 docker_images=$(docker images -q)

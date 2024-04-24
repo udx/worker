@@ -11,11 +11,10 @@
   ],
   "author": "",
   "license": "ISC",
-  "scripts": {
-    "postinstall": "udx-worker",
-    "udx-worker": "./node_modules/.bin/udx-worker"
-  },
   "devDependencies": {
-    "udx-worker": "file:../../../.."
+    "udx-worker": "file:../../udx-worker"
+  },
+  "scripts": {
+    "prepare": "udx-worker setup"
   }
 }

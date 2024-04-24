@@ -16,7 +16,7 @@ const execSync = promisify(exec);
 // console.log(isRunning);
 //
 async function isContainerRunning(container_name) {
-  const { stdout } = execSync("docker-compose ps");
+  const { stdout } = await execSync("docker-compose ps");
   return stdout.includes(container_name);
 }
 
@@ -57,6 +57,7 @@ export async function checkAndStartContainers(container_name) {
     }
   } catch (error) {
     console.error(chalk.red(`Error: ${error.message}`));
+    console.error(error);
   }
 }
 

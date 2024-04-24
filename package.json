@@ -2,31 +2,22 @@
   "name": "udx-worker",
   "version": "0.0.1",
   "type": "module",
-  "description": "A CLI tool for managing UDX Worker tasks.",
-  "main": "./.worker-dev-cli/index.js",
+  "description": "Tool for managing tasks and apps utilizing containerized workers",
+  "main": "./cli/index.js",
   "keywords": [
+    "app",
     "cli",
+    "container",
     "development",
+    "docker",
+    "task",
     "tooling",
     "udx",
     "worker"
   ],
-  "config": {
-    "environment": {
-      "container_name": "udx-worker",
-      "user": "udx-worker",
-      "volumes": [
-        "./:/home/app"
-      ]
-    },
-    "compose_template": "./.worker-dev-cli/docker-compose.template",
-    "compose_path": "./docker-compose.yml"
-  },
-  "author": "Your Name",
+  "author": "fqjony (Dmitry Smirnov)",
   "license": "ISC",
-  "bin": {
-    "udx-worker": "./.worker-dev-cli/index.js"
-  },
+  "bin": "./cli/index.js",
   "devDependencies": {
     "@babel/core": "^7.24.4",
     "@babel/preset-env": "^7.24.4",
@@ -39,17 +30,5 @@
     "nopt": "^7.2.0",
     "prompt": "^1.3.0",
     "yaml": "^2.4.1"
-  },
-  "scripts": {
-    "start": "node ./.worker-dev-cli/index.js",
-    "test": "jest"
-  },
-  "jest": {
-    "transform": {
-      "^.+\\.jsx?$": "babel-jest"
-    },
-    "transformIgnorePatterns": [
-      "/node_modules/(?!chalk).+\\.js$"
-    ]
   }
 }

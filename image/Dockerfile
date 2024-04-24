@@ -1,5 +1,5 @@
 #
-# UDX Worker Dockerfile
+# UDX Worker Docker Image
 #
 # Description: This Dockerfile is used to build a Docker image for a UDX Worker.
 #
@@ -43,6 +43,7 @@ RUN apt-get update && \
     apt-get install -y curl gnupg wget && \
     curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get install -y nodejs && \
+    YQ_VERSION=$(curl --silent "https://api.github.com/repos/mikefarah/yq/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') && \
     wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
     rm -rf /var/lib/apt/lists/*
@@ -63,7 +64,7 @@ COPY --chown=${USER}:${USER} ./etc/home     /home/${USER}/etc
 # Switch to the non-root user after all commands that require root permissions have been executed
 USER ${USER}
 
-# Create a new directory for your application
+# Create a new directory for user
 WORKDIR /home/${USER}
 
 # Set the entrypoint to run bin/entrypoint.sh

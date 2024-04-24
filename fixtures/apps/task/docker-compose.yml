@@ -1,0 +1,6 @@
+services:
+  udx-worker:
+    container_name: udx-worker
+    image: udx-worker-udx-worker:latest
+    volumes:
+      - ./fixtures/apps/task:/home/app

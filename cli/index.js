@@ -13,6 +13,7 @@ const program = new Command();
 // Set the version and description of the application
 //
 // Example usage:
+//
 // $ udx-worker --version
 // $ udx-worker -v
 // $ udx-worker --help
@@ -46,11 +47,11 @@ program
 // - -f, --force: Force file creation
 //
 // Example usage:
-// $ worker-dev-cli setup
-// $ worker-dev-cli setup -m plan
-// $ worker-dev-cli setup -m apply
-// $ worker-dev-cli setup -f
-// $ worker-dev-cli setup -m plan -f
+// $ cli setup
+// $ cli setup -m plan
+// $ cli setup -m apply
+// $ cli setup -f
+// $ cli setup -m plan -f
 program
   .command("setup")
   .description("Setup Ephemeral Workstation [interactive mode supported]")
@@ -99,7 +100,7 @@ program
     console.log(chalk.green("Executing cleanup script..."));
 
     // Execute the cleanup script
-    execSync("bin/cleanup.sh", { stdio: "inherit" });
+    execSync("cli/bin/cleanup.sh", { stdio: "inherit" });
   });
 
 // Define the restart command
@@ -111,7 +112,7 @@ program
     console.log(chalk.green("Executing restart script..."));
 
     // Execute the restart command
-    execSync("bin/restart.sh", { stdio: "inherit" });
+    execSync("./cli/bin/restart.sh", { stdio: "inherit" });
   });
 
 // Parse the command line arguments

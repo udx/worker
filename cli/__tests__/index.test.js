@@ -6,7 +6,7 @@
 // - The tests also check that the execute command fails when an invalid command is passed.
 // - The tests use the Jest testing framework and the commander module to parse the command line arguments.
 // - The tests are run using `npm test` command.
-// - The tests are run in the `.worker-dev-cli/__tests__` directory.
+// - The tests are run in the `cli/__tests__` directory.
 
 // Import the necessary modules and functions
 import { init } from "../lib/interface.js";

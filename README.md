@@ -5,13 +5,15 @@ UDX Worker is a tool that provides a consistent interface for running any type o
 The UDX Worker is designed to be flexible and can be used in two different ways: as an npm cli or as a standalone Docker image.
 <br />
 
-## NPM CLI
+## Features
 
-The npm package is designed for software development, environments configuration, testing.
+- CLI
+- Worker Container
+- Github Actions Integration
 
-### Install
+### Installation
 
-It can be installed globally on local machine and used to run and test cloud applications or scripts, generate configuration manifests, etc.
+It can be installed globally on local machine and used to configure, build and run cloud tasks, services, applications or scripts.
 
 #### NPM Registry
 
@@ -28,28 +30,6 @@ npm install -g
 ### Use (In Progress)
 
 The npm package acts as a wrapper to the Docker CLI, providing a simplified, user-friendly interface for running Docker commands.
-
-Please see [Worker Container Use](#use-1) section for more information on what features are currently available.
-
-```
-udx-worker generate "staging/worker.yml"
-```
-
-\* _Generating /home/app/src/staging/worker.yml [ask to override if exists]_
-
-```
-udx-worker task --module=terraform
-```
-
-\* \_Start script task including terraform to perform configuration execution as one time process, expects tf configurations under ./terraform/\*
-
-```
-udx-worker service start
-```
-
-\* _Start NodeJS service as running process, expects app entrypoint is ./index.js_
-
-All this makes it easy to develop and test your applications locally, before deploying them to a production environment.
 
 ## Worker Container
 

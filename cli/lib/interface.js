@@ -1,14 +1,17 @@
 import fs from "fs";
-import path from "path";
 import chalk from "chalk";
-import yaml from "yaml";
+import { parse, stringify } from "yaml";
 import prompt from "prompt";
 
 //
 // Define the default compose path
 //
-async function getInputs(interactive, config) {
-  let inputs = config.environment;
+async function getInputs(interactive) {
+  let inputs = {
+    container_name: "udx-worker",
+    user: "udx-worker",
+    volumes: ["./fixtures/apps/task:/home/app"],
+  };
 
   if (!interactive) {
     console.log(
@@ -17,13 +20,16 @@ async function getInputs(interactive, config) {
     return inputs;
   }
 
-  const properties = Object.keys(config.environment).map((key) => {
+  const properties = Object.keys(inputs).map((key) => {
+    let defaultValue = inputs[key];
+
+    if (Array.isArray(defaultValue)) {
+      defaultValue = defaultValue.join(",");
+    }
     return {
       name: key,
       description: `Enter the ${key.replace("_", " ")}`,
-      default: Array.isArray(config.environment[key])
-        ? config.environment[key].join(",")
-        : config.environment[key],
+      default: defaultValue,
     };
   });
 
@@ -60,16 +66,16 @@ function formatTemplate(inputs, templatePath) {
   for (const variable in inputs) {
     let value;
 
-    if (variable === "volumes") {
-      value = inputs.volumes
-        ? inputs.volumes
-            .split(",")
-            .map((volume) => `- ${volume.trim()}`)
-            .join("\n")
-        : "";
-    } else {
-      value = inputs[variable];
-    }
+    // if (variable === "volumes") {
+    //   value = inputs.volumes
+    //     ? inputs.volumes
+    //         .split(",")
+    //         .map((volume) => `- ${volume.trim()}`)
+    //         .join("\n")
+    //     : "";
+    // } else {
+    value = inputs[variable];
+    // }
 
     const regex = new RegExp(`#{${variable.toUpperCase()}}`, "g");
     template = template.replace(regex, value);
@@ -94,20 +100,11 @@ function formatTemplate(inputs, templatePath) {
 // init(false, true); - Force file creation
 // init(true, true); - Interactive mode and force file creation
 //
-export async function init(interactive = false, force = false) {
-  // Get package config
-  const packageJson = JSON.parse(
-    fs.readFileSync(
-      path.join(__dirname, "../../package.json"),
-      "utf-8"
-    )
-  );
-
-  const config = packageJson.config;
-
-  // Get the compose path
-  const composePath = config.compose_path || composePath;
-
+export async function init(
+  interactive = false,
+  force = false,
+  composePath = "./docker-compose.yml"
+) {
   let containerName;
 
   // Check if the docker-compose file exists
@@ -115,16 +112,29 @@ export async function init(interactive = false, force = false) {
   // Otherwise, get the inputs and create the file
   if (fs.existsSync(composePath) && !force) {
     console.log(chalk.yellow(`${composePath} already exists. Skipping Setup.`));
-    const composeFile = yaml.parse(fs.readFileSync(composePath, "utf8"));
+    const composeFile = parse(fs.readFileSync(composePath, "utf8"));
     containerName = Object.keys(composeFile.services)[0];
   } else {
-    const inputs = await getInputs(interactive, config);
+    const inputs = await getInputs(interactive);
     containerName = inputs.container_name;
 
-    const templatePath = config.template_path;
-    const template = formatTemplate(inputs, templatePath);
+    // @TODO: Move template to configs repo and update the logic
+    // const templatePath = "./cli/templates/docker-compose.template";
+    // const template = formatTemplate(inputs, templatePath);
+    const template = {
+      services: {
+        "udx-worker": {
+          container_name: inputs.container_name,
+          // @TODO
+          image: "udx-worker-udx-worker:latest",
+          volumes: inputs.volumes
+            ? inputs.volumes.map((volume) => `${volume.trim()}`)
+            : [],
+        },
+      },
+    };
 
-    fs.writeFileSync(composePath, template);
+    fs.writeFileSync(composePath, stringify(template));
     console.log(chalk.green(`Successfully created ${composePath}`));
   }
 

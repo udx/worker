@@ -52,7 +52,7 @@ jobs:
       id-token: write
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
-      IMAGE_CONTEXT: .worker-image
+      IMAGE_CONTEXT: image
 
     steps:
       - name: Checkout code

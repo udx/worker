@@ -1,7 +1,9 @@
 #!/bin/bash
 
+ls -R | grep -E ":$|[^/]+\.[^/]+$" | sed -e 's/:$//' -e 's/[^-][^/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
+
 # Load all modules in the modules directory
-for module_file in /home/bin-modules/modules/*.sh; do
+for module_file in bin-modules/modules/*.sh; do
     if [ -f "$module_file" ]; then
         source "$module_file"
     fi

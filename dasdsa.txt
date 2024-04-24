@@ -1,0 +1,20 @@
+.
+|- bin-modules
+    entrypoint.sh
+|- fixtures
+    |- application
+        readme.md
+    |- bin
+        entrypoint.sh
+    |- static
+        |- configs
+            readme.md
+            |- default
+                certificates.yml
+                deployment.yml
+                secrets.yml
+                variables.yml
+|- modules
+    utils.sh
+|- etc
+    ecosystem.config.js

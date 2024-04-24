@@ -55,7 +55,7 @@ nice_logs() {
 # Example: fetchConfigs "config.json" | jq
 #
 fetchConfigs() {
-    files=$(find /home/bin-modules/fixtures/application/ -type f)
+    files=$(find bin-modules/fixtures/application/ -type f)
     
     if [[ -n $1 ]]; then
         filtered_files=$(echo "$files" | grep "$1")
@@ -125,7 +125,7 @@ FetchSecrets(){
     # Parse the secrets using yq
     kind=$(echo "$secrets" | yq e '.kind' -)
     version=$(echo "$secrets" | yq e '.version' -)
-    items=$(echo "$secrets" | yq e '.items' -)
+    items=$(echo "$secrets" | yq e '.items | to_entries | map({(.key): .value}) | add' -)
     
     nice_logs "Kind: $kind" "info"
     nice_logs "Version: $version" "info"
