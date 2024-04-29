@@ -1,16 +1,9 @@
-# Node.js
-node_modules/
+# .gitignore
 
-# Logs
-logs/
-*.log
+# Ignore macOS system files
+.DS_Store
 
-# Build output
-dist/
-
-# Environment variables
-.env
-
-# IDE files
-.vscode/
+# Ignore IDE specific files
 .idea/
+.vscode/
+*.iml

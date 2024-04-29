@@ -1,0 +1,4 @@
+services:
+  #{CONTAINER_NAME}:
+    container_name: #{CONTAINER_NAME}
+    image: cli-udx-worker
