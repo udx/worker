@@ -1,0 +1,114 @@
+## CI Pipeline to build and release npm package to GitHub
+##
+## How it works:
+## -------------
+##
+## - all vars are stored as repository variables
+## - the pipeline is triggered on every push to any branch
+## - if the push is to "release" (latest) branch, the pipeline will release the package
+## - published release is tagged with the version from GitVersion
+## - the pipeline will tag new version as well as "latest" tag and delete the previous "latest" image
+## - if the push is to any other branch, the pipeline will only make test build
+## - the pipeline will create a GitHub release with the changelog
+## - the changelog is generated automatically from the commit messages between the last tag and HEAD
+## - GitVersion is configured in ci/git-version.yml. It ensures using "ContinuousDeployment" versioning mode and branching strategy (release: "latest", development: "!latest")
+##
+## Required repository variables:
+## ------------------------------
+## - GCP_PROJECT: Google Cloud project ID
+## - GCP_REGION: Google Cloud region
+## - GCP_REGISTRY_REPO: Google Artifact Registry repository name
+## - GCP_AUTH_PROVIDER: Google Cloud Workload Identity Provider
+## - GCP_SERVICE_ACCOUNT: Google Cloud service account name
+## - DOCKER_IMAGE_NAME: Docker image name
+##
+## References:
+## -----------
+##
+## - GitTools actions: https://github.com/GitTools/actions
+## - Google Cloud SDK: https://cloud.google.com/sdk
+## - GitVersion: https://gitversion.net/docs/
+##
+
+name: Build CLI
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "package.json"
+      - "cli/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_BRANCH_REF: refs/heads/latest
+      CLI_CONTEXT: cli
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "20.x"
+
+      - name: Run Tests
+        run: |
+          npm install
+          npm test
+
+      - name: Install GitVersion
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: gittools/actions/gitversion/setup@v1
+        with:
+          versionSpec: "5.12.0"
+
+      - name: Determine Version
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v1
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
+
+      - name: Pack CLI
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        run: |
+          npm ci --production
+          npm pack
+
+      - name: Upload CLI binary
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: actions/upload-artifact@v2
+        with:
+          name: cli-binary
+          path: ./*.tgz
+
+      - name: Generate changelog
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD -- ./cli --pretty=format:"- %s" > changelog.txt
+          echo "::set-output name=changelog::$(cat changelog.txt)"
+
+      - name: Create GitHub release
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const semVer = "${{ steps.gitversion.outputs.semVer }}"
+            const changelog = "${{ steps.changelog.outputs.changelog }}"
+            github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${semVer}`,
+              name: `Release v${semVer}`,
+              body: `Release Notes:\n${changelog}`
+            })

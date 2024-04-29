@@ -2,6 +2,7 @@ import fs from "fs";
 import chalk from "chalk";
 import { parse, stringify } from "yaml";
 import prompt from "prompt";
+import _ from "lodash";
 
 //
 // Define the default compose path
@@ -20,15 +21,13 @@ async function getInputs(interactive) {
     return inputs;
   }
 
-  const properties = Object.keys(inputs).map((key) => {
-    let defaultValue = inputs[key];
-
-    if (Array.isArray(defaultValue)) {
+  const properties = _.map(inputs, (defaultValue, key) => {
+    if (_.isArray(defaultValue)) {
       defaultValue = defaultValue.join(",");
     }
     return {
       name: key,
-      description: `Enter the ${key.replace("_", " ")}`,
+      description: `Enter the ${_.replace(key, "_", " ")}`,
       default: defaultValue,
     };
   });
@@ -63,23 +62,10 @@ function formatTemplate(inputs, templatePath) {
 
   let template = fs.readFileSync(templatePath, "utf8");
 
-  for (const variable in inputs) {
-    let value;
-
-    // if (variable === "volumes") {
-    //   value = inputs.volumes
-    //     ? inputs.volumes
-    //         .split(",")
-    //         .map((volume) => `- ${volume.trim()}`)
-    //         .join("\n")
-    //     : "";
-    // } else {
-    value = inputs[variable];
-    // }
-
-    const regex = new RegExp(`#{${variable.toUpperCase()}}`, "g");
-    template = template.replace(regex, value);
-  }
+  _.forIn(inputs, (value, variable) => {
+    const regex = new RegExp(`#{${_.toUpper(variable)}}`, "g");
+    template = _.replace(template, regex, value);
+  });
 
   return template;
 }
@@ -113,23 +99,17 @@ export async function init(
   if (fs.existsSync(composePath) && !force) {
     console.log(chalk.yellow(`${composePath} already exists. Skipping Setup.`));
     const composeFile = parse(fs.readFileSync(composePath, "utf8"));
-    containerName = Object.keys(composeFile.services)[0];
+    containerName = _.head(_.keys(composeFile.services));
   } else {
     const inputs = await getInputs(interactive);
     containerName = inputs.container_name;
 
-    // @TODO: Move template to configs repo and update the logic
-    // const templatePath = "./cli/templates/docker-compose.template";
-    // const template = formatTemplate(inputs, templatePath);
     const template = {
       services: {
         "udx-worker": {
           container_name: inputs.container_name,
-          // @TODO
           image: "udx-worker-udx-worker:latest",
-          volumes: inputs.volumes
-            ? inputs.volumes.map((volume) => `${volume.trim()}`)
-            : [],
+          volumes: _.map(inputs.volumes, (volume) => `${_.trim(volume)}`),
         },
       },
     };

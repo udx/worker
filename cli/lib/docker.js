@@ -1,46 +1,21 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import chalk from "chalk";
+import _ from "lodash";
 
 // Promisify the exec function from child_process
 const execSync = promisify(exec);
 
-//
-// Define a function to check if a container is running
-//
-// @param {string} container_name - The name of the container
-// @returns {boolean} - A boolean value indicating if the container is running
-//
-// Example usage:
-// const isRunning = await isContainerRunning("udx-worker");
-// console.log(isRunning);
-//
 async function isContainerRunning(container_name) {
   const { stdout } = await execSync("docker-compose ps");
-  return stdout.includes(container_name);
+  return _.includes(stdout, container_name);
 }
 
-//
-// Define a function to start a container
-//
-// @param {string} container_name - The name of the container
-//
-// Example usage:
-// await startContainer("udx-worker");
-//
 async function startContainer(container_name) {
   execSync("docker-compose up -d");
   console.log(chalk.green(`Container ${container_name} started.`));
 }
 
-//
-// Define a function to check and start containers
-//
-// @param {string} container_name - The name of the container
-//
-// Example usage:
-// await checkAndStartContainers("udx-worker");
-//
 export async function checkAndStartContainers(container_name) {
   try {
     if (!(await isContainerRunning(container_name))) {
@@ -61,18 +36,8 @@ export async function checkAndStartContainers(container_name) {
   }
 }
 
-//
-// Define a function to prepare the Docker command
-//
-// @param {string} container_name - The name of the container
-// @param {string} cmd - The command to be executed
-//
-// Example usage:
-//
-// prepareDockerCommand("udx-worker");
-//
 function prepareDockerCommand(container_name, cmd) {
-  if (!cmd || cmd.length === 0) {
+  if (_.isEmpty(cmd)) {
     console.log(chalk.yellow("No command provided."));
     return;
   }
@@ -81,8 +46,8 @@ function prepareDockerCommand(container_name, cmd) {
     chalk.blue(`Preparing Docker command for container ${container_name}`)
   );
 
-  const cmdString = cmd.join(" ");
-  const isInteractive = cmd[0] === "bash" || cmd[0] === "sh";
+  const cmdString = _.join(cmd, " ");
+  const isInteractive = _.includes(["bash", "sh"], _.head(cmd));
 
   console.log(chalk.blue(`Executing following shell command: ${cmdString}`));
 
@@ -99,15 +64,6 @@ function prepareDockerCommand(container_name, cmd) {
   return command;
 }
 
-//
-// Define a function to execute a Docker command
-//
-// @param {string} container_name - The name of the container
-// @param {string[]} cmd - The command to be executed
-//
-// Example usage:
-// await executeDockerCommand("udx-worker", ["bash"]);
-//
 export async function executeDockerCommand(container_name, cmd) {
   try {
     console.log(
@@ -122,11 +78,6 @@ export async function executeDockerCommand(container_name, cmd) {
   }
 }
 
-//
-// Define a function to build a Docker image
-//
-// Example usage:
-//
 export async function buildWorkerImage() {
   try {
     console.log(chalk.green("Building Docker image..."));
