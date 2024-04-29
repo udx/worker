@@ -34,18 +34,9 @@ name: Build CLI
 
 on:
   push:
-    branches:
-      - "**"
     paths:
       - "cli/**"
       - ".github/workflows/cli.yml"
-  workflow_dispatch:
-    inputs:
-      release:
-        description: "Trigger release"
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   build:
@@ -72,13 +63,13 @@ jobs:
           npm test
 
       - name: Install GitVersion
-        if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
-        if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1
         with:
@@ -86,27 +77,27 @@ jobs:
           configFilePath: ci/git-version.yml
 
       - name: Pack CLI
-        if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
           npm ci --production
           npm pack
 
       - name: Upload CLI binary
-        if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/upload-artifact@v2
         with:
           name: cli-binary
           path: ./*.tgz
 
       - name: Generate changelog
-        if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > changelog.txt
           echo "::set-output name=changelog::$(cat changelog.txt)"
 
       - name: Create GitHub release
-        if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}

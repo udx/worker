@@ -15,13 +15,17 @@ To use the UDX Worker Image, follow these steps:
 1. Pull the Docker image from the Docker Hub:
 
    ```shell
-   docker pull udx/worker-image:latest
+   docker pull gcr.io/[PROJECT-ID]/[IMAGE]:[TAG]
+
+   ## docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
    ```
 
 2. Run the UDX Worker container:
 
    ```shell
-   docker run -d --name udx-worker udx/worker-image:latest
+    docker run -d --name udx-worker gcr.io/[PROJECT-ID]/[IMAGE]:[TAG]
+
+    ## docker run -d --name udx-worker gcr.io/rabbit-ci-tooling/udx-worker:latest
    ```
 
 3. Access the UDX Worker container:
