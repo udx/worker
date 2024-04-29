@@ -22,3 +22,6 @@ yarn.lock
 
 # Ignore build output
 dist/
+
+# Ignore the .env file
+docker-compose.yml

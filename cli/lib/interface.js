@@ -108,8 +108,8 @@ export async function init(
       services: {
         "udx-worker": {
           container_name: inputs.container_name,
-          image: "udx-worker-udx-worker:latest",
-          volumes: _.map(inputs.volumes, (volume) => `${_.trim(volume)}`),
+          image: "cli-udx-worker:latest",
+          // volumes: _.map(inputs.volumes, (volume) => `${_.trim(volume)}`),
         },
       },
     };

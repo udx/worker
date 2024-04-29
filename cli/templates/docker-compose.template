@@ -1,8 +1,4 @@
 services:
   #{CONTAINER_NAME}:
     container_name: #{CONTAINER_NAME}
-    image: udx-worker-udx-worker
-    volumes:
-      #{VOLUMES}
-    tty: true
-    stdin_open: true
+    image: cli-udx-worker
