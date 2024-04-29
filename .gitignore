@@ -1,0 +1,9 @@
+# .gitignore
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.iml
