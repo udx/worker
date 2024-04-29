@@ -19,7 +19,7 @@ const { commands } = pkg.config;
 const program = new Command();
 
 program
-  .version("0.0.1")
+  .version(pkg.version)
   .description(
     "UDX Worker CLI: A tool for managing UDX Worker tasks such as setting up, executing commands, building, restarting, and cleaning up."
   )
