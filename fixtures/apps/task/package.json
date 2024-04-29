@@ -12,9 +12,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "udx-worker": "file:../../udx-worker"
+    "udx-worker": "file:../../../cli"
   },
   "scripts": {
-    "prepare": "udx-worker setup"
+    "prepare": "node ./node_modules/.bin/udx-worker setup"
   }
 }

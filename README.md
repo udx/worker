@@ -75,4 +75,4 @@ It encapsulates the operating system, system libraries, third-party modules, etc
 
 - `./Dockerfile`: used by Docker to build an image.
 - `./docker-compose.yml`: configure docker worker containers.
-- `./package.json`: manifest file for worker cli.
+- `./cli/package.json`: manifest file for worker cli.

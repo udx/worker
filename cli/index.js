@@ -3,10 +3,16 @@ import chalk from "chalk";
 import { execSync } from "child_process";
 import { init } from "./lib/interface.js";
 import { checkAndStartContainers, executeDockerCommand } from "./lib/docker.js";
-import fs from 'fs';
+import fs from "fs";
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Read and parse the package.json file
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+const filePath = path.join(__dirname, "package.json");
+const pkg = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
 const { commands } = pkg.config;
 

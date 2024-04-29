@@ -5,7 +5,7 @@ import path from 'path';
 jest.mock('child_process');
 
 // Read and parse the package.json file
-const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf-8'));
+const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../cli/package.json'), 'utf-8'));
 
 const { commands } = pkg.config;
 

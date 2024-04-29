@@ -3,7 +3,7 @@
   "version": "latest",
   "type": "module",
   "description": "Tool for managing tasks and apps utilizing containerized workers",
-  "main": "./cli/index.js",
+  "main": "index.js",
   "keywords": [
     "app",
     "cli",
@@ -17,7 +17,9 @@
   ],
   "author": "fqjony (Dmitry Smirnov)",
   "license": "ISC",
-  "bin": "./cli/index.js",
+  "bin": {
+    "udx-worker": "./index.js"
+  },
   "scripts": {
     "test": "jest"
   },
