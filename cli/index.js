@@ -63,14 +63,14 @@ commands.forEach((command) => {
           break;
         case "restart":
           console.log(chalk.green("Executing restart script..."));
-          const restartCommand = `sh ./cli/bin/restart.sh ${
+          const restartCommand = `sh ./bin/restart.sh ${
             cmd.force ? "-f" : ""
           }`;
           execSync(restartCommand, { stdio: "inherit" });
           break;
         case "cleanup":
           console.log(chalk.green("Executing cleanup script..."));
-          const cleanupCommand = `sh ./cli/bin/cleanup.sh ${
+          const cleanupCommand = `sh ./bin/cleanup.sh ${
             cmd.force ? "-f" : ""
           }`;
           execSync(cleanupCommand, { stdio: "inherit" });
