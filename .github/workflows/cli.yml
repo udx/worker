@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload CLI binary
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: cli-binary
           path: ./*.tgz
