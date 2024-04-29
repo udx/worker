@@ -4,8 +4,8 @@ import { execSync } from "child_process";
 import { init } from "./lib/interface.js";
 import { checkAndStartContainers, executeDockerCommand } from "./lib/docker.js";
 import fs from "fs";
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,19 +42,19 @@ commands.forEach((command) => {
       cmd.option(option.flags, option.description, option.defaultValue);
     });
 
-    cmd.action(async (cmd) => {
+    cmd.action(async (options) => {
       // You can use a switch statement or a map of functions to call the correct function based on the action name
       switch (command.action) {
         case "init":
           console.log(chalk.green("Starting the application..."));
-          const container_name = await init(cmd.mode, cmd.force);
+          const container_name = await init(options.mode, options.force);
           console.log(chalk.green("Ephemeral Workstation setup completed."));
           await checkAndStartContainers(container_name);
           console.log(chalk.green("Container check completed."));
           break;
         case "executeDockerCommand":
           console.log(chalk.green("Executing Docker command..."));
-          await executeDockerCommand("udx-worker", cmd);
+          await executeDockerCommand("udx-worker", options.command);
           break;
         case "build":
           console.log(chalk.green("Executing build script..."));
@@ -63,19 +63,14 @@ commands.forEach((command) => {
           break;
         case "restart":
           console.log(chalk.green("Executing restart script..."));
-          const restartCommand = `sh ./bin/restart.sh ${
-            cmd.force ? "-f" : ""
-          }`;
+          const restartCommand = `sh ./bin/restart.sh ${cmd.force ? "-f" : ""}`;
           execSync(restartCommand, { stdio: "inherit" });
           break;
         case "cleanup":
           console.log(chalk.green("Executing cleanup script..."));
-          const cleanupCommand = `sh ./bin/cleanup.sh ${
-            cmd.force ? "-f" : ""
-          }`;
+          const cleanupCommand = `sh ./bin/cleanup.sh ${cmd.force ? "-f" : ""}`;
           execSync(cleanupCommand, { stdio: "inherit" });
           break;
-        // Add more cases as needed
       }
     });
   }

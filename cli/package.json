@@ -62,6 +62,13 @@
         "name": "execute",
         "description": "Execute a Docker command on the 'udx-worker' container.",
         "enabled": true,
+        "options": [
+          {
+            "flags": "--command <command>",
+            "description": "Command to execute",
+            "defaultValue": ""
+          }
+        ],
         "action": "executeDockerCommand"
       },
       {
