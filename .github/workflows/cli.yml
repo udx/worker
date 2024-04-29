@@ -1,17 +1,17 @@
-## CI Pipeline to build and release npm package to GitHub
+## CI Pipeline to build, test, and release npm package to GitHub
 ##
 ## How it works:
 ## -------------
 ##
-## - all vars are stored as repository variables
-## - the pipeline is triggered on every push to any branch
-## - if the push is to "release" (latest) branch, the pipeline will release the package
-## - published release is tagged with the version from GitVersion
-## - the pipeline will tag new version as well as "latest" tag and delete the previous "latest" image
-## - if the push is to any other branch, the pipeline will only make test build
-## - the pipeline will create a GitHub release with the changelog
-## - the changelog is generated automatically from the commit messages between the last tag and HEAD
-## - GitVersion is configured in ci/git-version.yml. It ensures using "ContinuousDeployment" versioning mode and branching strategy (release: "latest", development: "!latest")
+## - All variables are stored as repository variables
+## - The pipeline is triggered on every push to any branch
+## - If the push is to the "release" (latest) branch, the pipeline will release the package
+## - The released package is tagged with the version from GitVersion
+## - The pipeline will tag the new version as well as the "latest" tag and delete the previous "latest" image
+## - If the push is to any other branch, the pipeline will only perform a test build
+## - The pipeline will create a GitHub release with the changelog
+## - The changelog is generated automatically from the commit messages between the last tag and the current HEAD
+## - GitVersion is configured in ci/git-version.yml. It ensures the use of "ContinuousDeployment" versioning mode and branching strategy (release: "latest", development: "!latest")
 ##
 ## Required repository variables:
 ## ------------------------------
@@ -37,7 +37,6 @@ on:
     branches:
       - "**"
     paths:
-      - "package.json"
       - "cli/**"
   workflow_dispatch:
     inputs:

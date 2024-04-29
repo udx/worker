@@ -1,22 +1,23 @@
-## CI Pipeline to build and push docker images to Google Artifact Registry
+## Continuous Integration (CI) Pipeline for Docker Image Management
 ##
-## How it works:
-## -------------
+## Overview:
+## ---------
 ##
-## - all vars are stored as repository variables
-## - an access to google cloud is granted using a service account and workload identity provider
-## - the pipeline is triggered on every push to any branch
-## - if the push is to "release" (latest) branch, the pipeline will build and push the image
-## - published images are tagged with the version from GitVersion
-## - the pipeline will tag new version as well as "latest" tag and delete the previous "latest" image
-## - if the push is to any other branch, the pipeline will only make test build
-## - "Build" job is configured with "contents" and "id-token" write permissions to allow pushing to Google Artifact Registry
-## - the pipeline will also create a GitHub release with the changelog
-## - Github release is created with version from GitVersion
-## - the changelog is generated automatically from the commit messages between the last tag and HEAD
-## - GitVersion is configured in ci/git-version.yml. It ensures using "ContinuousDeployment" versioning mode and branching strategy (release: "latest", development: "!latest")
+## This CI pipeline is designed to build and push Docker images to the Google Artifact Registry.
+## It is triggered on every push to any branch.
+## However, only pushes to the "release" (latest) branch result in the building and pushing of the image.
+## For all other branches, the pipeline only performs a test build.
 ##
-## Required repository variables:
+## The pipeline uses repository variables to store all necessary information.
+## Access to Google Cloud is granted using a service account and workload identity provider.
+## The images that are published are tagged with the version from GitVersion.
+## The pipeline also tags the new version as "latest", deletes the previous "latest" image, and creates a GitHub release with the changelog.
+##
+## The changelog is automatically generated from the commit messages between the last tag and HEAD.
+## GitVersion is configured in ci/git-version.yml, ensuring the use of "ContinuousDeployment" versioning mode and branching strategy
+## (release: "latest", development: "!latest").
+##
+## Required Repository Variables:
 ## ------------------------------
 ## - GCP_PROJECT: Google Cloud project ID
 ## - GCP_REGION: Google Cloud region
