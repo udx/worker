@@ -1,6 +1,6 @@
 {
   "name": "udx-worker",
-  "version": "0.0.1",
+  "version": "latest",
   "type": "module",
   "description": "Tool for managing tasks and apps utilizing containerized workers",
   "main": "./cli/index.js",

@@ -16,16 +16,15 @@ if [ "$1" == "-f" ]; then
 fi
 
 # Check if there are any worker containers running
-if [ "$(docker ps -q -f name=udx-worker)" == "" ]; then
+if [ "$(docker-compose ps -q udx-worker)" == "" ]; then
     echo "No worker containers are running."
-    exit 0
 else
-    echo `${docker ps -q -f name=udx-worker} | wc -l` "worker containers are running."
+    echo `${docker-compose ps -q udx-worker} | wc -l` "worker containers are running."
 fi
 
-# Stop running containers
-echo "Stopping running containers..."
-docker-compose down
+# Stop running containers and remove containers, networks, volumes, and images
+echo "Stopping running containers and removing containers, networks, volumes, and images confugured in the docker-compose file."
+docker-compose down --rmi all --volumes
 
 if [ $FORCE -eq 0 ]; then
     echo "This will remove all stopped containers and images. Are you sure? [y/N]"
@@ -34,16 +33,8 @@ if [ $FORCE -eq 0 ]; then
         echo "Aborting cleanup."
         exit 1
     fi
+else
+    echo "Force cleanup. Removing all stopped containers and images without confirmation."
 fi
 
-# Remove stopped containers
-if [ "$(docker ps -a -q)" != "" ]; then
-    echo "Removing stopped containers..."
-    docker rm $(docker ps -a -q)
-fi
-
-# Remove images
-if [ "$(docker images -q)" != "" ]; then
-    echo "Removing images..."
-    docker rmi $(docker images -q)
-fi
+echo "Cleanup completed."

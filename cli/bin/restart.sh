@@ -9,23 +9,36 @@
 
 set -e
 
-# Remove images
-docker_images=$(docker images -q)
-if [ -n "$docker_images" ]; then
-    echo "Removing images..."
-    docker rmi -f $docker_images
-else
-    echo "No images to remove."
+# Check if Docker is running
+if ! docker info >/dev/null 2>&1; then
+    echo "Docker is not running. Please start Docker and try again."
+    exit 1
+fi
+
+# Check if Docker Compose is installed
+if ! command -v docker-compose >/dev/null 2>&1; then
+    echo "Docker Compose is not installed. Please install Docker Compose and try again."
+    exit 1
 fi
 
 FORCE=0
-if [ "$1" == "-f" ]; then
-    FORCE=1
-fi
+
+# Parse command-line options
+while getopts "f" opt; do
+    case ${opt} in
+        f)
+            FORCE=1
+        ;;
+        \?)
+            echo "Invalid option: -$OPTARG" 1>&2
+            exit 1
+        ;;
+    esac
+done
 
 if [ $FORCE -eq 0 ]; then
     echo "This will stop all running containers, remove all images, rebuild images, and start new containers. Are you sure? [y/N]"
-    read answer
+    read -r answer
     if [ "$answer" != "y" ]; then
         echo "Aborting restart."
         exit 1
@@ -35,16 +48,14 @@ fi
 # Stop running containers
 echo "Stopping running containers..."
 docker-compose down
-docker-compose rm -f
+
+# Remove stopped containers
+echo "Removing stopped containers..."
+docker container prune -f
 
 # Remove images
-docker_images=$(docker images -q)
-if [ -n "$docker_images" ]; then
-    echo "Removing images..."
-    docker rmi $docker_images
-else
-    echo "No images to remove."
-fi
+echo "Removing images..."
+docker image prune -a -f
 
 # Rebuild images
 echo "Rebuilding images..."
