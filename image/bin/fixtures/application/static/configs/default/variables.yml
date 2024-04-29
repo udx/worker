@@ -1,0 +1,27 @@
+---
+kind: workerVariables
+version: udx.io/worker-v1/variables
+items:
+  # "udx-worker"
+  DOCKER_IMAGE_NAME: #{DOCKER_IMAGE_NAME}
+
+  # "projects/309037306746/locations/global/workloadIdentityPools/udx-worker-pool/providers/udx-worker-provider"
+  GCP_AUTH_PROVIDER: #{GCP_AUTH_PROVIDER}
+
+  # "rabbit-ci-tooling"
+  GCP_PROJECT: #{GCP_PROJECT}
+
+  # "us-central1"
+  GCP_REGION: #{GCP_REGION}
+
+  # "udx-worker"
+  GCP_REGISTRY_REPO: #{GCP_REGISTRY_REPO}
+
+  # "svc-udx-worker@rabbit-ci-tooling.iam.gserviceaccount.com"
+  GCP_SERVICE_ACCOUNT: #{GCP_SERVICE_ACCOUNT}
+
+  # "https://github.com/udx/worker-repo-best-practice-configs"
+  GITHUB_CONFIGS_REPO: #{GITHUB_CONFIGS_REPO}
+
+  # "main"
+  GITHUB_CONFIGS_BRANCH: #{GITHUB_CONFIGS_BRANCH}

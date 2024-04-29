@@ -1,123 +1,79 @@
-import { exec } from "child_process";
+import { Command } from "commander";
+import chalk from "chalk";
+import { execSync } from "child_process";
+import { init } from "./lib/interface.js";
+import { checkAndStartContainers, executeDockerCommand } from "./lib/docker.js";
 import fs from "fs";
-import nopt from "nopt";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
 
-// Define options
-const options = {
-  type: [String, null],
-  cmd: [String, Array],
-  service_name: [String, null],
-  user: [String, null],
-  app_path: [String, null],
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Parse command line arguments
-const parsed = nopt(options, {}, process.argv, 2);
+// Read and parse the package.json file
+const filePath = path.join(__dirname, "package.json");
+const pkg = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
-// Map type to Docker service name
-let container;
-switch (parsed.type) {
-  case "service":
-    container = "udx-worker-service";
-    break;
-  case "task":
-    container = "udx-worker-task";
-    break;
-  default:
-    console.error(`Error: Unknown type "${parsed.type}".`);
-    return;
-}
+const { commands } = pkg.config;
 
-// Check if docker-compose.yml exists
-if (!fs.existsSync("./docker-compose.yml")) {
-  console.error("Error: docker-compose.yml does not exist.");
-  return;
-}
-// Check if docker-compose.md exists in the templates directory
-if (!fs.existsSync("./fixtures/templates/docker-compose.md")) {
-  console.error("Error: docker-compose.md template does not exist.");
-  return;
-}
+const program = new Command();
 
-if (fs.existsSync("./docker-compose.yml")) {
-  console.log("docker-compose.yml already exists.");
-} else {
-  // Read the contents of the template file
-  let template = fs.readFileSync(
-    "./fixtures/templates/docker-compose.md",
-    "utf8"
-  );
-
-  // Define default values
-  let defaults = {
-    "#{SERVICE_NAME}": "udx-worker",
-    "#{USER}": "udx-worker",
-    "#{APP_PATH}": ".",
-  };
-
-  // Override default values with command line arguments, if provided
-  if (parsed.service_name) defaults["#{SERVICE_NAME}"] = parsed.service_name;
-  if (parsed.user) defaults["#{USER}"] = parsed.user;
-  if (parsed.app_path) defaults["#{APP_PATH}"] = parsed.app_path;
-
-  // Replace variables in the template with their default values
-  for (const variable in defaults) {
-    const value = defaults[variable];
-    const regex = new RegExp(variable, "g");
-    template = template.replace(regex, value);
-  }
-
-  // Use the template to create a new docker-compose.yml file
-  fs.writeFileSync("./docker-compose.yml", template);
-}
-
-// Check if Docker containers are running
-exec("docker-compose ps", (error, stdout, stderr) => {
-  if (error) {
-    console.error(`Error: ${error.message}`);
-    return;
-  }
-
-  if (stderr) {
-    console.error(`Error: ${stderr}`);
-    return;
-  }
-
-  // If Docker containers are not running, start them
-  if (!stdout.includes(container)) {
-    exec("docker-compose up -d", (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`);
-        return;
+program
+  .version(pkg.version)
+  .description(
+    "UDX Worker CLI: A tool for managing UDX Worker tasks such as setting up, executing commands, building, restarting, and cleaning up."
+  )
+  .on("--help", () => {
+    console.log("");
+    console.log("Examples:");
+    commands.forEach((command) => {
+      if (command.enabled) {
+        console.log(`  $ udx-worker ${command.name}`);
       }
+    });
+    console.log("");
+  });
 
-      if (stderr) {
-        console.error(`Error: ${stderr}`);
-        return;
+commands.forEach((command) => {
+  if (command.enabled) {
+    const cmd = program.command(command.name).description(command.description);
+
+    command.options?.forEach((option) => {
+      cmd.option(option.flags, option.description, option.defaultValue);
+    });
+
+    cmd.action(async (options) => {
+      // You can use a switch statement or a map of functions to call the correct function based on the action name
+      switch (command.action) {
+        case "init":
+          console.log(chalk.green("Starting the application..."));
+          const container_name = await init(options.mode, options.force);
+          console.log(chalk.green("Ephemeral Workstation setup completed."));
+          await checkAndStartContainers(container_name);
+          console.log(chalk.green("Container check completed."));
+          break;
+        case "executeDockerCommand":
+          console.log(chalk.green("Executing Docker command..."));
+          await executeDockerCommand("udx-worker", options.command);
+          break;
+        case "build":
+          console.log(chalk.green("Executing build script..."));
+          const buildCommand = `docker-compose build`;
+          execSync(buildCommand, { stdio: "inherit" });
+          break;
+        case "restart":
+          console.log(chalk.green("Executing restart script..."));
+          const restartCommand = `sh ./bin/restart.sh ${cmd.force ? "-f" : ""}`;
+          execSync(restartCommand, { stdio: "inherit" });
+          break;
+        case "cleanup":
+          console.log(chalk.green("Executing cleanup script..."));
+          const cleanupCommand = `sh ./bin/cleanup.sh ${cmd.force ? "-f" : ""}`;
+          execSync(cleanupCommand, { stdio: "inherit" });
+          break;
       }
-
-      console.log(`Output: ${stdout}`);
     });
   }
 });
 
-let dockerCommand = `docker exec ${container} ${parsed.cmd.join(" ")}`;
-
-// If the command is a shell, run it interactively
-if (parsed.cmd[0] === "bash" || parsed.cmd[0] === "sh") {
-  dockerCommand = `docker exec -it ${container} ${parsed.cmd.join(" ")}`;
-}
-
-exec(dockerCommand, (error, stdout, stderr) => {
-  if (error) {
-    console.error(`Error: ${error.message}`);
-    return;
-  }
-
-  if (stderr) {
-    console.error(`Error: ${stderr}`);
-    return;
-  }
-
-  console.log(`Output: ${stdout}`);
-});
+program.parse(process.argv);

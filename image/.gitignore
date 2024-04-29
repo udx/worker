@@ -1,0 +1,27 @@
+# .gitignore
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore node modules
+node_modules/
+
+# Ignore log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore the npm package lock files
+package-lock.json
+yarn.lock
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.iml
+
+# Ignore environment secrets
+.env
+
+# Ignore build output
+dist/
