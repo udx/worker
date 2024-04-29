@@ -39,14 +39,20 @@ ENV USER=${USER}
 # Set the environment variable to run Python unbuffered
 ENV PYTHONUNBUFFERED=1
 
-# Install curl, wget, gnupg, Node.js, npm and Python
 RUN apt-get update && \
-    apt-get install -y curl gnupg wget python3 python3-pip && \
+    apt-get install -y curl gnupg wget build-essential libssl-dev zlib1g-dev libbz2-dev \
+    libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
+    xz-utils tk-dev libffi-dev liblzma-dev python-openssl git && \
+    curl https://pyenv.run | bash && \
+    export PATH="/root/.pyenv/bin:$PATH" && \
+    eval "$(pyenv init -)" && \
+    eval "$(pyenv virtualenv-init -)" && \
+    pyenv install 3.8.6 && \
+    pyenv global 3.8.6 && \
     curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/* && \
-    # Install pyyaml
-    pip3 install pyyaml
+    pip install pyyaml    
 
 # Install npm packages globally
 RUN npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type
