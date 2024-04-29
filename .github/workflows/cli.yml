@@ -38,6 +38,7 @@ on:
       - "**"
     paths:
       - "cli/**"
+      - ".github/workflows/cli.yml"
   workflow_dispatch:
     inputs:
       release:
@@ -66,6 +67,7 @@ jobs:
 
       - name: Run Tests
         run: |
+          cd $CLI_CONTEXT
           npm install
           npm test
 
@@ -100,7 +102,7 @@ jobs:
         if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- ./cli --pretty=format:"- %s" > changelog.txt
+          git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > changelog.txt
           echo "::set-output name=changelog::$(cat changelog.txt)"
 
       - name: Create GitHub release

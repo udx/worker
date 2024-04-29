@@ -46,6 +46,7 @@ on:
       - "**"
     paths:
       - "image/**"
+      - ".github/workflows/image.yml"
   workflow_dispatch:
     inputs:
       release:
@@ -139,7 +140,7 @@ jobs:
         if: success() && ((github.ref == env.RELEASE_BRANCH_REF) || github.event.inputs.release)
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- ./image --pretty=format:"- %s" > changelog.txt
+          git log $(git describe --tags --abbrev=0)..HEAD -- ./${IMAGE_CONTEXT} --pretty=format:"- %s" > changelog.txt
           echo "::set-output name=changelog::$(cat changelog.txt)"
 
       - name: Create GitHub release
