@@ -16,26 +16,6 @@ async function startContainer(container_name) {
   console.log(chalk.green(`Container ${container_name} started.`));
 }
 
-export async function checkAndStartContainers(container_name) {
-  try {
-    if (!(await isContainerRunning(container_name))) {
-      console.log(
-        chalk.yellow(
-          `Container ${container_name} is not running. Starting it...`
-        )
-      );
-      await startContainer(container_name);
-    } else {
-      console.log(
-        chalk.green(`Container ${container_name} is already running.`)
-      );
-    }
-  } catch (error) {
-    console.error(chalk.red(`Error: ${error.message}`));
-    console.error(error);
-  }
-}
-
 function prepareDockerCommand(container_name, cmd) {
   if (_.isEmpty(cmd)) {
     console.log(chalk.yellow("No command provided."));
@@ -62,6 +42,26 @@ function prepareDockerCommand(container_name, cmd) {
   console.log(chalk.blue(`Docker command: ${command}`));
 
   return command;
+}
+
+export async function checkAndStartContainers(container_name) {
+  try {
+    if (!(await isContainerRunning(container_name))) {
+      console.log(
+        chalk.yellow(
+          `Container ${container_name} is not running. Starting it...`
+        )
+      );
+      await startContainer(container_name);
+    } else {
+      console.log(
+        chalk.green(`Container ${container_name} is already running.`)
+      );
+    }
+  } catch (error) {
+    console.error(chalk.red(`Error: ${error.message}`));
+    console.error(error);
+  }
 }
 
 export async function executeDockerCommand(container_name, cmd) {
