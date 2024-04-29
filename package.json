@@ -35,5 +35,65 @@
     "@babel/preset-env": "^7.24.4",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0"
+  },
+  "config": {
+    "commands": [
+      {
+        "name": "setup",
+        "description": "Setup Ephemeral Workstation. This command initializes the workstation and checks the status of the containers. Interactive mode is supported.",
+        "enabled": true,
+        "options": [
+          {
+            "flags": "-m, --mode <mode>",
+            "description": "Set the mode. Options are 'plan' or 'apply'. Default is 'plan'.",
+            "defaultValue": "plan"
+          },
+          {
+            "flags": "-f, --force",
+            "description": "Force file creation. If set, existing files will be overwritten.",
+            "defaultValue": false
+          }
+        ],
+        "action": "init"
+      },
+      {
+        "name": "execute",
+        "description": "Execute a Docker command on the 'udx-worker' container.",
+        "enabled": true,
+        "action": "executeDockerCommand"
+      },
+      {
+        "name": "build",
+        "description": "Build the worker image using the Docker Compose build command.",
+        "enabled": true,
+        "action": "build"
+      },
+      {
+        "name": "restart",
+        "description": "Restart the application. This command runs a restart script.",
+        "enabled": true,
+        "options": [
+          {
+            "flags": "-f, --force",
+            "description": "Force restart. If set, the application will be restarted even if it's currently running.",
+            "defaultValue": false
+          }
+        ],
+        "action": "restart"
+      },
+      {
+        "name": "cleanup",
+        "description": "Execute a cleanup script. This command removes temporary files and resets the application to its initial state.",
+        "enabled": true,
+        "options": [
+          {
+            "flags": "-f, --force",
+            "description": "Force cleanup. If set, the cleanup script will be run regardless of the current state of the application.",
+            "defaultValue": false
+          }
+        ],
+        "action": "cleanup"
+      }
+    ]
   }
 }
