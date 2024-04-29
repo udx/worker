@@ -22,7 +22,7 @@ else
 fi
 
 # Use the colors in logs
-nice_logs "Here you go, welcome to UDX Worker." "info"
+nice_logs "Here you go, welcome to UDX Worker Container." "info"
 
 nice_logs "..."
 
