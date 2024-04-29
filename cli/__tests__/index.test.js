@@ -20,9 +20,12 @@ describe("udx-worker CLI", () => {
           // Mock the execSync function to simulate the execution of the command
           execSync.mockImplementation(() => 'success');
           // Execute the command and get the output
-          result = execSync(`node cli/index.js ${command.name}`);
+          const cmd = `node cli/index.js ${command.name}`;
+          console.log(`Executing command: ${cmd}`);
+          result = execSync(cmd);
         } catch (error) {
           // If the command fails, log the error message and set result to null
+          console.error(`Error executing command: ${command.name}`);
           console.error(error.stderr.toString());
           result = null;
         }
