@@ -41,6 +41,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
       CLI_CONTEXT: cli
