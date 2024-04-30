@@ -63,13 +63,13 @@ jobs:
           npm test
 
       - name: Install GitVersion
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1
         with:
@@ -84,21 +84,21 @@ jobs:
           npm pack
 
       - name: Upload CLI binary
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/upload-artifact@v4
         with:
           name: cli-binary
           path: ./*.tgz
 
       - name: Generate changelog
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > changelog.txt
           echo "::set-output name=changelog::$(cat changelog.txt)"
 
       - name: Create GitHub release
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
