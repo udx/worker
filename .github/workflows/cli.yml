@@ -91,7 +91,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cli-binary
-          path: ./*.tgz
+          path: ./${{ env.CLI_CONTEXT }}/*.tgz
 
       - name: Generate changelog
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
