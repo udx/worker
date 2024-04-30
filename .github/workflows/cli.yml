@@ -77,8 +77,9 @@ jobs:
           configFilePath: ci/git-version.yml
 
       - name: Pack CLI
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
+          cd $CLI_CONTEXT
           npm ci --production
           npm pack
 
