@@ -47,6 +47,8 @@ jobs:
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
       CLI_CONTEXT: cli
+      RELEASE_ASSET_PATH: release.tar.gz
+      CHANGELOG_ASSET_PATH: changelog.txt
 
     steps:
       - name: Checkout code
@@ -90,27 +92,29 @@ jobs:
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/upload-artifact@v4
         with:
-          name: cli-binary
-          path: ./${{ env.CLI_CONTEXT }}/*.tgz
+          name: ${{ env.RELEASE_ASSET_PATH }}
+          path: ${{ env.CLI_CONTEXT }}
 
       - name: Generate changelog
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > changelog.txt          
+          git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > ${CHANGELOG_ASSET_PATH}
 
       - name: Install Octokit
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: npm install @octokit/rest
 
-      - name: Create GitHub release
+      - name: Create Github release and upload asset
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
-        id: create_release
-        run: node ci/scripts/create-release.js
+        run: |
+          node -e "
+          const { createRelease, uploadReleaseAsset } = require('./ci/scripts/github');
+          (async () => {
+            const releaseId = await createRelease('${{ env.CHANGELOG_ASSET_PATH }}');
+            await uploadReleaseAsset(releaseId, '${{ env.CLI_CONTEXT }}/${{ env.RELEASE_ASSET_PATH }}');
+          })();"
         env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           semVer: ${{ steps.gitversion.outputs.semVer }}
-          changelog: ${{ env.changelog }}
-
-      - name: Upload release asset
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
-        run: node ci/scripts/upload-release-asset.js ${{secrets.GITHUB_TOKEN}} ${{steps.create_release.outputs.result}} ./${{ env.CLI_CONTEXT }}/*.tgz
+          GITHUB_REPOSITORY: udx/udx-worker
