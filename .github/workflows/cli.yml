@@ -86,7 +86,7 @@ jobs:
         run: |
           cd $CLI_CONTEXT
           npm install --production
-          tar -czvf ${{ env.RELEASE_ASSET_PATH }} .
+          ls -la
 
       - name: Upload CLI binary
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
