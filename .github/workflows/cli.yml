@@ -47,7 +47,7 @@ jobs:
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
       CLI_CONTEXT: cli
-      RELEASE_ASSET_PATH: release.tar.gz
+      RELEASE_ASSET_PATH: udx-worker-latest.tgz
       CHANGELOG_ASSET_PATH: changelog.txt
 
     steps:
@@ -86,9 +86,7 @@ jobs:
         run: |
           cd $CLI_CONTEXT
           npm install --production
-          ls -la
           npm pack	
-          ls -la
 
       - name: Upload CLI binary
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
