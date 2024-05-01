@@ -97,8 +97,7 @@ jobs:
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > changelog.txt
-          echo "changelog=$(cat changelog.txt)" >> $GITHUB_ENV
+          git log $(git describe --tags --abbrev=0)..HEAD -- ./${CLI_CONTEXT} --pretty=format:"- %s" > changelog.txt          
 
       - name: Install Octokit
         run: npm install @octokit/rest
