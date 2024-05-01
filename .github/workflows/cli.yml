@@ -102,16 +102,41 @@ jobs:
 
       - name: Create GitHub release
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        id: create_release
         uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const semVer = "${{ steps.gitversion.outputs.semVer }}"
             const changelog = "${{ steps.changelog.outputs.changelog }}"
-            github.rest.repos.createRelease({
+            const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: `v${semVer}`,
               name: `Release v${semVer}`,
               body: `Release Notes:\n${changelog}`
+            })
+            return release.data.id
+
+      - name: Upload release asset
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const releaseId = "${{ steps.create_release.outputs.result }}"
+            const assetPath = ".${{ env.CLI_CONTEXT }}/*.tgz"
+            const assetName = path.basename(assetPath)
+            const assetMimeType = 'application/gzip'
+            const file = fs.readFileSync(assetPath)
+            const { data: uploadUrl } = await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+              name: assetName,
+              data: file,
+              headers: {
+                'content-type': assetMimeType,
+                'content-length': file.length
+              }
             })
