@@ -118,6 +118,9 @@ jobs:
             })
             return release.data.id
 
+      - name: Install dependencies
+        run: npm install @octokit/rest
+
       - name: Upload release asset
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: node ci/scripts/upload-release-asset.js ${{secrets.GITHUB_TOKEN}} ${{steps.create_release.outputs.result}} ./${{ env.CLI_CONTEXT }}/*.tgz
