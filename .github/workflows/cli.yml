@@ -85,7 +85,7 @@ jobs:
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
           cd $CLI_CONTEXT
-          npm ci --production --loglevel=error && wait
+          npm install --production
           tar -czvf ${{ env.RELEASE_ASSET_PATH }} .
 
       - name: Upload CLI binary
