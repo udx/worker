@@ -87,6 +87,8 @@ jobs:
           cd $CLI_CONTEXT
           npm install --production
           ls -la
+          npm pack	
+          ls -la
 
       - name: Upload CLI binary
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
