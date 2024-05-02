@@ -119,7 +119,6 @@ jobs:
       - name: Create Github release and upload asset
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
-          ls -la
           node -e "
           const { createRelease, uploadReleaseAsset } = require('./ci/scripts/github');
           (async () => {
