@@ -98,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.RELEASE_ASSET_NAME }}
-          path: .
+          path: ./${{ env.CLI_CONTEXT }}/
 
       - name: Clean up
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
