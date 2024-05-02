@@ -123,7 +123,7 @@ jobs:
           const { createRelease, uploadReleaseAsset } = require('./ci/scripts/github');
           (async () => {
             const releaseId = await createRelease('${{ env.CHANGELOG_ASSET_PATH }}');
-            await uploadReleaseAsset(releaseId, '${{ env.CLI_CONTEXT }}/${{ env.RELEASE_ASSET_NAME }}');
+            await uploadReleaseAsset(releaseId, '${{ env.CLI_CONTEXT }}/', '${{ env.RELEASE_ASSET_NAME }}');
           })();"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
