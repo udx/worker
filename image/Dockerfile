@@ -44,14 +44,14 @@ ENV PYTHONUNBUFFERED=1
 # Install necessary packages as root
 RUN apt-get update && \
     apt-get install -y curl gnupg wget build-essential libssl-dev zlib1g-dev libbz2-dev \
-    libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
+    libreadline-dev libsqlite3-dev llvm libncurses5-dev libncursesw5-dev \
     xz-utils tk-dev libffi-dev liblzma-dev git && \
     curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # Install npm packages globally
-RUN npm install -g grunt-cli pm2 mocha should gulp-cli ionic request should-type    
+RUN npm install -g grunt-cli pm2 mocha should gulp-cli should-type axios
 
 # Create a new user
 RUN useradd -m ${USER}
