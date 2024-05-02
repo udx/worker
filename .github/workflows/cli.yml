@@ -69,13 +69,13 @@ jobs:
           npm test
 
       - name: Install GitVersion
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1
         with:
@@ -83,7 +83,7 @@ jobs:
           configFilePath: ci/git-version.yml
 
       - name: Pack CLI
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
 
           # Install dependencies
@@ -94,13 +94,13 @@ jobs:
           npm pack --ignore-scripts
 
       - name: Clean up
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
           rm -rf $CLI_CONTEXT/node_modules
           rm -rf $CLI_CONTEXT/package-lock.json          
 
       - name: Upload CLI binary
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.RELEASE_ASSET_NAME }}
@@ -112,17 +112,17 @@ jobs:
 
 
       - name: Generate changelog
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" > ${CHANGELOG_ASSET_PATH}
 
       - name: Install Octokit
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: npm install @octokit/rest
 
       - name: Create Github release and upload asset
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
           node -e "
           const { createRelease, uploadReleaseAsset } = require('./ci/scripts/github');
