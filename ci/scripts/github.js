@@ -66,9 +66,10 @@ async function createRelease(changelogFile) {
  * @returns
  */
 async function uploadReleaseAsset(releaseId, assetPath, assetName) {
-  // const assetName = path.basename(assetPath);
   const assetMimeType = "application/gzip";
-  const file = fs.readFileSync(path.join('../../', assetPath, assetName));
+  const file = fs.readFileSync(
+    path.join(__dirname, "../../", assetPath, assetName)
+  );
 
   await octokit.rest.repos.uploadReleaseAsset({
     owner: process.env.GITHUB_REPOSITORY.split("/")[0],
