@@ -93,18 +93,23 @@ jobs:
           # Pack the CLI
           npm pack --ignore-scripts
 
+      - name: Clean up
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        run: |
+          rm -rf $CLI_CONTEXT/node_modules
+          rm -rf $CLI_CONTEXT/package-lock.json          
+
       - name: Upload CLI binary
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.RELEASE_ASSET_NAME }}
-          path: ./${{ env.CLI_CONTEXT }}/
+          path: |
+            ./${{ env.CLI_CONTEXT }}/
+            !./${{ env.CLI_CONTEXT }}/__tests__
+            !./${{ env.CLI_CONTEXT }}/*.tgz
+            !./${{ env.CLI_CONTEXT }}/*.cjs
 
-      - name: Clean up
-        # if: success() && github.ref == env.RELEASE_BRANCH_REF
-        run: |
-          rm -rf $CLI_CONTEXT/node_modules
-          rm -rf $CLI_CONTEXT/package-lock.json
 
       - name: Generate changelog
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
