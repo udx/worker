@@ -23,6 +23,12 @@
   "scripts": {
     "test": "jest"
   },
+  "files": [
+    "index.js",
+    "lib/**/*.js",
+    "bin/*.sh",
+    "templates/*.template"
+  ],
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^12.0.0",
