@@ -105,7 +105,6 @@ jobs:
         run: |
           rm -rf $CLI_CONTEXT/node_modules
           rm -rf $CLI_CONTEXT/package-lock.json
-          rm -rf $CLI_CONTEXT/*.tgz
 
       - name: Generate changelog
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
