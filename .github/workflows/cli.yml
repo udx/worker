@@ -85,12 +85,12 @@ jobs:
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
 
-            # Install dependencies
-            cd $CLI_CONTEXT
-            npm install --omit=dev
+          # Install dependencies
+          cd $CLI_CONTEXT
+          npm install --omit=dev
 
-            # Pack the CLI
-            npm pack --ignore-scripts
+          # Pack the CLI
+          npm pack --ignore-scripts
 
       - name: Upload CLI binary
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -98,6 +98,13 @@ jobs:
         with:
           name: ${{ env.RELEASE_ASSET_NAME }}
           path: .
+
+      - name: Clean up
+        # if: success() && github.ref == env.RELEASE_BRANCH_REF
+        run: |
+          rm -rf $CLI_CONTEXT/node_modules
+          rm -rf $CLI_CONTEXT/package-lock.json
+          rm -rf $CLI_CONTEXT/*.tgz
 
       - name: Generate changelog
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
