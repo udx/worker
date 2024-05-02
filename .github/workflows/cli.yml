@@ -35,9 +35,10 @@ name: Build CLI
 on:
   push:
     paths:
-      - "cli/**"
       - ".github/workflows/cli.yml"
-
+      - "ci/*"
+      - "cli/**"
+      
 jobs:
   build:
     runs-on: ubuntu-latest
