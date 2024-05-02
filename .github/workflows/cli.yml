@@ -47,7 +47,7 @@ jobs:
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
       CLI_CONTEXT: cli
-      RELEASE_ASSET_PATH: udx-worker-latest.tgz
+      RELEASE_ASSET_NAME: udx-worker-latest.tgz
       CHANGELOG_ASSET_PATH: changelog.txt
 
     steps:
@@ -84,16 +84,20 @@ jobs:
       - name: Pack CLI
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
-          cd $CLI_CONTEXT
-          npm install --production
-          npm pack	
+
+            # Install dependencies
+            cd $CLI_CONTEXT
+            npm install --omit=dev
+
+            # Pack the CLI
+            npm pack --ignore-scripts
 
       - name: Upload CLI binary
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.RELEASE_ASSET_PATH }}
-          path: ${{ env.CLI_CONTEXT }}
+          name: ${{ env.RELEASE_ASSET_NAME }}
+          path: .
 
       - name: Generate changelog
         # if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -112,7 +116,7 @@ jobs:
           const { createRelease, uploadReleaseAsset } = require('./ci/scripts/github');
           (async () => {
             const releaseId = await createRelease('${{ env.CHANGELOG_ASSET_PATH }}');
-            await uploadReleaseAsset(releaseId, '${{ env.CLI_CONTEXT }}/${{ env.RELEASE_ASSET_PATH }}');
+            await uploadReleaseAsset(releaseId, '${{ env.CLI_CONTEXT }}/${{ env.RELEASE_ASSET_NAME }}');
           })();"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
