@@ -60,23 +60,32 @@ for (( i=0; i<${#str}; i++ )); do
   message "success" "${str:$i:1}" "-n"
   # Add a pause only if the current character is not a space or newline
   if [[ "${str:$i:1}" != " " && "${str:$i:1}" != $'\n' ]]; then
-    sleep 0.001
+    sleep 0.01
   fi
 done
+
+sleep 1
 
 # Use the functions in the script
 message "white" "\n\nWhat I can do:\n---\n"
 
+sleep 0.5
+
 declare -A commands
 commands=(
-  ["init"]="Configure the workflow: This command sets up the necessary environment for the application."
-  ["deploy"]="Deploy the application: This command deploys the application to the specified environment."
-  ["delete"]="Delete a resource: This command deletes a specified resource."
-  ["list"]="List all resources: This command lists all the resources in the current environment."
-  ["update"]="Update a resource: This command updates a specified resource."
+  ["exec"]="This command executes a command in the context of the udx-worker"
+  ["configure"]="This command configure new tooling worker based on udx-worker"
+  ["integrate"]="This command generates CI implemetation utilizing udx-worker tooling worker"
+  ["build"]="This command detects type of project and build it"
+  ["test"]="This command detects type of project and run tests against it"
+  ["deploy"]="This command detects type of project and deploy it"
+  ["chat"]="This command starts AI chat bot with internal knowledgebase"
+  ["help"]="Show this help message"
 )
 
 for command in "${!commands[@]}"; do
   message "info" "${commands[$command]}:"
+  sleep 0.05
   message "info" "  udx-worker ${command}\n"
+  sleep 0.1
 done
