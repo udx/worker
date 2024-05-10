@@ -71,20 +71,16 @@ message "white" "\n\nWhat I can do:\n---\n"
 
 sleep 0.5
 
-declare -A commands
-commands=(
-  ["exec"]="This command executes a command in the context of the udx-worker"
-  ["configure"]="This command configure new tooling worker based on udx-worker"
-  ["integrate"]="This command generates CI implemetation utilizing udx-worker tooling worker"
-  ["build"]="This command detects type of project and build it"
-  ["test"]="This command detects type of project and run tests against it"
-  ["deploy"]="This command detects type of project and deploy it"
-  ["chat"]="This command starts AI chat bot with internal knowledgebase"
-  ["help"]="Show this help message"
-)
+# Parse the commands from package.json using jq
+commands=$(jq -r '.config.commands[] | "\(.name)=\(.description)"' cli/package.json)
 
-for command in "${!commands[@]}"; do
-  message "info" "${commands[$command]}:"
+declare -A commands_map
+while IFS="=" read -r key value; do
+  commands_map["$key"]="$value"
+done <<< "$commands"
+
+for command in "${!commands_map[@]}"; do
+  message "info" "${commands_map[$command]}:"
   sleep 0.05
   message "info" "  udx-worker ${command}\n"
   sleep 0.1
