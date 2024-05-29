@@ -18,7 +18,8 @@
   "author": "fqjony (Dmitry Smirnov)",
   "license": "ISC",
   "bin": {
-    "udx-worker": "./index.js"
+    "udx-worker": "./bin/udx-worker.js",
+    "udx-worker-start": "./bin/start.sh"
   },
   "scripts": {
     "test": "jest"
@@ -50,7 +51,14 @@
         "name": "exec",
         "description": "This command executes a command in the context of the udx-worker",
         "enabled": true,
-        "action": "exec"
+        "action": "exec",
+        "options": [
+          {
+            "flags": "-c, --command <command>",
+            "description": "Command to execute",
+            "defaultValue": "echo 'Hello, World!'"
+          }
+        ]
       },
       {
         "name": "configure",

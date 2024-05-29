@@ -12,17 +12,18 @@ function loading_icon() {
     local elapsed=0
     local loading_animation=( '—' "\\" '|' '/' )
     
-    message "success" $loading_message
+    message "success" "$loading_message"
     
     # This part is to make the cursor not blink
     # on top of the animation while it lasts
     tput civis
     trap "tput cnorm" EXIT
-    while [ "${load_interval}" -ne "${elapsed}" ]; do
+    limit=$(( load_interval - 1 ))
+    while [ $elapsed -le $limit ]
+    do
         for frame in "${loading_animation[@]}" ; do
             printf "%s\b" "${frame}"
-            message "success" ...
-            sleep 0.25
+            sleep 0.1
         done
         elapsed=$(( elapsed + 1 ))
     done
