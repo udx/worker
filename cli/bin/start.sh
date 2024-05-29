@@ -64,30 +64,15 @@ function start_interface() {
     clear
     case $CHOICE in
         1)
-            case "$(uname -s)" in
-                Darwin)
-                    open -a "Visual Studio Code" "${1:-.}"
-                    message "success" "Visual Studio Code has been opened."
-                ;;
-                Linux)
-                    code "${1:-.}"
-                    message "success" "Visual Studio Code has been opened."
-                ;;
-                CYGWIN*|MINGW32*|MSYS*|MINGW*)
-                    start code "${1:-.}"
-                    message "success" "Visual Studio Code has been opened."
-                ;;
-                *)
-                    message "error" "unsupported platform"
-                ;;
-            esac
+            vscode "$SCRIPT_DIR/../templates/udx-worker.ipynb"
         ;;
         2)
             source "$SCRIPT_DIR/help.sh"
             message "success" "CLI Terminal has been opened."
         ;;
         3)
-            echo "echo '##[set-env name=WORKSPACE;value=${1:-.}]'"
+            mkdir -p .github/workflows
+            cp "$SCRIPT_DIR/../templates/github-action.yml" .github/workflows/udx-worker.yml
             message "success" "GitHub Action has been set."
         ;;
         4)

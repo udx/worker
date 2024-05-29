@@ -28,7 +28,8 @@
     "index.js",
     "lib/**/*.js",
     "bin/*.sh",
-    "templates/*.template"
+    "templates/*.template",
+    "templates/*.ipynb"
   ],
   "dependencies": {
     "chalk": "^4.1.2",

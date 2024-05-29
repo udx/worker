@@ -14,7 +14,8 @@ message "white" "\n\nWhat I can do:\n---\n"
 loading_icon 1 "..."
 
 # Parse the commands from package.json using jq
-commands=$(jq -r '.config.commands[] | "\(.name)=\(.description)"' ./package.json)
+global_package_path=$(npm root -g)/udx-worker
+commands=$(jq -r '.config.commands[] | "\(.name)=\(.description)"' $global_package_path/package.json)
 
 declare -A commands_map
 while IFS="=" read -r key value; do

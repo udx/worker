@@ -41,3 +41,24 @@ message() {
         echo -e "${colors[$type]}$text${NC}"
     fi
 }
+
+function vscode() {
+    local FILE_PATH="$1"
+    case "$(uname -s)" in
+        Darwin)
+            open -a "Visual Studio Code" "$FILE_PATH"
+            echo "Visual Studio Code has been opened."
+        ;;
+        Linux)
+            code "$FILE_PATH"
+            echo "Visual Studio Code has been opened."
+        ;;
+        CYGWIN*|MINGW32*|MSYS*|MINGW*)
+            start code "$FILE_PATH"
+            echo "Visual Studio Code has been opened."
+        ;;
+        *)
+            echo "unsupported platform"
+        ;;
+    esac
+}
