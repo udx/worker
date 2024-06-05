@@ -20,7 +20,7 @@
 # The Dockerfile also creates a new user, installs necessary packages as root, switches to the non-root user after all commands that require root permissions have been executed, sets the home directory for the non-root user, installs pyenv and Python as non-root user, copies the bin, etc directories to the image, creates a new directory for user, and sets the entrypoint to run bin/entrypoint.sh.
 #
 
-# Create a new image based on the latest Ubuntu image
+# A new image based on the latest Ubuntu image
 FROM ubuntu:latest
 
 # Set the maintainer of the image
@@ -29,10 +29,8 @@ LABEL maintainer="UDX CAG Team"
 # Define arguments
 ARG USER=udx-worker
 
-# Set NodeJS version to 20.x by default
+# Define runtime versions
 ARG NODE_VERSION=20.x
-
-# Set Python version to 3.12.2 by default
 ARG PYTHON_VERSION=3.12.2
 
 # Copy user as an environment variable from arg

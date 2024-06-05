@@ -27,7 +27,7 @@ function loading_icon() {
         done
         elapsed=$(( elapsed + 1 ))
     done
-    printf " \b\n"
+    # printf " \b\n"
 }
 
 # Define a single function for all message types
