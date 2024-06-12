@@ -2,10 +2,10 @@
 kind: workerVariables
 version: udx.io/worker-v1/variables
 config:
-  deployment:
-    name: "udx-worker"
-    image: "udx-worker:ubuntu-latest"
-    type: "task"
+  # deployment:
+  #   name: "udx-worker"
+  #   image: "udx-worker:ubuntu-latest"
+  #   type: "task"
   env:
     # "udx-worker"
     DOCKER_IMAGE_NAME: #{DOCKER_IMAGE_NAME}
