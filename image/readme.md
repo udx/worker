@@ -1,6 +1,6 @@
-# UDX Worker Image
+# UDX Worker Base Image
 
-This repository contains the base docker image for the UDX Worker.
+This repository contains the base standalone docker image for the UDX Worker.
 
 ## Prerequisites
 
@@ -23,9 +23,9 @@ To use the UDX Worker Image, follow these steps:
 2. Run the UDX Worker container:
 
    ```shell
-    docker run -d --name udx-worker gcr.io/[PROJECT-ID]/[IMAGE]:[TAG]
+    docker run -d --rm --name udx-worker gcr.io/[PROJECT-ID]/[IMAGE]:[TAG]
 
-    ## docker run -d --name udx-worker gcr.io/rabbit-ci-tooling/udx-worker:latest
+    ## docker run -d --rm --name udx-worker gcr.io/rabbit-ci-tooling/udx-worker:latest
    ```
 
 3. Access the UDX Worker container:

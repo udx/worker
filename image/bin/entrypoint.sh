@@ -19,7 +19,7 @@ nice_logs() {
 }
 
 # Load all modules in the modules directory
-modules_dir="/home/udx-worker/bin-modules/modules"
+modules_dir="/home/${USER}/bin-modules/modules"
 if [ -d "$modules_dir" ]; then
   for module_file in "$modules_dir"/*.sh; do
     [ -e "$module_file" ] || continue

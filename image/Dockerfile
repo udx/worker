@@ -1,18 +1,19 @@
-# Use a specific version of a minimal base image
-FROM ubuntu:20.04
+# Use the latest version of the Ubuntu image
+FROM ubuntu:latest
 
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
 # Define arguments
-ARG USER=udx-worker
+ARG USER=udx
+ARG NODE_VERSION=14.x
 
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 
 # Set user environment variable directly
-ENV USER=udx-worker
+ENV USER=udx
 ENV HOME=/home/${USER}
 
 # Install necessary packages in a single RUN statement to reduce layers
@@ -22,6 +23,17 @@ RUN apt-get update && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Node.js and npm
+RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
+    apt-get update && \
+    apt-get install -y nodejs npm
+
+# Verify Node.js and npm installation
+RUN node -v && npm -v
+
+# Install PM2 and Grunt
+RUN npm install -g pm2 grunt-cli
 
 # Create a new user
 RUN useradd -m ${USER}
@@ -42,4 +54,4 @@ RUN chmod +x /home/${USER}/bin-modules/entrypoint.sh && \
 USER ${USER}
 
 # Set the entrypoint to run the new entrypoint script
-ENTRYPOINT ["/home/udx-worker/bin-modules/entrypoint.sh"]
+ENTRYPOINT ["sh", "-c", "/home/${USER}/bin-modules/entrypoint.sh"]
