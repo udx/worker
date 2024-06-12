@@ -23,7 +23,7 @@ modules_dir="/home/udx-worker/bin-modules/modules"
 if [ -d "$modules_dir" ]; then
   for module_file in "$modules_dir"/*.sh; do
     [ -e "$module_file" ] || continue
-    bash "$module_file"
+    source "$module_file"
   done
 else
   echo "Directory $modules_dir does not exist."
@@ -42,8 +42,8 @@ nice_logs "..."
 # Call the EnvironmentController from the modules environment
 nice_logs "Do the configuration..." "info"
 
-# Placeholder for environment controller logic
-echo -e "\e[32mEnvironment configuration logic goes here.\e[0m"
+# Calling the main function from environment.sh
+configure_environment
 
 nice_logs "..."
 sleep 1
@@ -56,6 +56,6 @@ if [ "$1" == "project_init" ]; then
     echo "Not enough arguments for project_init"
     exit 1
   fi
-  # Placeholder for project initialization logic
-  echo "Initializing project with arguments: $2, $3"
+  # Calling the init_project function from init_project.sh
+  init_project "apply" "true"
 fi
