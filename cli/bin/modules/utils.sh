@@ -1,3 +1,5 @@
+#!/bin/bash
+
 declare -A colors
 colors[error]='\033[0;31m'
 colors[warning]='\033[1;33m'

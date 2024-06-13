@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Resolve the directory of this script
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 

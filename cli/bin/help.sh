@@ -1,3 +1,5 @@
+#!/bin/bash
+
 source bin/modules/utils.sh
 
 loading_icon 2 "..."
