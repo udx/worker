@@ -2,6 +2,9 @@ name: "CodeQL"
 
 on:
   push:
+  pull_request:
+    types:
+      - auto_merge_enabled
 
 jobs:
   analyze:
