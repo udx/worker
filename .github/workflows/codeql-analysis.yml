@@ -1,4 +1,4 @@
-name: "CodeQL Analysis"
+name: "CodeQL and Linter Analysis"
 
 on:
   push:
@@ -50,3 +50,18 @@ jobs:
       - name: Run ShellCheck
         run: |
           find . -name '*.sh' -print0 | xargs -0 shellcheck
+
+  analyze-dockerfile:
+    name: Analyze Dockerfiles
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install hadolint
+        run: sudo apt-get install -y hadolint
+
+      - name: Run hadolint
+        run: |
+          find . -name 'Dockerfile' -print0 | xargs -0 hadolint
