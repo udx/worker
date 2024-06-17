@@ -1,17 +1,18 @@
-#!/bin/bash
+#!/bin/sh
 
 # Utility functions library.
 #
 # Example usage:
 #
-# [bash] source "./modules/utils.sh"
-# [bash] env_defaults
+# [sh] . "./modules/utils.sh"
+# [sh] env_defaults
 #
 
 ping_pong() {
-    read -p "Ping? " answer
+    echo "Ping? \c"
+    read answer
     
-    if [[ $answer == "Pong" ]]; then
+    if [ "$answer" = "Pong" ]; then
         echo "Pong received"
     else
         echo "Invalid response: $answer"
@@ -19,7 +20,6 @@ ping_pong() {
 }
 
 nice_logs() {
-    
     RED=$(tput setaf 1)
     GREEN=$(tput setaf 2)
     YELLOW=$(tput setaf 3)
@@ -33,18 +33,18 @@ nice_logs() {
     case $type in
         "success")
             echo "${GREEN} ${message}${RESET}"
-        ;;
+            ;;
         "info")
             echo "${BLUE} ${message}${RESET}"
-        ;;
+            ;;
         "warn")
             echo "${YELLOW} ${message}${RESET}"
-        ;;
+            ;;
         "error")
             echo "${RED} ${message}${RESET}"
-        ;;
+            ;;
         *)
             echo "${type} ${message}"
-        ;;
+            ;;
     esac
 }

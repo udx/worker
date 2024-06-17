@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Function to simulate secrets
 fetch_secrets() {
@@ -31,7 +31,7 @@ get_actor_secret_from_cache() {
 
 # Main function to configure environment
 configure_environment() {
-    if [[ -z "$env" || -z "$secrets" ]]; then
+    if [ -z "$env" ] || [ -z "$secrets" ]; then
         fetch_env
         authenticate_actors
         fetch_secrets

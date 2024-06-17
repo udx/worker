@@ -1,12 +1,12 @@
 # Use the latest version of the Ubuntu image
-FROM ubuntu:latest
+FROM ubuntu:24.04
 
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
 # Define arguments
 ARG USER=udx
-ARG NODE_VERSION=14.x
+ARG NODE_VERSION=20.x
 
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive
@@ -44,14 +44,17 @@ WORKDIR /home/${USER}
 # Copy the bin, etc directories to the image and set correct permissions
 COPY ./bin /home/${USER}/bin-modules
 COPY ./etc/home /home/${USER}/etc
-COPY ./etc/configs /home/${USER}/worker-configs
+COPY ./etc/configs /home/${USER}/.cd/configs
 
 # Set executable permissions for entrypoint.sh
 RUN chmod +x /home/${USER}/bin-modules/entrypoint.sh && \
-    chown -R ${USER}:${USER} /home/${USER}/bin-modules /home/${USER}/etc /home/${USER}/worker-configs
+    chown -R ${USER}:${USER} /home/${USER}/bin-modules /home/${USER}/etc /home/${USER}/.cd/configs
 
 # Switch to non-root user
 USER ${USER}
 
 # Set the entrypoint to run the new entrypoint script
-ENTRYPOINT ["sh", "-c", "/home/${USER}/bin-modules/entrypoint.sh"]
+ENTRYPOINT ["/home/udx/bin-modules/entrypoint.sh"]
+
+# Default command to display Node.js version
+CMD ["sh", "-c", "echo NodeJS@$(node -v)"]
