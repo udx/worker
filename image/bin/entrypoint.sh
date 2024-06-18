@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Function to handle nice logs
@@ -11,6 +11,9 @@ nice_logs() {
             ;;
         success)
             echo "\033[34m$message\033[0m"
+            ;;
+        error)
+            echo "\033[31m$message\033[0m"
             ;;
         *)
             echo "$message"
