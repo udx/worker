@@ -7,13 +7,13 @@ nice_logs() {
     local level=$2
     case $level in
         info)
-            echo "\033[32m$message\033[0m"
+            echo -e "\033[32m$message\033[0m"
             ;;
         success)
-            echo "\033[34m$message\033[0m"
+            echo -e "\033[34m$message\033[0m"
             ;;
         error)
-            echo "\033[31m$message\033[0m"
+            echo -e "\033[31m$message\033[0m"
             ;;
         *)
             echo "$message"
@@ -24,6 +24,7 @@ nice_logs() {
 # Load all modules in the modules directory
 modules_dir="/home/udx/bin-modules/modules"
 if [ -d "$modules_dir" ]; then
+    # shellcheck disable=SC1090
     for module_file in "$modules_dir"/*.sh; do
         [ -e "$module_file" ] || continue
         . "$module_file"
