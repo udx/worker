@@ -10,7 +10,7 @@
 
 ping_pong() {
     echo "Ping? \c"
-    read answer
+    read -r answer  
     
     if [ "$answer" = "Pong" ]; then
         echo "Pong received"
@@ -24,7 +24,6 @@ nice_logs() {
     GREEN=$(tput setaf 2)
     YELLOW=$(tput setaf 3)
     BLUE=$(tput setaf 4)
-    GREY=$(tput setaf 8)
     RESET=$(tput sgr0)
     
     message=$1
