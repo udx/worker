@@ -1,7 +1,0 @@
----
-kind: workerDeployment
-version: udx.io/worker-v1/deployment
-settings:
-  name: "udx-worker"
-  image: "udx-worker:ubuntu-latest"
-  type: "task"

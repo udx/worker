@@ -18,7 +18,8 @@
   "author": "fqjony (Dmitry Smirnov)",
   "license": "ISC",
   "bin": {
-    "udx-worker": "./index.js"
+    "udx-worker": "./bin/udx-worker.js",
+    "udx-worker-start": "./bin/start.sh"
   },
   "scripts": {
     "test": "jest"
@@ -27,7 +28,8 @@
     "index.js",
     "lib/**/*.js",
     "bin/*.sh",
-    "templates/*.template"
+    "templates/*.template",
+    "templates/*.ipynb"
   ],
   "dependencies": {
     "chalk": "^4.1.2",
@@ -47,67 +49,59 @@
   "config": {
     "commands": [
       {
-        "name": "setup",
-        "description": "Setup Ephemeral Workstation. This command initializes the workstation and checks the status of the containers. Interactive mode is supported.",
+        "name": "exec",
+        "description": "This command executes a command in the context of the udx-worker",
         "enabled": true,
+        "action": "exec",
         "options": [
           {
-            "flags": "-m, --mode <mode>",
-            "description": "Set the mode. Options are 'plan' or 'apply'. Default is 'plan'.",
-            "defaultValue": "plan"
-          },
-          {
-            "flags": "-f, --force",
-            "description": "Force file creation. If set, existing files will be overwritten.",
-            "defaultValue": false
+            "flags": "-c, --command <command>",
+            "description": "Command to execute",
+            "defaultValue": "echo 'Hello, World!'"
           }
-        ],
-        "action": "init"
+        ]
       },
       {
-        "name": "execute",
-        "description": "Execute a Docker command on the 'udx-worker' container.",
+        "name": "configure",
+        "description": "This command configure new tooling worker based on udx-worker",
         "enabled": true,
-        "options": [
-          {
-            "flags": "--command <command>",
-            "description": "Command to execute",
-            "defaultValue": ""
-          }
-        ],
-        "action": "executeDockerCommand"
+        "action": "configure"
+      },
+      {
+        "name": "integrate",
+        "description": "This command generates CI implemetation utilizing udx-worker tooling worker",
+        "enabled": true,
+        "action": "integrate"
       },
       {
         "name": "build",
-        "description": "Build the worker image using the Docker Compose build command.",
+        "description": "This command detects type of project and build it",
         "enabled": true,
         "action": "build"
       },
       {
-        "name": "restart",
-        "description": "Restart the application. This command runs a restart script.",
+        "name": "test",
+        "description": "This command detects type of project and run tests against it",
         "enabled": true,
-        "options": [
-          {
-            "flags": "-f, --force",
-            "description": "Force restart. If set, the application will be restarted even if it's currently running.",
-            "defaultValue": false
-          }
-        ],
-        "action": "restart"
+        "action": "test"
       },
       {
-        "name": "cleanup",
-        "description": "Execute a cleanup script. This command removes temporary files and resets the application to its initial state.",
+        "name": "deploy",
+        "description": "This command detects type of project and deploy it",
         "enabled": true,
-        "options": [
-          {
-            "flags": "-f, --force",
-            "description": "Force cleanup. If set, the cleanup script will be run regardless of the current state of the application.",
-            "defaultValue": false
-          }
-        ],
-        "action": "cleanup"
+        "action": "deploy"
+      },
+      {
+        "name": "chat",
+        "description": "This command starts AI chat bot with internal knowledgebase",
+        "enabled": true,
+        "action": "chat"
+      },
+      {
+        "name": "help",
+        "description": "Show this help message",
+        "enabled": true,
+        "action": "help"
       }
     ]
   }

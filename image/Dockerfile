@@ -1,87 +1,63 @@
-#
-# UDX Worker Docker Image
-# This Dockerfile is used to build a Docker image for a UDX Worker.
-#
-# The image is based on the official Ubuntu image 
-# Includes Ubuntu, essential libraries, Node.js, NPM, Python (installed via pyenv), and some global NPM and Python packages.
-# 
-# ARGs: 
-# - USER: The user to be created in the image (Default: udx-worker).
-# - NODE_VERSION: The version of Node.js to be installed in the image (Default: 20.x)
-# - PYTHON_VERSION: The version of Python to be installed in the image (Default: 3.12.2)
-# 
-# ENVs:
-# - USER: The user to be created in the image (Default: udx-worker inherited from USER arg).
-# - PYTHONUNBUFFERED: Set to 1 to run Python unbuffered
-# - HOME: Set to the home directory of the created user
-# - PYENV_ROOT: Set to the pyenv installation directory
-# - PATH: Updated to include the pyenv shims and bin directories
-# 
-# The Dockerfile also creates a new user, installs necessary packages as root, switches to the non-root user after all commands that require root permissions have been executed, sets the home directory for the non-root user, installs pyenv and Python as non-root user, copies the bin, etc directories to the image, creates a new directory for user, and sets the entrypoint to run bin/entrypoint.sh.
-#
-
-# Create a new image based on the latest Ubuntu image
-FROM ubuntu:latest
+# Use the latest version of the Ubuntu image
+FROM ubuntu:24.04
 
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
 # Define arguments
-ARG USER=udx-worker
+ARG USER=udx
+ARG NODE_VERSION=20
 
-# Set NodeJS version to 20.x by default
-ARG NODE_VERSION=20.x
+# Set environment variables to avoid interactive prompts and set a fixed timezone
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
 
-# Set Python version to 3.12.2 by default
-ARG PYTHON_VERSION=3.12.2
+# Set user environment variable directly
+ENV USER=udx
+ENV HOME=/home/${USER}
 
-# Copy user as an environment variable from arg
-ENV USER=${USER}
+# Set the shell with pipefail option
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Set the environment variable to run Python unbuffered
-ENV PYTHONUNBUFFERED=1
-
-# Install necessary packages as root
+# Install necessary packages in a single RUN statement to reduce layers and pin versions
 RUN apt-get update && \
-    apt-get install -y curl gnupg wget build-essential libssl-dev zlib1g-dev libbz2-dev \
-    libreadline-dev libsqlite3-dev llvm libncurses5-dev libncursesw5-dev \
-    xz-utils tk-dev libffi-dev liblzma-dev git && \
-    curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y --no-install-recommends \
+    tzdata=2024a-3ubuntu1.1 \
+    curl=8.5.0-2ubuntu10.1 \
+    bash=5.2.21-2ubuntu4 \
+    gnupg=2.4.4-2ubuntu17 \
+    wget=1.21.4-1ubuntu4 \
+    ca-certificates \
+    nodejs \
+    npm && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install npm packages globally
-RUN npm install -g grunt-cli pm2 mocha should gulp-cli should-type axios
-
-# Create a new user
+# Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
 
-# Create a new directory for the user and change ownership
-RUN mkdir -p /home/${USER} && chown -R ${USER}:${USER} /home/${USER}
-
-# Switch to the non-root user after all commands that require root permissions have been executed
-USER ${USER}
-
-# Set the home directory for the non-root user
-ENV HOME /home/${USER}
-
-# Set the environment variables for pyenv
-ENV PYENV_ROOT $HOME/.pyenv
-ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
-
-# Install pyenv and Python as non-root user
-RUN curl https://pyenv.run | bash && \
-    pyenv install ${PYTHON_VERSION} && \
-    pyenv global ${PYTHON_VERSION} && \
-    pip install pyyaml pyOpenSSL
-
-# Copy the bin, etc directories to the image
-COPY --chown=${USER}:${USER} ./bin              /home/${USER}/bin-modules
-COPY --chown=${USER}:${USER} ./etc/home         /home/${USER}/etc
-COPY --chown=${USER}:${USER} ./etc/configs      /home/${USER}/worker-configs
-
-# Create a new directory for user
+# Switch to the user directory
 WORKDIR /home/${USER}
 
-# Set the entrypoint to run bin/entrypoint.sh
-ENTRYPOINT ["sh", "-c", "/home/${USER}/bin-modules/entrypoint.sh"]
+# Install PM2 and Grunt CLI globally
+RUN npm install -g pm2@5.3.0 grunt-cli@1.4.3
+
+# Copy the bin, etc directories to the image and set correct permissions
+COPY ./bin /home/${USER}/bin-modules
+COPY ./etc/home /home/${USER}/etc
+COPY ./etc/configs /home/${USER}/.cd/configs
+
+# Set executable permissions for entrypoint.sh
+RUN chmod +x /home/${USER}/bin-modules/entrypoint.sh && \
+    chown -R ${USER}:${USER} /home/${USER}/bin-modules /home/${USER}/etc /home/${USER}/.cd/configs
+
+# Switch to non-root user
+USER ${USER}
+
+# Set the entrypoint to run the new entrypoint script
+ENTRYPOINT ["/home/udx/bin-modules/entrypoint.sh"]
+
+# Default command to display NodeJS version in the desired format
+CMD ["sh", "-c", "echo NodeJS@$(node -v)"]

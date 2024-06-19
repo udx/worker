@@ -1,0 +1,70 @@
+name: "CodeQL and Linter Analysis"
+
+on:
+  push:
+  pull_request:
+    types:
+      - auto_merge_enabled
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  analyze-shell:
+    name: Analyze Shell Scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        continue-on-error: true
+        run: |
+          find . -name '*.sh' -print0 | xargs -0 shellcheck
+
+  analyze-dockerfile:
+    name: Analyze Dockerfiles
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install hadolint
+        run: |
+          wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint
+
+      - name: Run hadolint
+        continue-on-error: true
+        run: |
+          find . -name 'Dockerfile' -print0 | xargs -0 /usr/local/bin/hadolint
