@@ -29,7 +29,7 @@ fetch_env() {
     yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
     
     # Display the contents of the generated script for debugging
-    cat /tmp/env_vars.sh
+    # cat /tmp/env_vars.sh
     
     # Source the generated script to set environment variables
     . /tmp/env_vars.sh
@@ -56,17 +56,8 @@ configure_environment() {
         authenticate_actors
         fetch_secrets
         cleanup_actors
-        echo "Fetching secrets and cleaning up actors"
     else
         get_actor_secret_from_cache
         echo "Retrieving actor/secret from local cache"
     fi
 }
-
-# Main entry point
-main() {
-    configure_environment
-}
-
-# Execute the main function
-main

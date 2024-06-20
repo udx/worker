@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 
 # Set user environment variable directly
-ENV USER=udx
+ENV USER=${USER}
 ENV HOME=/home/${USER}
 
 # Set the shell with pipefail option
@@ -51,15 +51,19 @@ COPY ./bin /home/${USER}/bin-modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 
-# Set executable permissions for entrypoint.sh
-RUN chmod +x /home/${USER}/bin-modules/entrypoint.sh && \
+# Set executable permissions for main.sh
+RUN chmod +x /home/${USER}/bin-modules/main.sh && \
     chown -R ${USER}:${USER} /home/${USER}/bin-modules /home/${USER}/etc /home/${USER}/.cd/configs
+
+# Copy and set permissions for the entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Switch to non-root user
 USER ${USER}
 
-# Set the entrypoint to run the new entrypoint script
-ENTRYPOINT ["/home/udx/bin-modules/entrypoint.sh"]
+# Set the entrypoint to run the new entrypoint script using shell form
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Default command to display NodeJS version in the desired format
 CMD ["sh", "-c", "echo NodeJS@$(node -v)"]
