@@ -28,11 +28,13 @@ fetch_env() {
     # Use yq to extract environment variables and format them for export
     yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
     
-    # Display the contents of the generated script for debugging
-    # cat /tmp/env_vars.sh
-    
     # Source the generated script to set environment variables
-    . /tmp/env_vars.sh
+    if [ -f /tmp/env_vars.sh ]; then
+        . /tmp/env_vars.sh
+    else
+        echo "Error: Generated environment variables script not found"
+        return 1
+    fi
 }
 
 # Function to cleanup actors
@@ -48,8 +50,7 @@ get_actor_secret_from_cache() {
 # Main function to configure environment
 configure_environment() {
     if [ -z "$env" ] || [ -z "$secrets" ]; then
-        fetch_env
-        if [ $? -ne 0 ]; then
+        if ! fetch_env; then
             echo "Failed to fetch environment configuration"
             exit 1
         fi
