@@ -1,32 +1,13 @@
 ---
-kind: workerVariables
-version: udx.io/worker-v1/variables
+kind: workerConfig
+version: udx.io/worker-v1/config
 config:
-  # deployment:
-  #   name: "udx-worker"
-  #   image: "udx-worker:ubuntu-latest"
-  #   type: "task"
   env:
-    # "udx-worker"
-    DOCKER_IMAGE_NAME: #{DOCKER_IMAGE_NAME}
-
-    # "projects/309037306746/locations/global/workloadIdentityPools/udx-worker-pool/providers/udx-worker-provider"
-    GCP_AUTH_PROVIDER: #{GCP_AUTH_PROVIDER}
-
-    # "rabbit-ci-tooling"
-    GCP_PROJECT: #{GCP_PROJECT}
-
-    # "us-central1"
-    GCP_REGION: #{GCP_REGION}
-
-    # "udx-worker"
-    GCP_REGISTRY_REPO: #{GCP_REGISTRY_REPO}
-
-    # "svc-udx-worker@rabbit-ci-tooling.iam.gserviceaccount.com"
-    GCP_SERVICE_ACCOUNT: #{GCP_SERVICE_ACCOUNT}
-
-    # "https://github.com/udx/worker-repo-best-practice-configs"
-    GITHUB_CONFIGS_REPO: #{GITHUB_CONFIGS_REPO}
-
-    # "main"
-    GITHUB_CONFIGS_BRANCH: #{GITHUB_CONFIGS_BRANCH}
+    DOCKER_IMAGE_NAME: "udx-worker"
+    GCP_AUTH_PROVIDER: "projects/309037306746/locations/global/workloadIdentityPools/udx-worker-pool/providers/udx-worker-provider"
+    GCP_PROJECT: "rabbit-ci-tooling"
+    GCP_REGION: "us-central1"
+    GCP_REGISTRY_REPO: "udx-worker"
+    GCP_SERVICE_ACCOUNT: "svc-udx-worker@rabbit-ci-tooling.iam.gserviceaccount.com"
+    GITHUB_CONFIGS_REPO: "https://github.com/udx/worker-repo-best-practice-configs"
+    GITHUB_CONFIGS_BRANCH: "main"

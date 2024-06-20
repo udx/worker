@@ -15,8 +15,24 @@ authenticate_actors() {
 # Function to fetch environment configuration
 fetch_env() {
     echo "Fetching environment configuration"
-    # Simulate fetching environment configuration
-    env="environment_configuration"
+    
+    # Define the path to your YAML file
+    YAML_FILE="/home/udx/.cd/configs/worker.yml"
+    
+    # Check if the file exists
+    if [ ! -f "$YAML_FILE" ]; then
+        echo "Error: YAML configuration file not found at $YAML_FILE"
+        return 1
+    fi
+    
+    # Use yq to extract environment variables and format them for export
+    yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$YAML_FILE" > /tmp/env_vars.sh
+    
+    # Display the contents of the generated script for debugging
+    cat /tmp/env_vars.sh
+    
+    # Source the generated script to set environment variables
+    . /tmp/env_vars.sh
 }
 
 # Function to cleanup actors
@@ -33,6 +49,10 @@ get_actor_secret_from_cache() {
 configure_environment() {
     if [ -z "$env" ] || [ -z "$secrets" ]; then
         fetch_env
+        if [ $? -ne 0 ]; then
+            echo "Failed to fetch environment configuration"
+            exit 1
+        fi
         authenticate_actors
         fetch_secrets
         cleanup_actors

@@ -33,7 +33,9 @@ RUN apt-get update && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    wget -qO- https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
+    mv yq_linux_amd64 /usr/bin/yq
 
 # Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
