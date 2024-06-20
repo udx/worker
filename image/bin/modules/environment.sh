@@ -17,16 +17,16 @@ fetch_env() {
     echo "Fetching environment configuration"
     
     # Define the path to your YAML file
-    YAML_FILE="/home/udx/.cd/configs/worker.yml"
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
     # Check if the file exists
-    if [ ! -f "$YAML_FILE" ]; then
-        echo "Error: YAML configuration file not found at $YAML_FILE"
+    if [ ! -f "$WORKER_CONFIG" ]; then
+        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
     
     # Use yq to extract environment variables and format them for export
-    yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$YAML_FILE" > /tmp/env_vars.sh
+    yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
     
     # Display the contents of the generated script for debugging
     cat /tmp/env_vars.sh
