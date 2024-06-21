@@ -8,16 +8,16 @@ nice_logs() {
     case $level in
         info)
             echo -e "\033[32m$message\033[0m"
-            ;;
+        ;;
         success)
             echo -e "\033[34m$message\033[0m"
-            ;;
+        ;;
         error)
             echo -e "\033[31m$message\033[0m"
-            ;;
+        ;;
         *)
             echo "$message"
-            ;;
+        ;;
     esac
 }
 
@@ -34,27 +34,25 @@ else
     exit 1
 fi
 
-# Execute the provided command if any, else proceed with the script
-if [ "$#" -gt 0 ]; then
-    exec "$@"
-else
-    # Use the colors in logs
-    nice_logs "Here you go, welcome to UDX Worker Container." "info"
-    nice_logs "..."
+# Use the colors in logs
+nice_logs "Here you go, welcome to UDX Worker Container." "info"
+nice_logs "..."
 
-    sleep 1
+sleep 1
 
-    nice_logs "Init the environment..." "info"
-    nice_logs "..."
+nice_logs "Init the environment..." "info"
+nice_logs "..."
 
-    # Call the EnvironmentController from the modules environment
-    nice_logs "Do the configuration..." "info"
+# Call the EnvironmentController from the modules environment
+nice_logs "Do the configuration..." "info"
 
-    # Calling the main function from environment.sh
-    configure_environment
+# Calling the main function from environment.sh
+configure_environment
 
-    nice_logs "..."
-    sleep 1
+nice_logs "..."
+sleep 1
 
-    nice_logs "The worker has started successfully." "success"
-fi
+nice_logs "The worker has started successfully." "success"
+
+# Execute passed commands or default command
+exec "$@"
