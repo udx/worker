@@ -15,8 +15,26 @@ authenticate_actors() {
 # Function to fetch environment configuration
 fetch_env() {
     echo "Fetching environment configuration"
-    # Simulate fetching environment configuration
-    env="environment_configuration"
+    
+    # Define the path to your YAML file
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    
+    # Check if the file exists
+    if [ ! -f "$WORKER_CONFIG" ]; then
+        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
+        return 1
+    fi
+    
+    # Use yq to extract environment variables and format them for export
+    yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
+    
+    # Source the generated script to set environment variables
+    if [ -f /tmp/env_vars.sh ]; then
+        . /tmp/env_vars.sh
+    else
+        echo "Error: Generated environment variables script not found"
+        return 1
+    fi
 }
 
 # Function to cleanup actors
@@ -32,21 +50,15 @@ get_actor_secret_from_cache() {
 # Main function to configure environment
 configure_environment() {
     if [ -z "$env" ] || [ -z "$secrets" ]; then
-        fetch_env
+        if ! fetch_env; then
+            echo "Failed to fetch environment configuration"
+            exit 1
+        fi
         authenticate_actors
         fetch_secrets
         cleanup_actors
-        echo "Fetching secrets and cleaning up actors"
     else
         get_actor_secret_from_cache
         echo "Retrieving actor/secret from local cache"
     fi
 }
-
-# Main entry point
-main() {
-    configure_environment
-}
-
-# Execute the main function
-main
