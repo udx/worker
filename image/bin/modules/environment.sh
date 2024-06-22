@@ -29,6 +29,7 @@ fetch_env() {
     yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
     
     # Source the generated script to set environment variables
+    # shellcheck source=/tmp/env_vars.sh
     if [ -f /tmp/env_vars.sh ]; then
         . /tmp/env_vars.sh
     else

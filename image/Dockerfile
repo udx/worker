@@ -43,8 +43,9 @@ RUN useradd -m ${USER}
 # Switch to the user directory
 WORKDIR /home/${USER}
 
-# Install PM2 and Grunt CLI globally
-RUN npm install -g pm2@5.3.0 grunt-cli@1.4.3
+# Install PM2 and Grunt CLI globally and update vulnerable packages
+RUN npm install -g pm2@5.4.1 grunt-cli@1.4.3 && \
+    npm install @babel/traverse@7.24.7 braces@3.0.3 http-cache-semantics@4.1.1
 
 # Copy the bin, etc directories to the image and set correct permissions
 COPY ./bin /home/${USER}/bin-modules
