@@ -27,7 +27,8 @@ RUN apt-get update && \
     wget=1.21.4-1ubuntu4 \
     ca-certificates \
     nodejs \
-    npm && \
+    npm \
+    e2fsprogs && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -57,14 +58,10 @@ COPY ./bin/modules /usr/local/bin/modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 
-# Set executable permissions for main.sh
-RUN chmod +x /usr/local/bin/main.sh && \
-    chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs
-
-# Copy and set permissions for the entrypoint script
-COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
-# RUN chmod +x /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh && chmod a-w /usr/local/bin/entrypoint.sh
+# Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
+RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/modules/*.sh && \
+    chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs && \
+    chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh /usr/local/bin/modules/environment.sh /usr/local/bin/modules/init_project.sh /usr/local/bin/modules/utils.sh
 
 # Switch to non-root user
 USER ${USER}
