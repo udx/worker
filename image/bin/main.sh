@@ -22,7 +22,7 @@ nice_logs() {
 }
 
 # Load all modules in the modules directory
-modules_dir="/home/$USER/bin-modules/modules"
+modules_dir="/usr/local/bin/modules"
 if [ -d "$modules_dir" ]; then
     # shellcheck disable=SC1090
     for module_file in "$modules_dir"/*.sh; do

@@ -11,8 +11,6 @@ ARG NODE_VERSION=20
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
-
-# Set user environment variable directly
 ENV USER=${USER}
 ENV HOME=/home/${USER}
 
@@ -37,6 +35,12 @@ RUN apt-get update && \
     wget -qO- https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
     mv yq_linux_amd64 /usr/bin/yq
 
+# Install Go and update to the latest secure version
+RUN wget https://golang.org/dl/go1.20.5.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz && \
+    ln -s /usr/local/go/bin/go /usr/bin/go && \
+    rm go1.20.5.linux-amd64.tar.gz
+
 # Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
 
@@ -48,17 +52,19 @@ RUN npm install -g pm2@5.4.1 grunt-cli@1.4.3 && \
     npm install @babel/traverse@7.24.7 braces@3.0.3 http-cache-semantics@4.1.1
 
 # Copy the bin, etc directories to the image and set correct permissions
-COPY ./bin /home/${USER}/bin-modules
+COPY ./bin /usr/local/bin
+COPY ./bin/modules /usr/local/bin/modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 
 # Set executable permissions for main.sh
-RUN chmod +x /home/${USER}/bin-modules/main.sh && \
-    chown -R ${USER}:${USER} /home/${USER}/bin-modules /home/${USER}/etc /home/${USER}/.cd/configs
+RUN chmod +x /usr/local/bin/main.sh && \
+    chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs
 
 # Copy and set permissions for the entrypoint script
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
+# RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh && chmod a-w /usr/local/bin/entrypoint.sh
 
 # Switch to non-root user
 USER ${USER}
