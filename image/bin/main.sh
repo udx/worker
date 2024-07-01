@@ -55,4 +55,8 @@ sleep 1
 nice_logs "The worker has started successfully." "success"
 
 # Execute passed commands or default command
-exec "$@"
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+else
+    exec sh -c "echo NodeJS@$(node -v)"
+fi
