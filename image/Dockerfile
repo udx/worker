@@ -14,6 +14,9 @@ ENV TZ=Etc/UTC
 ENV USER=${USER}
 ENV HOME=/home/${USER}
 
+# Set the additional entrypoint script path
+ENV ADDITIONAL_ENTRYPOINT=/usr/local/bin/init.sh
+
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
