@@ -12,21 +12,27 @@ Before using the UDX Worker Image, make sure you have the following prerequisite
 
 To build the Docker image, use the following command:
 
-```shell
-docker build -t udx-worker:latest .
-```
+1. Pull the Docker image from the Docker Hub:
 
-### Run
+   ```shell
+   docker pull gcr.io/[PROJECT-ID]/[IMAGE]:[TAG]
 
-```shell
-docker run --rm -it udx-worker:latest
-```
+   ## docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
+   ```
 
-### Exec
+2. Run the UDX Worker container:
 
-```shell
-docker exec -it udx-worker bash
-```
+   ```shell
+    docker run -d --rm --name udx-worker gcr.io/[PROJECT-ID]/[IMAGE]:[TAG]
+
+    ## docker run -d --rm --name udx-worker gcr.io/rabbit-ci-tooling/udx-worker:latest
+   ```
+
+3. Access the UDX Worker container:
+
+   ```shell
+   docker exec -it udx-worker bash
+   ```
 
 ### Pull
 
@@ -40,9 +46,12 @@ The UDX Worker Docker image includes support for an additional entrypoint script
 
 #### How it works:
 
-- Default Entrypoint: Executes `/usr/local/bin/entrypoint.sh` at container start.
-- Main Script Execution: Runs `main.sh` to set up the environment.
-- Custom Initialization: Executes the script specified by `ADDITIONAL_ENTRYPOINT` after `main.sh`.
+- Default Entrypoint: Executes `/usr/local/bin/entrypoint.sh` when the container starts.
+
+- Main Script Execution: Runs main.sh to set up the environment.
+
+- Custom Initialization: Executes the script specified by the `ADDITIONAL_ENTRYPOINT` environment variable after main.sh. This allows users who utilize the UDX Worker as a base for their own Docker images to add custom initialization logic.
+    - The `ADDITIONAL_ENTRYPOINT` (`/usr/local/bin/init.sh` by default) environment variable specifies the shell script to run during the entrypoint for child images. If an entrypoint is specified in the child Dockerfile, UDX Worker features will not be enabled.
 
 #### Example Usage:
 
