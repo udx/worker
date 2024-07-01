@@ -11,10 +11,11 @@ ARG NODE_VERSION=20
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
-
-# Set user environment variable directly
 ENV USER=${USER}
 ENV HOME=/home/${USER}
+
+# Set the additional entrypoint script path
+ENV ADDITIONAL_ENTRYPOINT=/usr/local/bin/init.sh
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -29,13 +30,20 @@ RUN apt-get update && \
     wget=1.21.4-1ubuntu4 \
     ca-certificates \
     nodejs \
-    npm && \
+    npm \
+    e2fsprogs && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     wget -qO- https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
     mv yq_linux_amd64 /usr/bin/yq
+
+# Install Go and update to the latest secure version
+RUN wget https://golang.org/dl/go1.20.5.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz && \
+    ln -s /usr/local/go/bin/go /usr/bin/go && \
+    rm go1.20.5.linux-amd64.tar.gz
 
 # Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
@@ -48,17 +56,15 @@ RUN npm install -g pm2@5.4.1 grunt-cli@1.4.3 && \
     npm install @babel/traverse@7.24.7 braces@3.0.3 http-cache-semantics@4.1.1
 
 # Copy the bin, etc directories to the image and set correct permissions
-COPY ./bin /home/${USER}/bin-modules
+COPY ./bin /usr/local/bin
+COPY ./bin/modules /usr/local/bin/modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 
-# Set executable permissions for main.sh
-RUN chmod +x /home/${USER}/bin-modules/main.sh && \
-    chown -R ${USER}:${USER} /home/${USER}/bin-modules /home/${USER}/etc /home/${USER}/.cd/configs
-
-# Copy and set permissions for the entrypoint script
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
+RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/modules/*.sh && \
+    chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs && \
+    chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh /usr/local/bin/modules/environment.sh /usr/local/bin/modules/init_project.sh /usr/local/bin/modules/utils.sh
 
 # Switch to non-root user
 USER ${USER}
