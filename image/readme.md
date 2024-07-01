@@ -1,16 +1,16 @@
-# UDX Worker Base Image
+# UDX Worker
 
-This repository contains the base standalone docker image for the UDX Worker.
+This repository contains the UDX Worker Docker image, designed to provide a secure and reliable environment for various automation tasks. The image includes essential tools and dependencies for development and deployment.
 
-## Prerequisites
+### Prerequisites
 
 Before using the UDX Worker Image, make sure you have the following prerequisites installed:
 
 - Docker: [Installation Guide](https://docs.docker.com/get-docker/)
 
-## Usage
+### Build
 
-To use the UDX Worker Image, follow these steps:
+To build the Docker image, use the following command:
 
 1. Pull the Docker image from the Docker Hub:
 
@@ -74,7 +74,3 @@ This setup ensures flexibility and extensibility, allowing custom initialization
 ### Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
