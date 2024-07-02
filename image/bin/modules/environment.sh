@@ -38,6 +38,38 @@ fetch_env() {
     fi
 }
 
+# Function to detect volume configuration and generate a warning log
+detect_volumes() {
+    echo "Fetching volumes configuration"
+    
+    # Define the path to your YAML file
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    
+    # Check if the file exists
+    if [ ! -f "$WORKER_CONFIG" ]; then
+        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
+        return 1
+    fi
+    
+    # Use yq to extract volume mappings
+    VOLUMES=$(yq e '.config.volumes[]' "$WORKER_CONFIG" 2>/dev/null)
+    
+    if [ -z "$VOLUMES" ]; then
+        echo "Info: No volume configurations found in $WORKER_CONFIG"
+        return 0
+    fi
+    
+    echo "The following volumes are detected:"
+    echo "$VOLUMES" | while read -r volume; do
+        if [ -z "$volume" ]; then
+            echo "Warning: Empty volume configuration found"
+        else
+            echo "  -v $volume"
+        fi
+    done
+    echo "Please make sure to mount volumes when starting the container."
+}
+
 # Function to cleanup actors
 cleanup_actors() {
     echo "Cleaning up actors"
@@ -62,4 +94,6 @@ configure_environment() {
         get_actor_secret_from_cache
         echo "Retrieving actor/secret from local cache"
     fi
+    
+    detect_volumes
 }

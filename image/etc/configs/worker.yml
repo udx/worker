@@ -4,10 +4,5 @@ version: udx.io/worker-v1/config
 config:
   env:
     DOCKER_IMAGE_NAME: "udx-worker"
-    GCP_AUTH_PROVIDER: "projects/309037306746/locations/global/workloadIdentityPools/udx-worker-pool/providers/udx-worker-provider"
-    GCP_PROJECT: "rabbit-ci-tooling"
-    GCP_REGION: "us-central1"
-    GCP_REGISTRY_REPO: "udx-worker"
-    GCP_SERVICE_ACCOUNT: "svc-udx-worker@rabbit-ci-tooling.iam.gserviceaccount.com"
-    GITHUB_CONFIGS_REPO: "https://github.com/udx/worker-repo-best-practice-configs"
-    GITHUB_CONFIGS_BRANCH: "main"
+  # volumes:
+  #   - "/host/path:/container/path"
