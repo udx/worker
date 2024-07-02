@@ -22,7 +22,7 @@ nice_logs() {
 }
 
 # Load all modules in the modules directory
-modules_dir="/home/$USER/bin-modules/modules"
+modules_dir="/usr/local/bin/modules"
 if [ -d "$modules_dir" ]; then
     # shellcheck disable=SC1090
     for module_file in "$modules_dir"/*.sh; do
@@ -55,4 +55,8 @@ sleep 1
 nice_logs "The worker has started successfully." "success"
 
 # Execute passed commands or default command
-exec "$@"
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+else
+    exec sh -c "echo NodeJS@$(node -v)"
+fi
