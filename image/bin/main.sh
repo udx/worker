@@ -46,7 +46,7 @@ nice_logs "..."
 # Call the EnvironmentController from the modules environment
 nice_logs "Do the configuration..." "info"
 
-# Calling the main function from environment.sh
+# Call the main function to configure environment
 configure_environment
 
 nice_logs "..."

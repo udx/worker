@@ -1,16 +1,9 @@
 #!/bin/sh
 
-# Function to simulate secrets
-fetch_secrets() {
-    echo "Fetching secrets"
-    # You can store secrets in a global variable or file if needed
-    secrets="some_secret_data"
-}
-
-# Function to authenticate actors
-authenticate_actors() {
-    echo "Authenticating actors"
-}
+# Source the modules
+source /usr/local/bin/modules/secrets.sh
+source /usr/local/bin/modules/auth.sh
+source /usr/local/bin/modules/cleanup.sh
 
 # Function to fetch environment configuration
 fetch_env() {
@@ -29,13 +22,14 @@ fetch_env() {
     yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
     
     # Source the generated script to set environment variables
-    # shellcheck source=/tmp/env_vars.sh
     if [ -f /tmp/env_vars.sh ]; then
         . /tmp/env_vars.sh
     else
         echo "Error: Generated environment variables script not found"
         return 1
     fi
+
+    echo "Environment configuration fetched successfully"
 }
 
 # Function to detect volume configuration and generate a warning log
@@ -70,14 +64,10 @@ detect_volumes() {
     echo "Please make sure to mount volumes when starting the container."
 }
 
-# Function to cleanup actors
-cleanup_actors() {
-    echo "Cleaning up actors"
-}
-
 # Function to retrieve actor/secret from local cache
 get_actor_secret_from_cache() {
     echo "Retrieving actor/secret from local cache"
+    # Add retrieval logic here if needed
 }
 
 # Main function to configure environment
@@ -97,3 +87,6 @@ configure_environment() {
     
     detect_volumes
 }
+
+# Call the main function to configure environment
+configure_environment
