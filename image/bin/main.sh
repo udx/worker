@@ -7,17 +7,17 @@ nice_logs() {
     local level=$2
     case $level in
         info)
-            echo -e "\033[32m$message\033[0m"
-        ;;
+            echo "INFO: $message"
+            ;;
         success)
-            echo -e "\033[34m$message\033[0m"
-        ;;
+            echo "SUCCESS: $message"
+            ;;
         error)
-            echo -e "\033[31m$message\033[0m"
-        ;;
+            echo "ERROR: $message"
+            ;;
         *)
             echo "$message"
-        ;;
+            ;;
     esac
 }
 
@@ -27,12 +27,13 @@ message() {
     local text=$2
     local arg=${3:-""}
     if [ "$arg" = "-n" ]; then
-        printf "${colors[$type]}%s${NC}" "$text"
+        printf "%s" "$text"
     else
-        echo -e "${colors[$type]}$text${NC}"
+        echo "$text"
     fi
 }
 
+# Logo string
 str=$'
         _|            _   _ |   _  _ 
 __ |_| (_| )( .  \)/ (_) |  |( (- |  __
@@ -62,7 +63,7 @@ else
     exit 1
 fi
 
-# Use the colors in logs
+# Use the logs
 nice_logs "Here you go, welcome to UDX Worker Container." "info"
 nice_logs "..."
 
