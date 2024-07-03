@@ -17,4 +17,4 @@ config:
     #   email: your-gcp-service-account-email
     #   keyfile: "udx://tokens/data/gcp-service-account/keyfile"
   volumes:
-    - "/host/path:/container/path"
+    - "/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml"

@@ -54,7 +54,7 @@ This repository is configured with GitHub Actions workflows that ensure continuo
 
 ### Features
 
-#### Using worker.yml for Dynamic Configuration
+#### 1. Using worker.yml for Dynamic Configuration
 
 The worker.yml file allows you to dynamically configure environment variables, volume mappings, and more for the UDX Worker container. This enhances flexibility and consistency across different environments.
 
@@ -65,7 +65,7 @@ config:
   env:
     DOCKER_IMAGE_NAME: "udx-worker"
   volumes:
-    - "/host/path:/container/path"
+    - "/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml"
 ```
 
 ##### Mounting worker.yml during Container Run
@@ -76,7 +76,7 @@ You can mount your local worker.yml file to the container using the -v option:
 docker run -v $(pwd)/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml udx-worker
 ```
 
-#### Additional Entrypoint Script
+#### 2. Additional Entrypoint Script
 
 The UDX Worker Docker image includes support for an additional entrypoint script. This is defined by the `ADDITIONAL_ENTRYPOINT` environment variable. If a child image or a user wants to include custom initialization logic, they can do so by placing their script at the path specified by `ADDITIONAL_ENTRYPOINT`.
 
@@ -89,7 +89,7 @@ The UDX Worker Docker image includes support for an additional entrypoint script
 - Custom Initialization: Executes the script specified by the `ADDITIONAL_ENTRYPOINT` environment variable after main.sh. This allows users who utilize the UDX Worker as a base for their own Docker images to add custom initialization logic.
   - The `ADDITIONAL_ENTRYPOINT` (`/usr/local/bin/init.sh` by default) environment variable specifies the shell script to run during the entrypoint for child images. If an entrypoint is specified in the child Dockerfile, UDX Worker features will not be enabled.
 
-#### Example Usage:
+##### Example Usage:
 
 - Create a custom script (e.g., `init.sh`) and place it at `/usr/local/bin/init.sh` inside the Docker container.
 - Ensure the script has executable permissions.
@@ -107,14 +107,17 @@ RUN chmod +x /usr/local/bin/init.sh
 
 This setup ensures flexibility and extensibility, allowing custom initialization while maintaining a secure and reliable environment for automation tasks.
 
-#### GitHub Actions Workflow
+#### 3. GitHub Actions Workflow Integration
 
-You can also integrate the UDX Worker container with a CI/CD pipeline using GitHub Actions. Here's an example workflow:
+You can also integrate the UDX Worker container with a CI/CD pipeline using GitHub Actions. Here’s how you can utilize the already built and uploaded UDX Worker image from Google Cloud, mounting worker.yml from your app repository:
 
 ```yaml
 name: CI Pipeline
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -127,16 +130,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v0
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Build and run UDX worker
+      - name: Pull and run UDX worker
         run: |
-          docker build -t udx-worker .
-          docker run -v ${{ github.workspace }}/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml udx-worker
+          docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
+          docker run -v ${{ github.workspace }}/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml gcr.io/rabbit-ci-tooling/udx-worker:latest
 ```
 
 ### Contributing
