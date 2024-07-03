@@ -71,6 +71,10 @@ COPY ./bin/modules /usr/local/bin/modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 
+# Copy the test script to the image
+COPY ./bin/test.sh /usr/local/bin/test.sh
+RUN chmod +x /usr/local/bin/test.sh
+
 # Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
 RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/modules/*.sh && \
     chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs && \

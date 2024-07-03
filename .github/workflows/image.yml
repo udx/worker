@@ -38,7 +38,7 @@
 ## - GitVersion: https://gitversion.net/docs/
 ##
 
-name: Build Image
+name: Build and Test Image
 
 on:
   push:
@@ -116,9 +116,15 @@ jobs:
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
+      - name: Build Docker Image
+        run: docker build -t udx-worker:latest ${{env.IMAGE_CONTEXT}}
+
+      - name: Run Tests in Docker Container
+        run: |
+          docker run --rm -v $(pwd)/worker.yml:/home/udx/.cd/configs/worker.yml udx-worker /usr/local/bin/test.sh
+
       - name: Build and push
         if: success() && github.ref == env.RELEASE_BRANCH_REF
-        id: docker_build
         uses: docker/build-push-action@v6
         with:
           context: ${{env.IMAGE_CONTEXT}}

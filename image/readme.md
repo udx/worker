@@ -12,7 +12,7 @@ Before using the UDX Worker Image, make sure you have the following prerequisite
 
 ### Build
 
-To build the Docker image locally, use the following command:
+To build the Docker image locally:
 
 ```shell
 docker build -t udx-worker .
@@ -20,15 +20,21 @@ docker build -t udx-worker .
 
 ### Run
 
-To run the locally built UDX Worker container, use the following command:
+To run the container in the background:
 
 ```shell
 docker run -d --rm --name udx-worker udx-worker
 ```
 
+To run the container interactively:
+
+```shell
+docker run --rm -it udx-worker bash
+```
+
 ### Exec
 
-To access the running UDX Worker container, use the following command:
+To access the running UDX Worker container:
 
 ```shell
 docker exec -it udx-worker bash
@@ -38,15 +44,15 @@ docker exec -it udx-worker bash
 
 ### Pull
 
-To pull the Docker image from the Google Cloud Artifact Registry, use the following command:
+To pull the Docker image from the Google Cloud Artifact Registry:
 
 ```shell
 docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
 ```
 
-### Run 
+### Run
 
-To run the UDX Worker container pulled from the Google Cloud Artifact Registry, use the following command:
+To run the UDX Worker container pulled from the Google Cloud Artifact Registry:
 
 ```shell
 docker run -d --rm --name udx-worker gcr.io/rabbit-ci-tooling/udx-worker:latest
