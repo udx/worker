@@ -1,6 +1,12 @@
 # UDX Worker
 
-This repository contains the UDX Worker Docker image, designed to provide a secure and reliable environment for various automation tasks. The image includes essential tools and dependencies for development and deployment.
+- The UDX Worker revolutionizes DevSecOps by abstracting the complexities of secret management and securely handling these within its runtime environment, akin to the transformative role of Kubernetes in container orchestration. 
+
+- This innovative tool is crafted to support the decentralized DevOps model, providing secure access to necessary secrets without direct exposure or the need for individual permissions. 
+
+- This repository contains the UDX Worker Docker image, designed to provide a secure and reliable environment for various automation tasks. The image includes essential tools and dependencies for development and deployment.
+
+![UDX Worker Diagram](https://storage.googleapis.com/stateless-udx-io/2023/07/e5a9ac2b-understanding-containerization-in-microservices-architecture.png)
 
 ## Prerequisites
 

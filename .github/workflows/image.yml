@@ -121,6 +121,7 @@ jobs:
 
       - name: Run Tests in Docker Container
         run: |
+          
           docker run --rm -v $(pwd)/worker.yml:/home/udx/.cd/configs/worker.yml udx-worker /usr/local/bin/test.sh
 
       - name: Build and push
