@@ -84,11 +84,11 @@ configure_environment() {
         fi
     fi
     
+    authenticate_actors || echo "No actors configuration found"
+    
     if [ -z "$secrets" ]; then
         fetch_secrets || echo "No secrets configuration found"
     fi
-    
-    authenticate_actors || echo "No actors configuration found"
     
     detect_volumes
 }

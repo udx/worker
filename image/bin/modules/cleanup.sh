@@ -8,5 +8,5 @@ cleanup_actors() {
     az logout
     
     # Example: Deactivate GCP service account
-    gcloud auth revoke --all
+    # gcloud auth revoke --all
 }

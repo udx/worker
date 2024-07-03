@@ -1,6 +1,17 @@
 #!/bin/sh
 
-# Function to fetch secrets
+# Function to redact sensitive parts of the logs
+redact_secret() {
+    echo "$1" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g'
+}
+
+# Function to resolve secrets from Azure Key Vault
+resolve_azure_secret() {
+    local secret_url=$1
+    az keyvault secret show --id "$secret_url" --query "value" -o tsv
+}
+
+# Function to fetch secrets and set them as environment variables
 fetch_secrets() {
     echo "Fetching secrets"
     
@@ -13,22 +24,38 @@ fetch_secrets() {
         return 1
     fi
     
-    # Check if workerSecrets is defined
-    if ! yq e '.config.workerSecrets' "$WORKER_CONFIG" >/dev/null; then
-        echo "No workerSecrets configuration found"
-        return 0
-    fi
-
-    # Use yq to extract secrets and set them as environment variables
-    yq e '.config.workerSecrets | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/secrets.sh
+    # Ensure the secrets_env.sh file exists
+    SECRETS_ENV_FILE="/home/$USER/.cd/configs/secrets_env.sh"
+    touch $SECRETS_ENV_FILE
+    echo "# Secrets environment variables" > $SECRETS_ENV_FILE
     
-    # Source the generated script to set secrets as environment variables
-    if [ -f /tmp/secrets.sh ]; then
-        . /tmp/secrets.sh
-    else
-        echo "Error: Generated secrets script not found"
-        return 1
-    fi
+    # Extract secret URLs and resolve them
+    SECRETS_JSON=$(yq e -o=json '.config.workerSecrets' "$WORKER_CONFIG")
+    echo "Extracted secrets JSON: $SECRETS_JSON"
 
-    echo "Secrets fetched and set as environment variables"
+    echo "$SECRETS_JSON" | jq -c 'to_entries[]' | while read -r secret; do
+        name=$(echo "$secret" | jq -r '.key')
+        url=$(echo "$secret" | jq -r '.value')
+
+        echo "Resolving secret for $name"
+        
+        case $url in
+            https://*.vault.azure.net/*)
+                value=$(resolve_azure_secret "$url")
+                ;;
+            *)
+                echo "Unsupported secret URL: $(redact_secret "$url")"
+                value=""
+                ;;
+        esac
+
+        if [ -n "$value" ]; then
+            echo "export $name=\"$value\"" >> $SECRETS_ENV_FILE
+            echo "Secret $name resolved and set as environment variable."
+        else
+            echo "Failed to resolve secret for $name"
+        fi
+    done
+    
+    echo "Secrets fetched and written to $SECRETS_ENV_FILE"
 }
