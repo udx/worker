@@ -29,6 +29,7 @@ RUN apt-get update && \
     gnupg=2.4.4-2ubuntu17 \
     wget=1.21.4-1ubuntu4 \
     ca-certificates \
+    lsb-release \
     nodejs \
     npm \
     e2fsprogs && \
@@ -44,6 +45,14 @@ RUN wget https://golang.org/dl/go1.20.5.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz && \
     ln -s /usr/local/go/bin/go /usr/bin/go && \
     rm go1.20.5.linux-amd64.tar.gz
+
+# Add the Microsoft package repository and install Azure CLI
+RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
+    apt-get update && \
+    apt-get install -y azure-cli && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
