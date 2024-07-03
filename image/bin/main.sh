@@ -1,27 +1,22 @@
 #!/bin/bash
 set -e
 
-# Function to handle nice logs with redaction for secrets
+# Function to handle nice logs
 nice_logs() {
     local message=$1
     local level=$2
-    local redacted_message
-
-    # Redact secrets in the message
-    redacted_message=$(echo "$message" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g')
-
     case $level in
         info)
-            echo -e "\033[32m$redacted_message\033[0m"
+            echo -e "\033[32m$message\033[0m"
         ;;
         success)
-            echo -e "\033[34m$redacted_message\033[0m"
+            echo -e "\033[34m$message\033[0m"
         ;;
         error)
-            echo -e "\033[31m$redacted_message\033[0m"
+            echo -e "\033[31m$message\033[0m"
         ;;
         *)
-            echo "$redacted_message"
+            echo "$message"
         ;;
     esac
 }

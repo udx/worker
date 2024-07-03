@@ -1,5 +1,14 @@
 #!/bin/sh
 
+# Directory containing provider-specific auth modules
+AUTH_MODULES_DIR="/usr/local/bin/modules/auth"
+
+# Load provider-specific auth modules
+for module in "$AUTH_MODULES_DIR"/*.sh; do
+    # shellcheck disable=SC1090
+    [ -e "$module" ] && source "$module"
+done
+
 # Function to authenticate actors
 authenticate_actors() {
     echo "Authenticating actors"
@@ -12,30 +21,31 @@ authenticate_actors() {
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
-
+    
     # Extract actor information and authenticate
     yq e '.config.workerActors | to_entries | .[]' "$WORKER_CONFIG" | while read -r actor; do
         type=$(echo "$actor" | yq e '.value.type' -)
-        subscription=$(echo "$actor" | yq e '.value.subscription' -)
-        tenant=$(echo "$actor" | yq e '.value.tenant' -)
-        application=$(echo "$actor" | yq e '.value.application' -)
-        password=$(echo "$actor" | yq e '.value.password' -)
-        email=$(echo "$actor" | yq e '.value.email' -)
-        keyfile=$(echo "$actor" | yq e '.value.keyfile' -)
-        
-        echo "Authenticating actor of type: $type"
-        
-        # Perform authentication logic for Azure
-        if [ "$type" == "azure-service-principal" ]; then
-            az login --service-principal -u "$application" -p "$password" --tenant "$tenant"
-            az account set --subscription "$subscription"
-        fi
-        
-        # Perform authentication logic for GCP
-        if [ "$type" == "gcp-service-account" ]; then
-            echo "$keyfile" > /tmp/gcp_keyfile.json
-            gcloud auth activate-service-account "$email" --key-file=/tmp/gcp_keyfile.json
-            rm /tmp/gcp_keyfile.json
-        fi
+        authenticate_actor "$type" "$actor"
     done
+}
+
+# Function to call the appropriate authentication function based on the actor type
+authenticate_actor() {
+    local type=$1
+    local actor=$2
+    
+    case $type in
+        "azure-service-principal"|"azure-personal-account")
+            azure_authenticate "$actor"
+        ;;
+        "gcp-service-account")
+            gcp_authenticate "$actor"
+        ;;
+        "aws-role")
+            aws_authenticate "$actor"
+        ;;
+        *)
+            echo "Error: Unsupported actor type $type"
+        ;;
+    esac
 }
