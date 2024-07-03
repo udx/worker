@@ -21,6 +21,34 @@ nice_logs() {
     esac
 }
 
+# Define a single function for all message types
+message() {
+    local type=$1
+    local text=$2
+    local arg=${3:-""}
+    if [ "$arg" = "-n" ]; then
+        printf "${colors[$type]}%s${NC}" "$text"
+    else
+        echo -e "${colors[$type]}$text${NC}"
+    fi
+}
+
+str=$'
+        _|            _   _ |   _  _ 
+__ |_| (_| )( .  \)/ (_) |  |( (- |  __
+\n'
+
+# Print the logo with a delay after each character
+for (( i=0; i<${#str}; i++ )); do
+  message "success" "${str:$i:1}" "-n"
+  # Add a pause only if the current character is not a space or newline
+  if [[ "${str:$i:1}" != " " && "${str:$i:1}" != $'\n' ]]; then
+    sleep 0.01
+  fi
+done
+
+sleep 1
+
 # Load all modules in the modules directory
 modules_dir="/usr/local/bin/modules"
 if [ -d "$modules_dir" ]; then
