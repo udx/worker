@@ -77,21 +77,18 @@ get_actor_secret_from_cache() {
 
 # Main function to configure environment
 configure_environment() {
-    if [ -z "$env" ] || [ -z "$secrets" ]; then
+    if [ -z "$env" ]; then
         if ! fetch_env; then
             echo "Failed to fetch environment configuration"
             exit 1
         fi
-        authenticate_actors
-        fetch_secrets
-        cleanup_actors
-    else
-        get_actor_secret_from_cache
-        echo "Retrieving actor/secret from local cache"
     fi
+    
+    if [ -z "$secrets" ]; then
+        fetch_secrets || echo "No secrets configuration found"
+    fi
+    
+    authenticate_actors || echo "No actors configuration found"
     
     detect_volumes
 }
-
-# Call the main function to configure environment
-configure_environment

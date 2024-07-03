@@ -1,66 +1,5 @@
 #!/bin/sh
 
-# Function to resolve secrets based on URI
-resolve_secret() {
-    local uri=$1
-    case $uri in
-        *bitwarden.com*)
-            resolve_bitwarden_secret "$uri"
-            ;;
-        *keyvault.azure.com*)
-            resolve_azure_secret "$uri"
-            ;;
-        *google.com*)
-            resolve_gcp_secret "$uri"
-            ;;
-        *aws*)
-            resolve_aws_secret "$uri"
-            ;;
-        *vault*)
-            resolve_vault_secret "$uri"
-            ;;
-        *)
-            echo "Error: Unsupported secret URI"
-            return 1
-            ;;
-    esac
-}
-
-# Function to resolve secrets from Bitwarden
-resolve_bitwarden_secret() {
-    local uri=$1
-    # Implement Bitwarden secret resolution logic
-    echo "resolved_bitwarden_secret"
-}
-
-# Function to resolve secrets from GCP Secret Manager
-resolve_gcp_secret() {
-    local uri=$1
-    # Implement GCP Secret Manager resolution logic
-    echo "resolved_gcp_secret"
-}
-
-# Function to resolve secrets from Azure Key Vault
-resolve_azure_secret() {
-    local uri=$1
-    # Implement Azure Key Vault resolution logic
-    echo "resolved_azure_secret"
-}
-
-# Function to resolve secrets from AWS Secret Manager
-resolve_aws_secret() {
-    local uri=$1
-    # Implement AWS Secret Manager resolution logic
-    echo "resolved_aws_secret"
-}
-
-# Function to resolve secrets from HashiCorp Vault
-resolve_vault_secret() {
-    local uri=$1
-    # Implement HashiCorp Vault resolution logic
-    echo "resolved_vault_secret"
-}
-
 # Function to fetch secrets
 fetch_secrets() {
     echo "Fetching secrets"
@@ -73,15 +12,21 @@ fetch_secrets() {
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
+    
+    # Check if workerSecrets is defined
+    if ! yq e '.config.workerSecrets' "$WORKER_CONFIG" >/dev/null; then
+        echo "No workerSecrets configuration found"
+        return 0
+    fi
 
-    # Use yq to extract and resolve secrets
-    yq e '.config.workerSecrets | to_entries | .[] | .key + "=" + resolve_secret(.value)' "$WORKER_CONFIG" > /tmp/secret_vars.sh
-
+    # Use yq to extract secrets and set them as environment variables
+    yq e '.config.workerSecrets | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/secrets.sh
+    
     # Source the generated script to set secrets as environment variables
-    if [ -f /tmp/secret_vars.sh ]; then
-        . /tmp/secret_vars.sh
+    if [ -f /tmp/secrets.sh ]; then
+        . /tmp/secrets.sh
     else
-        echo "Error: Generated secret variables script not found"
+        echo "Error: Generated secrets script not found"
         return 1
     fi
 
