@@ -3,7 +3,6 @@
 # Source the provider-specific auth modules
 source /usr/local/bin/modules/auth/azure.sh
 # @TODO: Uncomment the following lines after implementing the auth modules
-# @TODO: and setting up the environment with the necessary CLI tools
 # source /usr/local/bin/modules/auth/gcp.sh
 # source /usr/local/bin/modules/auth/aws.sh
 
@@ -19,37 +18,42 @@ authenticate_actors() {
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
-    
-    # Check if workerActors is defined
-    if ! yq e '.config.workerActors' "$WORKER_CONFIG" >/dev/null; then
-        echo "No workerActors configuration found"
+
+    # Check if the workerActors section exists and is not empty
+    if ! yq e '.config.workerActors' "$WORKER_CONFIG" > /dev/null; then
+        echo "No workerActors section found in the configuration."
         return 0
     fi
 
     # Extract actor information and authenticate
-    yq e '.config.workerActors | to_entries | .[]' "$WORKER_CONFIG" | while read -r actor; do
-        type=$(echo "$actor" | yq e '.value.type' -)
-        authenticate_actor "$type" "$actor"
+    ACTORS_JSON=$(yq e -o=json '.config.workerActors' "$WORKER_CONFIG")
+    echo "Extracted actors JSON: $ACTORS_JSON"
+
+    if [ "$ACTORS_JSON" = "null" ]; then
+        echo "No actors found in the configuration."
+        return 0
+    fi
+
+    echo "$ACTORS_JSON" | jq -c '.[]' | while read -r actor; do
+        type=$(echo "$actor" | jq -r '.type')
+        email=$(echo "$actor" | jq -r '.email')
+        password=$(echo "$actor" | jq -r '.password')
+
+        echo "Extracted actor: $actor"
+        echo "Extracted actor type: $type"
+
+        if [ -z "$type" ] || [ "$type" == "null" ]; then
+            echo "Error: Actor type is null or empty"
+            continue
+        fi
+
+        # Handle specific actor types
+        if [ "$type" = "azure-personal-account" ]; then
+            echo "Authenticating Azure personal account: $email"
+            az login -u "$email" -p "$password"
+        fi
+
+        # Add other actor types handling as needed
+        # authenticate_actor "$type" "$actor"
     done
-}
-
-# Function to call the appropriate authentication function based on the actor type
-authenticate_actor() {
-    local type=$1
-    local actor=$2
-
-    case $type in
-        "azure-service-principal"|"azure-personal-account")
-            azure_authenticate "$actor"
-            ;;
-        "gcp-service-account")
-            gcp_authenticate "$actor"
-            ;;
-        "aws-role")
-            aws_authenticate "$actor"
-            ;;
-        *)
-            echo "Error: Unsupported actor type $type"
-            ;;
-    esac
 }

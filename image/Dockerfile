@@ -32,7 +32,8 @@ RUN apt-get update && \
     lsb-release \
     nodejs \
     npm \
-    e2fsprogs && \
+    e2fsprogs \
+    jq && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \

@@ -3,12 +3,19 @@
 # Function to authenticate Azure accounts
 azure_authenticate() {
     local actor=$1
-    local type=$(echo "$actor" | yq e '.type' -)
-    local subscription=$(echo "$actor" | yq e '.subscription' -)
-    local tenant=$(echo "$actor" | yq e '.tenant' -)
-    local application=$(echo "$actor" | yq e '.application' -)
-    local password=$(echo "$actor" | yq e '.password' -)
-    local email=$(echo "$actor" | yq e '.email' -)
+    local type=$(echo "$actor" | jq -r '.type')
+    local subscription=$(echo "$actor" | jq -r '.subscription')
+    local tenant=$(echo "$actor" | jq -r '.tenant')
+    local application=$(echo "$actor" | jq -r '.application')
+    local password=$(echo "$actor" | jq -r '.password')
+    local email=$(echo "$actor" | jq -r '.email')
+
+    echo "Actor type: $type"
+    echo "Subscription: $subscription"
+    echo "Tenant: $tenant"
+    echo "Application: $application"
+    # echo "Password: $password"
+    echo "Email: $email"
 
     case $type in
         "azure-service-principal")
@@ -19,7 +26,9 @@ azure_authenticate() {
         "azure-personal-account")
             echo "Authenticating Azure personal account: $email"
             az login -u "$email" -p "$password"
-            az account set --subscription "$subscription"
+            if [ -n "$subscription" ]; then
+                az account set --subscription "$subscription"
+            fi
             ;;
         *)
             echo "Error: Unsupported Azure authentication type $type"

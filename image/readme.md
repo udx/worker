@@ -80,7 +80,7 @@ docker run -v $(pwd)/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml udx
 
 The UDX Worker Docker image includes support for an additional entrypoint script. This is defined by the `ADDITIONAL_ENTRYPOINT` environment variable. If a child image or a user wants to include custom initialization logic, they can do so by placing their script at the path specified by `ADDITIONAL_ENTRYPOINT`.
 
-#### How it works:
+#### How it works
 
 - Default Entrypoint: Executes `/usr/local/bin/entrypoint.sh` when the container starts.
 
@@ -89,7 +89,7 @@ The UDX Worker Docker image includes support for an additional entrypoint script
 - Custom Initialization: Executes the script specified by the `ADDITIONAL_ENTRYPOINT` environment variable after main.sh. This allows users who utilize the UDX Worker as a base for their own Docker images to add custom initialization logic.
   - The `ADDITIONAL_ENTRYPOINT` (`/usr/local/bin/init.sh` by default) environment variable specifies the shell script to run during the entrypoint for child images. If an entrypoint is specified in the child Dockerfile, UDX Worker features will not be enabled.
 
-#### Example Usage:
+#### Example Usage
 
 - Create a custom script (e.g., `init.sh`) and place it at `/usr/local/bin/init.sh` inside the Docker container.
 - Ensure the script has executable permissions.
