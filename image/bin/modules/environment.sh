@@ -32,6 +32,11 @@ fetch_env() {
     echo "Environment configuration fetched successfully"
 }
 
+# Function to redact secrets in logs
+redact_secret() {
+    echo "$1" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g'
+}
+
 # Function to detect volume configuration and generate a warning log
 detect_volumes() {
     echo "Fetching volumes configuration"
