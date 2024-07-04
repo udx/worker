@@ -131,7 +131,10 @@ jobs:
 
       - name: Run Tests in Docker Container
         run: |
-          docker run --rm -v $(pwd)/image/etc/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro -v $(pwd)/image/.env:/home/udx/.cd/.env:ro udx-worker /usr/local/bin/test.sh
+          docker run --rm \
+            -v $(pwd)/image/etc/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro \
+            -v $(pwd)/image/.env:/home/udx/.cd/.env:ro \
+            udx-worker /usr/local/bin/test.sh
 
       - name: Build and push
         if: success() && github.ref == env.RELEASE_BRANCH_REF

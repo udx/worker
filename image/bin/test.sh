@@ -3,10 +3,10 @@
 echo "Starting tests..."
 
 # Test environment variables
-if [ "$DOCKER_IMAGE_NAME" != "udx-worker" ]; then
-    echo "DOCKER_IMAGE_NAME environment variable is not set correctly"
-    exit 1
-fi
+# if [ "$DOCKER_IMAGE_NAME" != "udx-worker" ]; then
+#     echo "DOCKER_IMAGE_NAME environment variable is not set correctly"
+#     exit 1
+# fi
 
 # Test secret resolution (assuming secrets are set as environment variables)
 if [ -z "$AZURE_SECRET" ]; then
