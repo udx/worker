@@ -47,7 +47,8 @@ fetch_env() {
     # Use yq to extract environment variables and export them
     yq e '.config.env | to_entries | .[] | .key + "=" + "\"" + .value + "\"" ' "$WORKER_CONFIG" | while IFS= read -r line; do
         eval "export $line"
-        echo "Exported: $line"  # Debug statement
+        key=$(echo $line | cut -d '=' -f 1)
+        eval "export $key=$(echo \$$key | envsubst)"
     done
     
     echo "Environment variables set:"
