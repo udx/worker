@@ -38,7 +38,7 @@
 ## - GitVersion: https://gitversion.net/docs/
 ##
 
-name: Build and Test Image
+name: Build and Test Docker Image
 
 on:
   push:
@@ -55,6 +55,9 @@ jobs:
     env:
       RELEASE_BRANCH_REF: refs/heads/latest
       IMAGE_CONTEXT: image
+      AZURE_SUBSCRIPTION_ID: 132583e0-0e9d-46a9-b702-66060ca58c1b
+      AZURE_TENANT_ID: ffbbef27-e47d-46b3-8d3c-21aa3438d682
+      AZURE_APPLICATION_ID: a6319a29-b3f2-4fc9-ba16-f215664a7d4e
 
     steps:
       - name: Checkout code
@@ -64,6 +67,13 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Generate .env file
+        run: |
+          echo "AZURE_SUBSCRIPTION_ID=${{ env.AZURE_SUBSCRIPTION_ID }}" >> .env
+          echo "AZURE_TENANT_ID=${{ env.AZURE_TENANT_ID }}" >> .env
+          echo "AZURE_APPLICATION_ID=${{ env.AZURE_APPLICATION_ID }}" >> .env
+          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .env
 
       - name: Test build
         if: success() && github.ref != env.RELEASE_BRANCH_REF
@@ -121,8 +131,7 @@ jobs:
 
       - name: Run Tests in Docker Container
         run: |
-          
-          docker run --rm -v $(pwd)/worker.yml:/home/udx/.cd/configs/worker.yml udx-worker /usr/local/bin/test.sh
+          docker run --rm -v $(pwd)/image/etc/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro -v $(pwd)/image/.env:/home/udx/.cd/.env:ro udx-worker /usr/local/bin/test.sh
 
       - name: Build and push
         if: success() && github.ref == env.RELEASE_BRANCH_REF

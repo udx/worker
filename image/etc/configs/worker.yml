@@ -3,18 +3,17 @@ kind: workerConfig
 version: udx.io/worker-v1/config
 config:
   env:
-    DOCKER_IMAGE_NAME: "udx-worker"
-  # workerSecrets:
-    # AZURE_SECRET: <https://keyvault.azure.com/v3/your-secret-id>
-    # GCP_SECRET: <https://secretmanager.googleapis.com/v1/projects/your-project/secrets/your-secret>
-  # workerActors:
-    # - type: azure-service-principal
-    #   subscription: your-azure-subscription-id
-    #   tenant: your-azure-tenant-id
-    #   application: your-azure-application-id
-    #   password: "udx://tokens/data/azure-service-principal/secretValue"
-    # - type: gcp-service-account
-    #   email: your-gcp-service-account-email
-    #   keyfile: "udx://tokens/data/gcp-service-account/keyfile"
-  volumes:
-    - "/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml"
+    DOCKER_IMAGE_NAME: udx-worker
+    AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
+    AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+    AZURE_APPLICATION_ID: ${AZURE_APPLICATION_ID}
+  workerSecrets:
+    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
+    # Placeholder for future support
+    GCP_SECRET: "https://secretmanager.googleapis.com/v1/projects/your-project/secrets/your-secret"
+  workerActors:
+    - type: azure-service-principal
+      subscription: ${AZURE_SUBSCRIPTION_ID}
+      tenant: ${AZURE_TENANT_ID}
+      application: ${AZURE_APPLICATION_ID}
+      password: ${AZURE_APPLICATION_PASSWORD}
