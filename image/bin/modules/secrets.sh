@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# Function to resolve placeholders with environment variables
+resolve_env_vars() {
+    local value="$1"
+    eval echo "$value"
+}
+
 # Function to redact sensitive parts of the logs
 redact_secret() {
     echo "$1" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g'
@@ -35,7 +41,9 @@ fetch_secrets() {
 
     echo "$SECRETS_JSON" | jq -c 'to_entries[]' | while read -r secret; do
         name=$(echo "$secret" | jq -r '.key')
-        url=$(echo "$secret" | jq -r '.value')
+        url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
+
+        echo "Resolved URL for $name: $url"
 
         echo "Resolving secret for $name with URL: $url" >&2
         

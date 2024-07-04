@@ -24,6 +24,8 @@ fetch_env() {
     # Source the generated script to set environment variables
     if [ -f /tmp/env_vars.sh ]; then
         . /tmp/env_vars.sh
+        echo "Environment variables set:"
+        env | grep AZURE_
     else
         echo "Error: Generated environment variables script not found"
         return 1
