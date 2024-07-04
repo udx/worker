@@ -61,6 +61,7 @@ fetch_env() {
     
     echo "Environment variables set:"
     env | grep AZURE_
+    env | grep DOCKER_IMAGE_NAME
 }
 
 # Function to redact secrets in logs
