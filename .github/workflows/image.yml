@@ -70,10 +70,10 @@ jobs:
 
       - name: Generate .env file
         run: |
-          echo "AZURE_SUBSCRIPTION_ID=${{ env.AZURE_SUBSCRIPTION_ID }}" >> .env
-          echo "AZURE_TENANT_ID=${{ env.AZURE_TENANT_ID }}" >> .env
-          echo "AZURE_APPLICATION_ID=${{ env.AZURE_APPLICATION_ID }}" >> .env
-          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .env
+          echo "AZURE_SUBSCRIPTION_ID=${{ env.AZURE_SUBSCRIPTION_ID }}" >> image/.env
+          echo "AZURE_TENANT_ID=${{ env.AZURE_TENANT_ID }}" >> image/.env
+          echo "AZURE_APPLICATION_ID=${{ env.AZURE_APPLICATION_ID }}" >> image/.env
+          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> image/.env
 
       - name: Test build
         if: success() && github.ref != env.RELEASE_BRANCH_REF
