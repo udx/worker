@@ -19,15 +19,15 @@ load_env() {
         set +a
     fi
     
-    # Check if AZURE_PASSWORD is set, if not prompt for it
+    # Check if AZURE_APPLICATION_PASSWORD is set, if not prompt for it
     if [ -f "$PASSWORD_FILE" ]; then
-        export AZURE_PASSWORD=$(cat "$PASSWORD_FILE")
-    elif [ -z "$AZURE_PASSWORD" ]; then
+        export AZURE_APPLICATION_PASSWORD=$(cat "$PASSWORD_FILE")
+    elif [ -z "$AZURE_APPLICATION_PASSWORD" ]; then
         if [ -t 0 ]; then
-            read -sp "Enter AZURE_PASSWORD: " AZURE_PASSWORD
+            read -sp "Enter AZURE_APPLICATION_PASSWORD: " AZURE_APPLICATION_PASSWORD
             echo
         else
-            echo "AZURE_PASSWORD is not set and not running interactively. Exiting."
+            echo "AZURE_APPLICATION_PASSWORD is not set and not running interactively. Exiting."
             exit 1
         fi
     fi
