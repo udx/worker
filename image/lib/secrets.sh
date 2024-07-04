@@ -79,3 +79,8 @@ fetch_secrets() {
     
     echo "Secrets fetched and written to $SECRETS_ENV_FILE"
 }
+
+# Initialize the secrets module
+init_secrets() {
+    echo "Initializing secrets module"
+}

@@ -66,20 +66,23 @@ WORKDIR /home/${USER}
 RUN npm install -g pm2@5.4.1 grunt-cli@1.4.3 && \
     npm install @babel/traverse@7.24.7 braces@3.0.3 http-cache-semantics@4.1.1
 
-# Copy the bin, etc directories to the image and set correct permissions
+# Copy the bin and etc directories to the image and set correct permissions
 COPY ./bin /usr/local/bin
-COPY ./bin/modules /usr/local/bin/modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
+
+# Copy the lib directory to the image
+COPY ./lib /usr/local/lib
 
 # Copy the test script to the image
 COPY ./bin/test.sh /usr/local/bin/test.sh
 RUN chmod +x /usr/local/bin/test.sh
 
 # Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
-RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/modules/*.sh && \
-    chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs && \
-    chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh /usr/local/bin/modules/environment.sh /usr/local/bin/modules/init_project.sh /usr/local/bin/modules/utils.sh
+RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh && \
+    find /usr/local/lib -type f -name "*.sh" -exec chmod +x {} \; && \
+    chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
+    chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh
 
 # Switch to non-root user
 USER ${USER}

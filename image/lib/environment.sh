@@ -1,10 +1,5 @@
 #!/bin/sh
 
-# Source the modules
-source /usr/local/bin/modules/secrets.sh
-source /usr/local/bin/modules/auth.sh
-source /usr/local/bin/modules/cleanup.sh
-
 # Function to load environment variables from .env file or prompt for password
 load_env() {
     echo "Loading environment variables"
@@ -47,13 +42,55 @@ fetch_env() {
     # Use yq to extract environment variables and export them
     yq e '.config.env | to_entries | .[] | .key + "=" + "\"" + .value + "\"" ' "$WORKER_CONFIG" | while IFS= read -r line; do
         eval "export $line"
-        key=$(echo $line | cut -d '=' -f 1)
-        eval "export $key=$(echo \$$key | envsubst)"
+    done
+
+    # Substitute variables and re-export them
+    for key in $(yq e '.config.env | keys | .[]' "$WORKER_CONFIG"); do
+        eval "export $key=\${$key}"
     done
     
     echo "Environment variables set:"
     env | grep AZURE_
     env | grep DOCKER_IMAGE_NAME
+}
+
+# Function to detect volume configuration and generate a warning log
+detect_volumes() {
+    echo "Fetching volumes configuration"
+    
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    
+    if [ ! -f "$WORKER_CONFIG" ]; then
+        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
+        return 1
+    fi
+    
+    VOLUMES=$(yq e '.config.volumes[]' "$WORKER_CONFIG" 2>/dev/null)
+    
+    if [ -z "$VOLUMES" ]; then
+        echo "Info: No volume configurations found in $WORKER_CONFIG"
+        return 0
+    fi
+    
+    echo "The following volumes are detected:"
+    echo "$VOLUMES" | while read -r volume; do
+        if [ -z "$volume" ]; then
+            echo "Warning: Empty volume configuration found"
+        else
+            echo "  -v $volume"
+        fi
+    done
+    echo "Please make sure to mount volumes when starting the container."
+}
+
+# Function to redact secrets in logs
+redact_secret() {
+    echo "$1" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g'
+}
+
+# Initialize the environment module
+init_environment() {
+    echo "Initializing environment module"
 }
 
 # Main function to configure environment
@@ -76,3 +113,15 @@ configure_environment() {
     
     detect_volumes
 }
+
+# Execute the main function
+configure_environment
+
+# Redact secrets and print environment variables for debugging
+echo "Printing all environment variables:"
+env | while read -r line; do
+    if [[ "$line" == *"AZURE_APPLICATION_PASSWORD="* ]]; then
+        line=$(redact_secret "$line")
+    fi
+    echo "$line"
+done

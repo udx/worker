@@ -60,3 +60,8 @@ authenticate_actors() {
         esac
     done
 }
+
+# Initialize the auth module
+init_auth() {
+    echo "Initializing auth module"
+}

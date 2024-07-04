@@ -33,8 +33,8 @@ done
 
 sleep 1
 
-# Load all modules in the modules directory
-modules_dir="/usr/local/bin/modules"
+# Load all modules in the lib directory
+modules_dir="/usr/local/lib"
 if [ -d "$modules_dir" ]; then
     for module_file in "$modules_dir"/*.sh; do
         [ -e "$module_file" ] || continue
@@ -44,6 +44,12 @@ else
     echo "Directory $modules_dir does not exist."
     exit 1
 fi
+
+# Initialize all modules
+init_environment
+init_auth
+init_secrets
+init_cleanup
 
 nice_logs "Here you go, welcome to UDX Worker Container." "info"
 nice_logs "..."
