@@ -6,9 +6,14 @@ resolve_env_vars() {
     eval echo "$value"
 }
 
-# Function to redact sensitive parts of the logs
-redact_secret() {
-    echo "$1" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g'
+# Function to redact passwords in the logs
+redact_password() {
+    echo "$1" | sed -E 's/("password":\s*")[^"]+/\1*********/g'
+}
+
+# Function to redact sensitive URLs
+redact_sensitive_urls() {
+    echo "$1" | sed -E 's/(https:\/\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)([A-Za-z0-9\/_-]*)/\1.*********\2.*********\3/g'
 }
 
 # Function to resolve secrets from Azure Key Vault
@@ -43,20 +48,20 @@ fetch_secrets() {
         name=$(echo "$secret" | jq -r '.key')
         url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
 
-        echo "Resolved URL for $name: $url"
+        echo "Resolved URL for $name: $(redact_sensitive_urls "$url")"
 
-        echo "Resolving secret for $name with URL: $url" >&2
+        echo "Resolving secret for $name with URL: $(redact_sensitive_urls "$url")" >&2
         
         case $url in
             https://*.vault.azure.net/*)
                 value=$(resolve_azure_secret "$url")
                 if [ $? -ne 0 ]; then
-                    echo "Error resolving Azure secret for $name: $(redact_secret "$url")" >&2
+                    echo "Error resolving Azure secret for $name: $(redact_sensitive_urls "$url")" >&2
                     value=""
                 fi
                 ;;
             *)
-                echo "Unsupported secret URL: $(redact_secret "$url")" >&2
+                echo "Unsupported secret URL: $(redact_sensitive_urls "$url")" >&2
                 value=""
                 ;;
         esac

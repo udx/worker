@@ -6,6 +6,11 @@ resolve_env_vars() {
     eval echo "$value"
 }
 
+# Function to redact passwords in the logs
+redact_password() {
+    echo "$1" | sed -E 's/("password":\s*")[^"]+/\1*********/g'
+}
+
 # Function to authenticate Azure service principal
 authenticate_azure_service_principal() {
     local subscription=$1
@@ -32,7 +37,7 @@ authenticate_actors() {
 
     # Extract actor configurations and resolve them
     ACTORS_JSON=$(yq e -o=json '.config.workerActors' "$WORKER_CONFIG")
-    echo "Extracted actors JSON: $ACTORS_JSON"
+    echo "Extracted actors JSON: $(redact_password "$ACTORS_JSON")"
 
     echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while read -r actor; do
         type=$(echo "$actor" | jq -r '.value.type')
