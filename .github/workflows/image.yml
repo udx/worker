@@ -8,7 +8,7 @@
 ## However, only pushes to the "release" (latest) branch result in the building and pushing of the image.
 ## For all other branches, the pipeline only performs a test build.
 ##
-## The pipeline uses repository variables to store all necessary information.
+## The pipeline uses repository variables and GitHub secrets to store all necessary information.
 ## Access to Google Cloud is granted using a service account and workload identity provider.
 ## The images that are published are tagged with the version from GitVersion.
 ## The pipeline also tags the new version as "latest", deletes the previous "latest" image, and creates a GitHub release with the changelog.
@@ -17,14 +17,9 @@
 ## GitVersion is configured in ci/git-version.yml, ensuring the use of "ContinuousDeployment" versioning mode and branching strategy
 ## (release: "latest", development: "!latest").
 ##
-## Required Repository Variables:
+## Required GitHub Secrets:
 ## ------------------------------
-## - GCP_PROJECT: Google Cloud project ID
-## - GCP_REGION: Google Cloud region
-## - GCP_REGISTRY_REPO: Google Artifact Registry repository name
-## - GCP_AUTH_PROVIDER: Google Cloud Workload Identity Provider
-## - GCP_SERVICE_ACCOUNT: Google Cloud service account name
-## - DOCKER_IMAGE_NAME: Docker image name
+## - AZURE_APPLICATION_PASSWORD: The password for the Azure application.
 ##
 ## References:
 ## -----------
@@ -75,18 +70,18 @@ jobs:
           echo "AZURE_APPLICATION_ID=${{ env.AZURE_APPLICATION_ID }}" >> image/.env
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> image/.env
 
-      - name: Test build
-        if: success() && github.ref != env.RELEASE_BRANCH_REF
-        run: docker build ${{env.IMAGE_CONTEXT}}
+      - name: Test build (non-release branches)
+        if: github.ref != env.RELEASE_BRANCH_REF
+        run: docker build ${{ env.IMAGE_CONTEXT }}
 
       - name: Install GitVersion
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1
         with:
@@ -95,7 +90,7 @@ jobs:
 
       - name: Authenticate to Google Cloud
         id: google_auth
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         uses: google-github-actions/auth@v2
         with:
           token_format: "access_token"
@@ -103,15 +98,15 @@ jobs:
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Google Cloud SDK
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Login to Google Artifact Registry
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Delete previous "latest" image
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         run: |
           IMAGE_NAME="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}"
           IMAGE_TAG="latest"
@@ -123,11 +118,12 @@ jobs:
           fi
 
       - name: Docker Login
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Build Docker Image
-        run: docker build -t udx-worker:latest ${{env.IMAGE_CONTEXT}}
+        if: github.ref == env.RELEASE_BRANCH_REF
+        run: docker build -t udx-worker:latest ${{ env.IMAGE_CONTEXT }}
 
       - name: Run Tests in Docker Container
         run: |
@@ -137,24 +133,24 @@ jobs:
             udx-worker /usr/local/bin/test.sh
 
       - name: Build and push
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         uses: docker/build-push-action@v6
         with:
-          context: ${{env.IMAGE_CONTEXT}}
+          context: ${{ env.IMAGE_CONTEXT }}
           push: true
           tags: |
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
       - name: Generate changelog
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- ./${IMAGE_CONTEXT} --pretty=format:"- %s" > changelog.txt
           echo "::set-output name=changelog::$(cat changelog.txt)"
 
       - name: Create GitHub release
-        if: success() && github.ref == env.RELEASE_BRANCH_REF
+        if: github.ref == env.RELEASE_BRANCH_REF
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
