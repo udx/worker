@@ -33,7 +33,8 @@ RUN apt-get update && \
     nodejs \
     npm \
     e2fsprogs \
-    jq && \
+    jq \
+    gettext-base && \  
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \

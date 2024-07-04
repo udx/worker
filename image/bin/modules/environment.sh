@@ -5,33 +5,62 @@ source /usr/local/bin/modules/secrets.sh
 source /usr/local/bin/modules/auth.sh
 source /usr/local/bin/modules/cleanup.sh
 
+# Function to load environment variables from .env file or prompt for password
+load_env() {
+    echo "Loading environment variables"
+    
+    ENV_FILE="/home/$USER/.cd/.env"
+    PASSWORD_FILE="/home/$USER/.cd/password"
+    
+    # Load environment variables from .env file if it exists
+    if [ -f "$ENV_FILE" ]; then
+        set -a
+        . "$ENV_FILE"
+        set +a
+    fi
+    
+    # Check if AZURE_PASSWORD is set, if not prompt for it
+    if [ -f "$PASSWORD_FILE" ]; then
+        export AZURE_PASSWORD=$(cat "$PASSWORD_FILE")
+    elif [ -z "$AZURE_PASSWORD" ]; then
+        if [ -t 0 ]; then
+            read -sp "Enter AZURE_PASSWORD: " AZURE_PASSWORD
+            echo
+        else
+            echo "AZURE_PASSWORD is not set and not running interactively. Exiting."
+            exit 1
+        fi
+    fi
+}
+
 # Function to fetch environment configuration
 fetch_env() {
     echo "Fetching environment configuration"
     
-    # Define the path to your YAML file
     WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
-    # Check if the file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
     
-    # Use yq to extract environment variables and format them for export
-    yq e '.config.env | to_entries | .[] | "export " + .key + "=" + "\"" + .value + "\""' "$WORKER_CONFIG" > /tmp/env_vars.sh
-    
-    # Source the generated script to set environment variables
-    if [ -f /tmp/env_vars.sh ]; then
-        . /tmp/env_vars.sh
-        echo "Environment variables set:"
-        env | grep AZURE_
-    else
-        echo "Error: Generated environment variables script not found"
-        return 1
+    # Load environment variables from .env file
+    ENV_FILE="/home/$USER/.cd/.env"
+    if [ -f "$ENV_FILE" ]; then
+        set -a
+        . "$ENV_FILE"
+        set +a
     fi
 
-    echo "Environment configuration fetched successfully"
+    # Use yq to extract environment variables and export them
+    yq e '.config.env | to_entries | .[] | .key + "=" + "\"" + .value + "\"" ' "$WORKER_CONFIG" | while IFS= read -r line; do
+        eval "export $line"
+        substituted_line=$(echo $line | envsubst)
+        eval "export $substituted_line"
+    done
+    
+    echo "Environment variables set:"
+    env | grep AZURE_
 }
 
 # Function to redact secrets in logs
@@ -43,16 +72,13 @@ redact_secret() {
 detect_volumes() {
     echo "Fetching volumes configuration"
     
-    # Define the path to your YAML file
     WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
-    # Check if the file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
     
-    # Use yq to extract volume mappings
     VOLUMES=$(yq e '.config.volumes[]' "$WORKER_CONFIG" 2>/dev/null)
     
     if [ -z "$VOLUMES" ]; then
@@ -79,6 +105,9 @@ get_actor_secret_from_cache() {
 
 # Main function to configure environment
 configure_environment() {
+    # Load environment variables
+    load_env
+
     if [ -z "$env" ]; then
         if ! fetch_env; then
             echo "Failed to fetch environment configuration"
