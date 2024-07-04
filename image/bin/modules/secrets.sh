@@ -8,7 +8,8 @@ redact_secret() {
 # Function to resolve secrets from Azure Key Vault
 resolve_azure_secret() {
     local secret_url=$1
-    az keyvault secret show --id "$secret_url" --query "value" -o tsv
+    echo "Resolving Azure secret for URL: $secret_url" >&2
+    az keyvault secret show --id "$secret_url" --query "value" -o tsv 2>/dev/null
 }
 
 # Function to fetch secrets and set them as environment variables
@@ -25,8 +26,7 @@ fetch_secrets() {
     fi
     
     # Ensure the secrets_env.sh file exists
-    SECRETS_ENV_FILE="/home/$USER/.cd/configs/secrets_env.sh"
-    touch $SECRETS_ENV_FILE
+    SECRETS_ENV_FILE="/tmp/secret_vars.sh"
     echo "# Secrets environment variables" > $SECRETS_ENV_FILE
     
     # Extract secret URLs and resolve them
@@ -37,25 +37,32 @@ fetch_secrets() {
         name=$(echo "$secret" | jq -r '.key')
         url=$(echo "$secret" | jq -r '.value')
 
-        echo "Resolving secret for $name"
+        echo "Resolving secret for $name with URL: $url" >&2
         
         case $url in
             https://*.vault.azure.net/*)
                 value=$(resolve_azure_secret "$url")
+                if [ $? -ne 0 ]; then
+                    echo "Error resolving Azure secret for $name: $(redact_secret "$url")" >&2
+                    value=""
+                fi
                 ;;
             *)
-                echo "Unsupported secret URL: $(redact_secret "$url")"
+                echo "Unsupported secret URL: $(redact_secret "$url")" >&2
                 value=""
                 ;;
         esac
 
         if [ -n "$value" ]; then
             echo "export $name=\"$value\"" >> $SECRETS_ENV_FILE
-            echo "Secret $name resolved and set as environment variable."
+            echo "Secret $name resolved and set as environment variable." >&2
         else
-            echo "Failed to resolve secret for $name"
+            echo "Failed to resolve secret for $name" >&2
         fi
     done
+
+    echo "Sourcing secrets from $SECRETS_ENV_FILE" >&2
+    . $SECRETS_ENV_FILE
     
     echo "Secrets fetched and written to $SECRETS_ENV_FILE"
 }

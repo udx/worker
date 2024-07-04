@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# Source the secrets environment variables
-if [ -f /home/$USER/.cd/configs/secrets_env.sh ]; then
-    echo "Sourcing /home/$USER/.cd/configs/secrets_env.sh"
-    source /home/$USER/.cd/configs/secrets_env.sh
-else
-    echo "/home/$USER/.cd/configs/secrets_env.sh not found"
-fi
-
 # If there are arguments, execute them
 if [ "$#" -gt 0 ]; then
     # Run main.sh to set up the environment and then execute passed commands

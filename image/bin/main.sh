@@ -63,9 +63,6 @@ sleep 1
 
 nice_logs "The worker has started successfully." "success"
 
-# Print environment variables for debugging
-env
-
 # Execute passed commands or default command
 if [ "$#" -gt 0 ]; then
     exec "$@"
