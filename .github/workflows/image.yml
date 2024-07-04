@@ -31,6 +31,8 @@
 ## - Google Artifact Registry: https://cloud.google.com/artifact-registry
 ## - Docker: https://docs.docker.com/engine/reference/commandline/build/
 ## - GitVersion: https://gitversion.net/docs/
+## - Azure Service Principal: https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals
+## - Azure Key Vault: https://docs.microsoft.com/en-us/azure/key-vault/
 ##
 
 name: Build and Test Docker Image
@@ -122,7 +124,6 @@ jobs:
         run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Build Docker Image
-        if: github.ref == env.RELEASE_BRANCH_REF
         run: docker build -t udx-worker:latest ${{ env.IMAGE_CONTEXT }}
 
       - name: Run Tests in Docker Container
@@ -130,7 +131,7 @@ jobs:
           docker run --rm \
             -v $(pwd)/image/etc/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro \
             -v $(pwd)/image/.env:/home/udx/.cd/.env:ro \
-            udx-worker /usr/local/bin/test.sh
+            udx-worker:latest /usr/local/bin/test.sh
 
       - name: Build and push
         if: github.ref == env.RELEASE_BRANCH_REF
