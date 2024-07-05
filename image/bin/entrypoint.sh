@@ -1,14 +1,14 @@
 #!/bin/bash
 
+# Execute the main.sh script to set up the environment
+/usr/local/bin/main.sh
+
 # If there are arguments, execute them
 if [ "$#" -gt 0 ]; then
-    # Run main.sh to set up the environment and then execute passed commands
-    exec /usr/local/bin/main.sh "$@"
+    # Execute passed commands
+    exec "$@"
 else
-    # If no arguments are passed, execute the main.sh script
-    /usr/local/bin/main.sh
-    
-    # If an additional entrypoint script exists in the child image, execute it
+    # If no arguments are passed, check for additional entrypoint logic
     if [ -f "$ADDITIONAL_ENTRYPOINT" ]; then
         echo "Executing additional entrypoint logic..."
         "$ADDITIONAL_ENTRYPOINT"
