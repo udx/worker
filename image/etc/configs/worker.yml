@@ -8,14 +8,9 @@ config:
     AZURE_APPLICATION_ID: ${AZURE_APPLICATION_ID}
   workerSecrets:
     AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
-    GCP_SECRET: "https://secretmanager.googleapis.com/v1/projects/your-project/secrets/your-secret"
-    BW_SECRET: "bitwarden://your-secret-id"
   workerActors:
     - type: azure-service-principal
       subscription: ${AZURE_SUBSCRIPTION_ID}
       tenant: ${AZURE_TENANT_ID}
       application: ${AZURE_APPLICATION_ID}
       password: ${AZURE_APPLICATION_PASSWORD}
-    - type: bitwarden
-      email: "your-email@example.com"
-      password: ${BITWARDEN_PASSWORD_ENV_VAR}

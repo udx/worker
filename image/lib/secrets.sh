@@ -2,17 +2,11 @@
 
 # Include specific secret resolving scripts
 . /usr/local/lib/secrets/azure.sh
-. /usr/local/lib/secrets/bitwarden.sh
 
 # Function to resolve placeholders with environment variables
 resolve_env_vars() {
     local value="$1"
     eval echo "$value"
-}
-
-# Function to redact passwords in the logs
-redact_password() {
-    echo "$1" | sed -E 's/("password":\s*")[^"]+/\1*********/g'
 }
 
 # Function to redact sensitive URLs
@@ -46,14 +40,6 @@ fetch_secrets() {
                 value=$(resolve_azure_secret "$url")
                 if [ $? -ne 0 ]; then
                     echo "Error resolving Azure secret for $name: $(redact_sensitive_urls "$url")" >&2
-                    value=""
-                fi
-                ;;
-            bitwarden://*)
-                bitwarden_login
-                value=$(resolve_bitwarden_secret "$(echo "$url" | cut -d '/' -f 3)")
-                if [ $? -ne 0 ]; then
-                    echo "Error resolving Bitwarden secret for $name: $(redact_sensitive_urls "$url")" >&2
                     value=""
                 fi
                 ;;
