@@ -1,24 +1,29 @@
-#!/bin/sh
+#!/bin/bash
 
-# Function to display the logo animation
-show_logo() {
-    cat << "EOF"
+# Source the environment variables from the .env file
+if [ -f /home/udx/.cd/.env ]; then
+    echo "[INFO] Loading environment variables"
+    set -a
+    source /home/udx/.cd/.env
+    set +a
+fi
 
-        _|            _   _ |   _  _
-__ |_| (_| )( .  \)/ (_) |  |( (- |  __
+# Source the secrets script
+if [ -f /usr/local/lib/secrets.sh ]; then
+    . /usr/local/lib/secrets.sh
+else
+    echo "[ERROR] Secrets script not found"
+    exit 1
+fi
 
-EOF
-}
+# Fetch secrets
+fetch_secrets
 
-# Include utility functions, environment configuration, and authentication
-. /usr/local/lib/utils.sh
+# Verify DOCKER_IMAGE_NAME
+if [ -z "$DOCKER_IMAGE_NAME" ]; then
+    echo "[ERROR] DOCKER_IMAGE_NAME is not set after sourcing secrets"
+else
+    echo "[INFO] DOCKER_IMAGE_NAME is set to $DOCKER_IMAGE_NAME after sourcing secrets"
+fi
 
-# Display the logo animation
-show_logo
-
-nice_logs "info" "Here you go, welcome to UDX Worker Container."
-nice_logs "info" "Init the environment..."
-
-. /usr/local/lib/environment.sh
-
-nice_logs "success" "Environment configuration completed."
+# Rest of the main.sh logic...

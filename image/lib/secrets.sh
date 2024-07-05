@@ -58,7 +58,16 @@ fetch_secrets() {
     done
 
     echo "[INFO] Sourcing secrets from $SECRETS_ENV_FILE" >&2
+    set -a
     . $SECRETS_ENV_FILE
+    set +a
     
     echo "[INFO] Secrets fetched and written to $SECRETS_ENV_FILE"
+    
+    # Verify DOCKER_IMAGE_NAME
+    if [ -z "$DOCKER_IMAGE_NAME" ]; then
+        echo "[ERROR] DOCKER_IMAGE_NAME is not set after sourcing secrets"
+    else
+        echo "[INFO] DOCKER_IMAGE_NAME is set to $DOCKER_IMAGE_NAME after sourcing secrets"
+    fi
 }

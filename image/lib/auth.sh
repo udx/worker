@@ -45,3 +45,6 @@ authenticate_actors() {
 init_auth() {
     echo "Initializing auth module"
 }
+
+# Execute authentication
+authenticate_actors
