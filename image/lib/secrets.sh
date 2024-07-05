@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Include specific secret resolving scripts
+. /usr/local/lib/secrets/azure.sh
+. /usr/local/lib/secrets/bitwarden.sh
+
 # Function to resolve placeholders with environment variables
 resolve_env_vars() {
     local value="$1"
@@ -16,47 +20,40 @@ redact_sensitive_urls() {
     echo "$1" | sed -E 's/(https:\/\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)([A-Za-z0-9\/_-]*)/\1.*********\2.*********\3/g'
 }
 
-# Function to resolve secrets from Azure Key Vault
-resolve_azure_secret() {
-    local secret_url=$1
-    echo "Resolving Azure secret for URL: $secret_url" >&2
-    az keyvault secret show --id "$secret_url" --query "value" -o tsv 2>/dev/null
-}
-
 # Function to fetch secrets and set them as environment variables
 fetch_secrets() {
-    echo "Fetching secrets"
+    echo "[INFO] Fetching secrets"
     
-    # Define the path to your YAML file
     WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
-    # Check if the file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
     
-    # Ensure the secrets_env.sh file exists
     SECRETS_ENV_FILE="/tmp/secret_vars.sh"
     echo "# Secrets environment variables" > $SECRETS_ENV_FILE
     
-    # Extract secret URLs and resolve them
     SECRETS_JSON=$(yq e -o=json '.config.workerSecrets' "$WORKER_CONFIG")
-    echo "Extracted secrets JSON: $SECRETS_JSON"
-
     echo "$SECRETS_JSON" | jq -c 'to_entries[]' | while read -r secret; do
         name=$(echo "$secret" | jq -r '.key')
         url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
 
-        echo "Resolved URL for $name: $(redact_sensitive_urls "$url")"
-
-        echo "Resolving secret for $name with URL: $(redact_sensitive_urls "$url")" >&2
+        echo "[INFO] Resolved URL for $name: $(redact_sensitive_urls "$url")"
         
         case $url in
             https://*.vault.azure.net/*)
                 value=$(resolve_azure_secret "$url")
                 if [ $? -ne 0 ]; then
                     echo "Error resolving Azure secret for $name: $(redact_sensitive_urls "$url")" >&2
+                    value=""
+                fi
+                ;;
+            bitwarden://*)
+                bitwarden_login
+                value=$(resolve_bitwarden_secret "$(echo "$url" | cut -d '/' -f 3)")
+                if [ $? -ne 0 ]; then
+                    echo "Error resolving Bitwarden secret for $name: $(redact_sensitive_urls "$url")" >&2
                     value=""
                 fi
                 ;;
@@ -68,19 +65,14 @@ fetch_secrets() {
 
         if [ -n "$value" ]; then
             echo "export $name=\"$value\"" >> $SECRETS_ENV_FILE
-            echo "Secret $name resolved and set as environment variable." >&2
+            echo "[INFO] Secret $name resolved and set as environment variable." >&2
         else
-            echo "Failed to resolve secret for $name" >&2
+            echo "[ERROR] Failed to resolve secret for $name" >&2
         fi
     done
 
-    echo "Sourcing secrets from $SECRETS_ENV_FILE" >&2
+    echo "[INFO] Sourcing secrets from $SECRETS_ENV_FILE" >&2
     . $SECRETS_ENV_FILE
     
-    echo "Secrets fetched and written to $SECRETS_ENV_FILE"
-}
-
-# Initialize the secrets module
-init_secrets() {
-    echo "Initializing secrets module"
+    echo "[INFO] Secrets fetched and written to $SECRETS_ENV_FILE"
 }

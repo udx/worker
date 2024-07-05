@@ -1,77 +1,52 @@
-#!/bin/bash
-set -e
+#!/bin/sh
 
-# Function to handle nice logs
-nice_logs() {
-    local message=$1
-    local level=$2
-    case $level in
-        info)
-            echo "[info]: $message"
-        ;;
-        success)
-            echo "[success]: $message"
-        ;;
-        error)
-            echo "[error]: $message"
-        ;;
-        *)
-            echo "$message"
-        ;;
-    esac
-}
+# Function to display the logo animation
+show_logo() {
+    cat << "EOF"
 
-# Print the logo with a delay after each character
-str=$'
         _|            _   _ |   _  _
 __ |_| (_| )( .  \)/ (_) |  |( (- |  __
-\n'
-for (( i=0; i<${#str}; i++ )); do
-  echo -n "${str:$i:1}"
-  sleep 0.01
-done
 
-sleep 1
+EOF
+}
 
-# Load all modules in the lib directory
-modules_dir="/usr/local/lib"
-if [ -d "$modules_dir" ]; then
-    for module_file in "$modules_dir"/*.sh; do
-        [ -e "$module_file" ] || continue
-        source "$module_file"
-    done
-else
-    echo "Directory $modules_dir does not exist."
-    exit 1
-fi
+# Include utility functions and environment configuration
+. /usr/local/lib/utils.sh
+. /usr/local/lib/environment.sh
 
-# Initialize all modules
-init_environment
-init_auth
-init_secrets
-init_cleanup
+# Display the logo animation
+show_logo
 
-nice_logs "Here you go, welcome to UDX Worker Container." "info"
-nice_logs "..."
+nice_logs "info" "Here you go, welcome to UDX Worker Container."
+nice_logs "info" "Init the environment..."
 
-sleep 1
+configure_environment() {
+    nice_logs "info" "Loading environment variables"
+    if [ -f /home/$USER/.cd/.env ]; then
+        export $(grep -v '^#' /home/$USER/.cd/.env | xargs)
+    fi
 
-nice_logs "Init the environment..." "info"
-nice_logs "..."
+    nice_logs "info" "Fetching environment configuration"
+    local env_config="/home/$USER/.cd/configs/worker.yml"
 
-nice_logs "Do the configuration..." "info"
+    if [ ! -f "$env_config" ]; then
+        nice_logs "error" "Configuration file not found at $env_config"
+        exit 1
+    fi
 
-# Call the main function to configure environment
+    # Use yq to extract environment variables and handle them correctly
+    local env_vars=$(yq e -o=json '.config.env | to_entries[] | .key + "=" + (.value | @sh)' "$env_config" | sed 's/^/export /')
+
+    # Export the environment variables
+    eval "$env_vars"
+
+    # Fetch secrets and set them as environment variables
+    fetch_secrets
+
+    nice_logs "info" "Environment variables set:"
+    env | grep -E 'DOCKER_IMAGE_NAME|AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_APPLICATION_ID|AZURE_APPLICATION_PASSWORD'
+}
+
 configure_environment
 
-nice_logs "..."
-sleep 1
-
-nice_logs "The worker has started successfully." "success"
-
-# Execute passed commands or default command
-if [ "$#" -gt 0 ]; then
-    exec "$@"
-else
-    exec sh -c "echo NodeJS@$(node -v)"
-fi
+nice_logs "success" "Environment configuration completed."

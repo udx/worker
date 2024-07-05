@@ -1,127 +1,33 @@
 #!/bin/sh
 
-# Function to load environment variables from .env file or prompt for password
-load_env() {
-    echo "Loading environment variables"
-    
-    ENV_FILE="/home/$USER/.cd/.env"
-    PASSWORD_FILE="/home/$USER/.cd/password"
-    
-    # Load environment variables from .env file if it exists
-    if [ -f "$ENV_FILE" ]; then
-        set -a
-        . "$ENV_FILE"
-        set +a
-    fi
-    
-    # Check if AZURE_APPLICATION_PASSWORD is set, if not prompt for it
-    if [ -f "$PASSWORD_FILE" ]; then
-        export AZURE_APPLICATION_PASSWORD=$(cat "$PASSWORD_FILE")
-    elif [ -z "$AZURE_APPLICATION_PASSWORD" ]; then
-        if [ -t 0 ]; then
-            read -sp "Enter AZURE_APPLICATION_PASSWORD: " AZURE_APPLICATION_PASSWORD
-            echo
-        else
-            echo "AZURE_APPLICATION_PASSWORD is not set and not running interactively. Exiting."
-            exit 1
-        fi
-    fi
-}
+# Include utility functions and secrets fetching
+. /usr/local/lib/utils.sh
+. /usr/local/lib/secrets.sh
 
-# Function to fetch environment configuration
-fetch_env() {
-    echo "Fetching environment configuration"
-    
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
-    
-    if [ ! -f "$WORKER_CONFIG" ]; then
-        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
-        return 1
-    fi
-    
-    # Use yq to extract environment variables and export them
-    yq e '.config.env | to_entries | .[] | .key + "=" + "\"" + .value + "\"" ' "$WORKER_CONFIG" | while IFS= read -r line; do
-        eval "export $line"
-    done
-
-    # Substitute variables and re-export them
-    for key in $(yq e '.config.env | keys | .[]' "$WORKER_CONFIG"); do
-        eval "export $key=\${$key}"
-    done
-    
-    echo "Environment variables set:"
-    env | grep AZURE_
-    env | grep DOCKER_IMAGE_NAME
-}
-
-# Function to detect volume configuration and generate a warning log
-detect_volumes() {
-    echo "Fetching volumes configuration"
-    
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
-    
-    if [ ! -f "$WORKER_CONFIG" ]; then
-        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
-        return 1
-    fi
-    
-    VOLUMES=$(yq e '.config.volumes[]' "$WORKER_CONFIG" 2>/dev/null)
-    
-    if [ -z "$VOLUMES" ]; then
-        echo "Info: No volume configurations found in $WORKER_CONFIG"
-        return 0
-    fi
-    
-    echo "The following volumes are detected:"
-    echo "$VOLUMES" | while read -r volume; do
-        if [ -z "$volume" ]; then
-            echo "Warning: Empty volume configuration found"
-        else
-            echo "  -v $volume"
-        fi
-    done
-    echo "Please make sure to mount volumes when starting the container."
-}
-
-# Function to redact secrets in logs
-redact_secret() {
-    echo "$1" | sed -E 's/([A-Za-z0-9_-]{3})[A-Za-z0-9_-]+([A-Za-z0-9_-]{3})/\1*********\2/g'
-}
-
-# Initialize the environment module
-init_environment() {
-    echo "Initializing environment module"
-}
-
-# Main function to configure environment
 configure_environment() {
-    # Load environment variables
-    load_env
+    echo "[INFO] Loading environment variables"
+    if [ -f /home/$USER/.cd/.env ]; then
+        export $(cat /home/$USER/.cd/.env | xargs)
+    fi
 
-    if [ -z "$env" ]; then
-        if ! fetch_env; then
-            echo "Failed to fetch environment configuration"
-            exit 1
-        fi
+    echo "[INFO] Fetching environment configuration"
+    local env_config="/home/$USER/.cd/configs/worker.yml"
+
+    if [ ! -f "$env_config" ]; then
+        echo "Error: Configuration file not found at $env_config"
+        exit 1
     fi
-    
-    authenticate_actors || echo "No actors configuration found"
-    
-    if [ -z "$secrets" ]; then
-        fetch_secrets || echo "No secrets configuration found"
-    fi
-    
-    detect_volumes
+
+    # Use yq to extract environment variables in a safer way
+    yq e '.config.env' "$env_config" | while IFS=": " read -r key value; do
+        key=$(echo $key | xargs)  # Remove leading/trailing whitespace
+        value=$(echo $value | xargs)  # Remove leading/trailing whitespace
+        export "$key=$value"
+    done
+
+    # Fetch secrets and set them as environment variables
+    fetch_secrets
+
+    echo "[INFO] Environment variables set:"
+    env | grep -E 'DOCKER_IMAGE_NAME|AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_APPLICATION_ID|AZURE_APPLICATION_PASSWORD'
 }
-
-# Execute the main function
-configure_environment
-
-# Redact secrets and print environment variables for debugging
-echo "Printing all environment variables:"
-env | while read -r line; do
-    if [[ "$line" == *"AZURE_APPLICATION_PASSWORD="* ]]; then
-        line=$(redact_secret "$line")
-    fi
-    echo "$line"
-done

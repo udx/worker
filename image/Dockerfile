@@ -13,8 +13,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 ENV USER=${USER}
 ENV HOME=/home/${USER}
-
-# Set the additional entrypoint script path
 ENV ADDITIONAL_ENTRYPOINT=/usr/local/bin/init.sh
 
 # Set the shell with pipefail option
@@ -34,7 +32,7 @@ RUN apt-get update && \
     npm \
     e2fsprogs \
     jq \
-    gettext-base && \  
+    gettext-base && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -56,6 +54,19 @@ RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Bitwarden CLI with debugging and retry logic
+RUN for i in {1..5}; do \
+        echo "Attempt $i to download Bitwarden CLI"; \
+        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && break || echo "Retrying..."; \
+    done && \
+    test -f /usr/local/bin/bw && chmod +x /usr/local/bin/bw || { \
+        echo "Failed to download Bitwarden CLI with curl, trying wget"; \
+        wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
+            echo "Failed to download Bitwarden CLI with wget"; \
+            exit 1; \
+        }; \
+    }
+
 # Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
 
@@ -74,12 +85,8 @@ COPY ./etc/configs /home/${USER}/.cd/configs
 # Copy the lib directory to the image
 COPY ./lib /usr/local/lib
 
-# Copy the test script to the image
-COPY ./bin/test.sh /usr/local/bin/test.sh
-RUN chmod +x /usr/local/bin/test.sh
-
 # Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
-RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh && \
+RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
     find /usr/local/lib -type f -name "*.sh" -exec chmod +x {} \; && \
     chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
     chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh

@@ -4,18 +4,11 @@
 azure_authenticate() {
     local actor=$1
     local type=$(echo "$actor" | jq -r '.type')
-    local subscription=$(echo "$actor" | jq -r '.subscription')
-    local tenant=$(echo "$actor" | jq -r '.tenant')
-    local application=$(echo "$actor" | jq -r '.application')
-    local password=$(echo "$actor" | jq -r '.password')
-    local email=$(echo "$actor" | jq -r '.email')
-
-    echo "Actor type: $type"
-    echo "Subscription: $subscription"
-    echo "Tenant: $tenant"
-    echo "Application: $application"
-    # echo "Password: $password"
-    echo "Email: $email"
+    local subscription=$(resolve_env_vars "$(echo "$actor" | jq -r '.subscription')")
+    local tenant=$(resolve_env_vars "$(echo "$actor" | jq -r '.tenant')")
+    local application=$(resolve_env_vars "$(echo "$actor" | jq -r '.application')")
+    local password=$(resolve_env_vars "$(echo "$actor" | jq -r '.password')")
+    local email=$(resolve_env_vars "$(echo "$actor" | jq -r '.email')")
 
     case $type in
         "azure-service-principal")
