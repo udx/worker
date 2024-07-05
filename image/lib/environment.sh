@@ -11,6 +11,9 @@ configure_environment() {
         export $(grep -v '^#' /home/$USER/.cd/.env | xargs)
     fi
 
+    echo "[INFO] Environment variables after loading .env file:"
+    env | grep -E 'DOCKER_IMAGE_NAME|AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_APPLICATION_ID|AZURE_APPLICATION_PASSWORD'
+
     echo "[INFO] Fetching environment configuration"
     local env_config="/home/$USER/.cd/configs/worker.yml"
 
@@ -25,15 +28,19 @@ configure_environment() {
 
     # Export the environment variables, resolving placeholders
     eval $(echo "$env_vars" | envsubst)
+    export $(echo "$env_vars" | envsubst | sed "s/'//g")
+
+    echo "[INFO] Environment variables after processing worker.yml:"
+    env | grep -E 'DOCKER_IMAGE_NAME|AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_APPLICATION_ID|AZURE_APPLICATION_PASSWORD'
 
     echo "[INFO] Authenticating actors..."
     authenticate_actors
 
-    # Fetch secrets and set them as environment variables
+    echo "[INFO] Fetching secrets"
     fetch_secrets
 
-    echo "[INFO] Environment variables set:"
-    env | grep -E 'DOCKER_IMAGE_NAME|AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_APPLICATION_ID|AZURE_APPLICATION_PASSWORD'
+    echo "[INFO] Environment variables set after fetching secrets:"
+    env | grep -E 'DOCKER_IMAGE_NAME|AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_APPLICATION_ID|AZURE_APPLICATION_PASSWORD|AZURE_SECRET'
 }
 
 configure_environment
