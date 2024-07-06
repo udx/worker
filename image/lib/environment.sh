@@ -1,15 +1,20 @@
 #!/bin/sh
 
-# Include utility functions, secrets fetching, and authentication
+# Include utility functions, secrets fetching, authentication, and cleanup
 . /usr/local/lib/utils.sh
 . /usr/local/lib/secrets.sh
 . /usr/local/lib/auth.sh
+. /usr/local/lib/cleanup.sh
 
 configure_environment() {
+    # Load environment variables from .env file if it exists
     if [ -f /home/$USER/.cd/.env ]; then
+        echo "[INFO] Loading environment variables from .env file"
         set -a
         . /home/$USER/.cd/.env
         set +a
+    else
+        echo "[ERROR] .env file not found"
     fi
 
     local env_config="/home/$USER/.cd/configs/worker.yml"
@@ -20,11 +25,18 @@ configure_environment() {
 
     local env_vars
     env_vars=$(yq e -o=json '.config.env' "$env_config" | jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')
-    eval $(echo "$env_vars" | envsubst)
-    export $(echo "$env_vars" | envsubst | sed "s/'//g")
+    
+    # Use a loop to export each environment variable
+    while IFS= read -r var; do
+        eval export "$var"
+    done <<< "$env_vars"
 
+    # Authenticate actors and fetch secrets
     authenticate_actors
     fetch_secrets
+
+    # Cleanup actor credentials
+    cleanup_actors
 }
 
 configure_environment

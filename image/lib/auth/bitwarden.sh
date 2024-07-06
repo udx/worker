@@ -6,9 +6,17 @@ bitwarden_authenticate() {
     local email=$(echo "$actor" | jq -r '.email')
     local password=$(echo "$actor" | jq -r '.password')
     
-    echo "Authenticating Bitwarden account..."
-    if ! bw login --check; then
-        echo "Logging in to Bitwarden..."
-        bw login "$email" "$password"
+    echo "[INFO] Authenticating Bitwarden account..."
+
+    # Check if already logged in
+    if ! bw login --check >/dev/null 2>&1; then
+        echo "[INFO] Logging in to Bitwarden..."
+        bw login --raw "$email" "$password" >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo "[ERROR] Bitwarden login failed"
+            return 1
+        fi
+    else
+        echo "[INFO] Already logged in to Bitwarden"
     fi
 }

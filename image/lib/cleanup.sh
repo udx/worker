@@ -54,8 +54,3 @@ cleanup_actors() {
         esac
     done
 }
-
-# Initialize the cleanup module
-init_cleanup() {
-    echo "Initializing cleanup module"
-}

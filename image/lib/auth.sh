@@ -8,16 +8,18 @@ resolve_env_vars() {
 
 # Function to authenticate actors
 authenticate_actors() {
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    local WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
 
     if [ ! -f "$WORKER_CONFIG" ]; then
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
 
+    local ACTORS_JSON
     ACTORS_JSON=$(yq e -o=json '.config.workerActors' "$WORKER_CONFIG")
 
-    echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while read -r actor; do
+    echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while IFS= read -r actor; do
+        local type provider actor_data auth_script auth_function
         type=$(resolve_env_vars "$(echo "$actor" | jq -r '.value.type')")
         provider=$(echo "$type" | cut -d '-' -f 1)
         actor_data=$(echo "$actor" | jq -c '.value')

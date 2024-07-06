@@ -2,6 +2,9 @@
 
 # Include specific secret resolving scripts
 . /usr/local/lib/secrets/azure.sh
+. /usr/local/lib/secrets/aws.sh
+. /usr/local/lib/secrets/gcp.sh
+. /usr/local/lib/secrets/bitwarden.sh
 
 # Function to resolve placeholders with environment variables
 resolve_env_vars() {
@@ -11,7 +14,7 @@ resolve_env_vars() {
 
 # Function to redact sensitive URLs
 redact_sensitive_urls() {
-    echo "$1" | sed -E 's/(https:\/\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)([A-Za-z0-9\/_-]*)/\1.*********\2.*********\3/g'
+    echo "$1" | sed -E 's|(https://[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)([A-Za-z0-9/_-]*)|\1.*********\2.*********\3|g'
 }
 
 # Function to fetch secrets and set them as environment variables
@@ -21,7 +24,7 @@ fetch_secrets() {
     WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
     if [ ! -f "$WORKER_CONFIG" ]; then
-        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
+        echo "[ERROR] YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
     
@@ -39,12 +42,13 @@ fetch_secrets() {
             https://*.vault.azure.net/*)
                 value=$(resolve_azure_secret "$url")
                 if [ $? -ne 0 ]; then
-                    echo "Error resolving Azure secret for $name: $(redact_sensitive_urls "$url")" >&2
+                    echo "[ERROR] Error resolving Azure secret for $name: $(redact_sensitive_urls "$url")" >&2
                     value=""
                 fi
                 ;;
+            # Add cases for other secret managers here
             *)
-                echo "Unsupported secret URL: $(redact_sensitive_urls "$url")" >&2
+                echo "[ERROR] Unsupported secret URL: $(redact_sensitive_urls "$url")" >&2
                 value=""
                 ;;
         esac

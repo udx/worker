@@ -3,15 +3,21 @@
 # Function to resolve secrets from Bitwarden
 resolve_bitwarden_secret() {
     local secret_id=$1
-    echo "[INFO] Resolving Bitwarden secret for ID: $secret_id" >&2
-    bw get item "$secret_id" | jq -r '.notes' 2>/dev/null
-}
 
-# Function to log in to Bitwarden
-bitwarden_login() {
-    if ! bw login --check; then
-        echo "[INFO] Logging in to Bitwarden..."
-        BW_SESSION=$(bw login --raw)
-        export BW_SESSION
+    echo "[INFO] Resolving Bitwarden secret for ID: $secret_id" >&2
+    secret_value=$(bw get item "$secret_id" | jq -r '.notes' 2>&1)
+
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Failed to retrieve Bitwarden secret for ID: $secret_id" >&2
+        echo "[DEBUG] Bitwarden CLI output: $secret_value" >&2
+        return 1
     fi
+
+    if [ -z "$secret_value" ]; then
+        echo "[ERROR] Secret value is empty for Bitwarden ID: $secret_id" >&2
+        return 1
+    fi
+
+    echo "$secret_value"
+    return 0
 }

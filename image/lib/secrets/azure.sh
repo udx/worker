@@ -14,11 +14,18 @@ resolve_azure_secret() {
         return 1
     fi
 
-    # Retrieve the secret value using Azure CLI
-    secret_value=$(az keyvault secret show --vault-name "$vault_name" --name "$secret_name" --query value -o tsv 2>/dev/null)
+    # Retrieve the secret value using Azure CLI with detailed logging
+    echo "[DEBUG] Retrieving secret from Azure Key Vault: vault_name=$vault_name, secret_name=$secret_name"
+    secret_value=$(az keyvault secret show --vault-name "$vault_name" --name "$secret_name" --query value -o tsv 2>&1)
 
-    if [ $? -ne 0 ] || [ -z "$secret_value" ]; then
+    if [ $? -ne 0 ]; then
         echo "[ERROR] Failed to retrieve secret from Azure Key Vault: $secret_url"
+        echo "[DEBUG] Azure CLI output: $secret_value"
+        return 1
+    fi
+
+    if [ -z "$secret_value" ]; then
+        echo "[ERROR] Secret value is empty for $secret_url"
         return 1
     fi
 

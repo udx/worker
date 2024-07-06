@@ -14,28 +14,39 @@ azure_authenticate() {
 
     case $type in
         "azure-service-principal")
-            echo "Authenticating Azure service principal: $application"
-            az login --service-principal -u "$application" -p "$password" --tenant "$tenant"
+            echo "[INFO] Authenticating Azure service principal: $application"
+            az login --service-principal -u "$application" -p "$password" --tenant "$tenant" >/dev/null 2>&1
             if [ $? -ne 0 ]; then
                 echo "[ERROR] Azure service principal authentication failed"
                 return 1
             fi
-            az account set --subscription "$subscription"
+            az account set --subscription "$subscription" >/dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                echo "[ERROR] Failed to set Azure subscription: $subscription"
+                return 1
+            fi
             ;;
         "azure-personal-account")
-            echo "Authenticating Azure personal account: $email"
-            az login -u "$email" -p "$password"
+            echo "[INFO] Authenticating Azure personal account: $email"
+            az login -u "$email" -p "$password" >/dev/null 2>&1
             if [ $? -ne 0 ]; then
                 echo "[ERROR] Azure personal account authentication failed"
                 return 1
             fi
             if [ -n "$subscription" ]; then
-                az account set --subscription "$subscription"
+                az account set --subscription "$subscription" >/dev/null 2>&1
+                if [ $? -ne 0 ]; then
+                    echo "[ERROR] Failed to set Azure subscription: $subscription"
+                    return 1
+                fi
             fi
             ;;
         *)
-            echo "Error: Unsupported Azure authentication type $type"
+            echo "[ERROR] Unsupported Azure authentication type: $type"
             return 1
             ;;
     esac
+
+    echo "[INFO] Azure authentication successful for type: $type"
+    return 0
 }
