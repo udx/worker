@@ -1,4 +1,9 @@
 #!/bin/sh
+#
+#
+# !!! Not supported yet, will be implemented in the future !!!
+#
+#
 
 # Specify whether each directory is required
 required() {
@@ -36,20 +41,20 @@ nice_logs() {
 init_project() {
     mode="${1:-plan}"
     force="${2:-false}"
-
+    
     echo "Initializing project in $mode mode..."
-
+    
     dirs="bin bin/entrypoint.sh .github/workflows .github/workflows/docker-build-and-release.yml environment/default environment/default/secrets.yml environment/default/deployment.yml environment/default/certificates.yml environment/default/variables.yml Dockerfile README.md .gitignore package.json"
-
+    
     for dir in $dirs; do
         nice_logs "$(explanation "$dir")" "info"
-
+        
         if [ ! -d "$dir" ]; then
             if [ "$(required "$dir")" = "true" ]; then
                 nice_logs "Required directory $dir does not exist." "error"
                 return 1
             fi
-
+            
             if [ "$mode" = "apply" ]; then
                 nice_logs "Directory $dir does not exist. Creating..." "info"
                 mkdir -p "$dir"
@@ -59,7 +64,7 @@ init_project() {
         else
             nice_logs "Directory $dir already exists." "info"
         fi
-
+        
         if [ ! -f "$dir" ] || [ "$force" = "true" ]; then
             if [ "$mode" = "apply" ]; then
                 nice_logs "File $dir does not exist or force mode is enabled. Creating..." "info"
@@ -71,11 +76,11 @@ init_project() {
             nice_logs "File $dir already exists." "info"
         fi
     done
-
+    
     nice_logs "Project initialization plan complete." "success"
 }
 
 # Execute the function if the script is run directly
 # if [ "$(basename "$0")" = "$(basename "${0}")" ]; then
-    # init_project "$@"
+# init_project "$@"
 # fi

@@ -1,13 +1,35 @@
----
 kind: workerConfig
 version: udx.io/worker-v1/config
 config:
   env:
     DOCKER_IMAGE_NAME: "udx-worker"
-    GCP_AUTH_PROVIDER: "projects/309037306746/locations/global/workloadIdentityPools/udx-worker-pool/providers/udx-worker-provider"
-    GCP_PROJECT: "rabbit-ci-tooling"
-    GCP_REGION: "us-central1"
-    GCP_REGISTRY_REPO: "udx-worker"
-    GCP_SERVICE_ACCOUNT: "svc-udx-worker@rabbit-ci-tooling.iam.gserviceaccount.com"
-    GITHUB_CONFIGS_REPO: "https://github.com/udx/worker-repo-best-practice-configs"
-    GITHUB_CONFIGS_BRANCH: "main"
+    AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
+    AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+    AZURE_APPLICATION_ID: ${AZURE_APPLICATION_ID}
+    # AWS_REGION: ${AWS_REGION}
+    # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    # BITWARDEN_EMAIL: ${BITWARDEN_EMAIL}
+    # BITWARDEN_PASSWORD: ${BITWARDEN_PASSWORD}
+    # GCP_EMAIL: ${GCP_EMAIL}
+    # GCP_KEYFILE: ${GCP_KEYFILE}
+  workerSecrets:
+    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
+    # AWS_SECRET: "arn:aws:secretsmanager:region:account-id:secret:secret-id"
+    # BITWARDEN_SECRET: "bitwarden://vault/secrets/your-secret-id"
+    # GCP_SECRET: "projects/your-project/secrets/your-secret"
+  workerActors:
+    - type: azure-service-principal
+      subscription: ${AZURE_SUBSCRIPTION_ID}
+      tenant: ${AZURE_TENANT_ID}
+      application: ${AZURE_APPLICATION_ID}
+      password: ${AZURE_APPLICATION_PASSWORD}
+    # - type: aws-role
+    #   role_arn: ${AWS_ROLE_ARN}
+    #   session_name: ${AWS_SESSION_NAME}
+    # - type: bitwarden
+    #   email: ${BITWARDEN_EMAIL}
+    #   password: ${BITWARDEN_PASSWORD}
+    # - type: gcp-service-account
+    #   email: ${GCP_EMAIL}
+    #   keyfile: ${GCP_KEYFILE}

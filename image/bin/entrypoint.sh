@@ -1,14 +1,30 @@
 #!/bin/bash
 
+# Source the utilities script
+source /usr/local/lib/utils.sh
+
+udx_logo
+
+echo "[INFO] Welcome to UDX Worker Container. Initializing environment..."
+
+# Load environment variables from .env file if it exists
+if [ -f /home/$USER/.cd/.env ]; then
+    echo "[INFO] Loading environment variables from .env file"
+    set -a
+    . /home/$USER/.cd/.env
+    set +a
+else
+    echo "[ERROR] .env file not found"
+fi
+
+# Execute the environment.sh script to set up the environment
+source /usr/local/lib/environment.sh
+
 # If there are arguments, execute them
 if [ "$#" -gt 0 ]; then
-    # Run main.sh to set up the environment and then execute passed commands
-    exec /usr/local/bin/main.sh "$@"
+    exec "$@"
 else
-    # If no arguments are passed, execute the main.sh script
-    /usr/local/bin/main.sh
-
-    # If an additional entrypoint script exists in the child image, execute it
+    # If no arguments are passed, check for additional entrypoint logic
     if [ -f "$ADDITIONAL_ENTRYPOINT" ]; then
         echo "Executing additional entrypoint logic..."
         "$ADDITIONAL_ENTRYPOINT"

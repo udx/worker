@@ -13,8 +13,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 ENV USER=${USER}
 ENV HOME=/home/${USER}
-
-# Set the additional entrypoint script path
 ENV ADDITIONAL_ENTRYPOINT=/usr/local/bin/init.sh
 
 # Set the shell with pipefail option
@@ -29,9 +27,12 @@ RUN apt-get update && \
     gnupg=2.4.4-2ubuntu17 \
     wget=1.21.4-1ubuntu4 \
     ca-certificates \
+    lsb-release \
     nodejs \
     npm \
-    e2fsprogs && \
+    e2fsprogs \
+    jq \
+    gettext-base && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -45,6 +46,27 @@ RUN wget https://golang.org/dl/go1.20.5.linux-amd64.tar.gz && \
     ln -s /usr/local/go/bin/go /usr/bin/go && \
     rm go1.20.5.linux-amd64.tar.gz
 
+# Add the Microsoft package repository and install Azure CLI
+RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
+    apt-get update && \
+    apt-get install -y azure-cli && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Bitwarden CLI with debugging and retry logic
+RUN for i in {1..5}; do \
+        echo "Attempt $i to download Bitwarden CLI"; \
+        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && break || echo "Retrying..."; \
+    done && \
+    test -f /usr/local/bin/bw && chmod +x /usr/local/bin/bw || { \
+        echo "Failed to download Bitwarden CLI with curl, trying wget"; \
+        wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
+            echo "Failed to download Bitwarden CLI with wget"; \
+            exit 1; \
+        }; \
+    }
+
 # Create a new user and ensure home directory permissions are set correctly
 RUN useradd -m ${USER}
 
@@ -55,16 +77,19 @@ WORKDIR /home/${USER}
 RUN npm install -g pm2@5.4.1 grunt-cli@1.4.3 && \
     npm install @babel/traverse@7.24.7 braces@3.0.3 http-cache-semantics@4.1.1
 
-# Copy the bin, etc directories to the image and set correct permissions
+# Copy the bin and etc directories to the image and set correct permissions
 COPY ./bin /usr/local/bin
-COPY ./bin/modules /usr/local/bin/modules
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 
-# Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
-RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/modules/*.sh && \
-    chown -R ${USER}:${USER} /usr/local/bin /home/${USER}/etc /home/${USER}/.cd/configs && \
-    chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh /usr/local/bin/modules/environment.sh /usr/local/bin/modules/init_project.sh /usr/local/bin/modules/utils.sh
+# Copy the lib directory to the image
+COPY ./lib /usr/local/lib
+
+# Set executable permissions for entrypoint.sh and other scripts
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
+    find /usr/local/lib -type f -name "*.sh" -exec chmod +x {} \; && \
+    chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
+    chmod 555 /usr/local/bin/entrypoint.sh
 
 # Switch to non-root user
 USER ${USER}
