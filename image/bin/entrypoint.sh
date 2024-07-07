@@ -6,16 +6,6 @@ source /usr/local/lib/utils.sh
 echo "[INFO] Running entrypoint.sh"
 udx_logo
 
-# Source the .env file
-if [ -f "/home/udx/.cd/.env" ]; then
-    echo "[INFO] Loading environment variables from .env file"
-    set -a
-    source /home/udx/.cd/.env
-    set +a
-else
-    echo "[ERROR] .env file not found"
-fi
-
 echo "[INFO] Welcome to UDX Worker Container. Initializing environment..."
 
 # Execute the environment.sh script to set up the environment
