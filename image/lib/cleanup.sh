@@ -2,7 +2,7 @@
 
 # Function to cleanup Azure authentication
 cleanup_azure() {
-    echo "Cleaning up Azure authentication"
+    echo "[INFO] Cleaning up Azure authentication"
     az logout
 }
 
@@ -26,7 +26,7 @@ cleanup_bitwarden() {
 
 # Function to cleanup actors
 cleanup_actors() {
-    echo "Cleaning up actors"
+    echo "[INFO] Cleaning up actors"
     
     # Check the type of each actor and clean up accordingly
     WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
@@ -38,7 +38,6 @@ cleanup_actors() {
     fi
     
     ACTORS_JSON=$(yq e -o=json '.config.workerActors' "$WORKER_CONFIG")
-    echo "Extracted actors JSON: $ACTORS_JSON"
     
     echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while read -r actor; do
         type=$(echo "$actor" | jq -r '.value.type')
@@ -90,9 +89,9 @@ cleanup_sensitive_env_vars() {
 }
 
 # Initialize the cleanup module
-init_cleanup() {
-    echo "Initializing cleanup module"
-}
+# init_cleanup() {
+#     echo "Initializing cleanup module"
+# }
 
 # Call init_cleanup to initialize the module
-init_cleanup
+# init_cleanup

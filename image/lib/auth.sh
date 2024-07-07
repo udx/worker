@@ -49,4 +49,4 @@ init_auth() {
 }
 
 # Execute authentication
-authenticate_actors
+# authenticate_actors
