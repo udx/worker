@@ -10,25 +10,25 @@ resolve_azure_secret() {
     secret_name=$(echo "$secret_url" | sed -n 's|.*/secrets/\([^/?]*\).*|\1|p')
 
     if [ -z "$vault_name" ] || [ -z "$secret_name" ]; then
-        echo "[ERROR] Invalid Azure Key Vault URL: $secret_url"
+        echo "[ERROR] Invalid Azure Key Vault URL: $secret_url" >&2
         return 1
     fi
 
     # Retrieve the secret value using Azure CLI with detailed logging
-    echo "[DEBUG] Retrieving secret from Azure Key Vault: vault_name=$vault_name, secret_name=$secret_name"
+    echo "[DEBUG] Retrieving secret from Azure Key Vault: vault_name=$vault_name, secret_name=$secret_name" >&2
     secret_value=$(az keyvault secret show --vault-name "$vault_name" --name "$secret_name" --query value -o tsv 2>&1)
 
     if [ $? -ne 0 ]; then
-        echo "[ERROR] Failed to retrieve secret from Azure Key Vault: $secret_url"
-        echo "[DEBUG] Azure CLI output: $secret_value"
+        echo "[ERROR] Failed to retrieve secret from Azure Key Vault: $secret_url" >&2
+        echo "[DEBUG] Azure CLI output: $secret_value" >&2
         return 1
     fi
 
     if [ -z "$secret_value" ]; then
-        echo "[ERROR] Secret value is empty for $secret_url"
+        echo "[ERROR] Secret value is empty for $secret_url" >&2
         return 1
     fi
 
-    echo "$secret_value"
+    printf "%s" "$secret_value"
     return 0
 }

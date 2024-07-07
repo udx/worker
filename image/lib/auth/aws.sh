@@ -6,7 +6,7 @@ aws_authenticate() {
     local role_arn=$(resolve_env_vars "$(echo "$actor" | jq -r '.role_arn')")
     local session_name=$(resolve_env_vars "$(echo "$actor" | jq -r '.session_name')")
 
-    echo "[DEBUG] Authenticating AWS role: $role_arn"
+    echo "[INFO] Authenticating AWS role: $role_arn"
 
     # Assume the role
     aws sts assume-role --role-arn "$role_arn" --role-session-name "$session_name" >/dev/null 2>&1

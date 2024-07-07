@@ -15,7 +15,6 @@ resolve_aws_secret() {
 
     if [ $? -ne 0 ]; then
         echo "[ERROR] Failed to retrieve AWS secret for ARN: $secret_arn" >&2
-        echo "[DEBUG] AWS CLI output: $secret_value" >&2
         return 1
     fi
 

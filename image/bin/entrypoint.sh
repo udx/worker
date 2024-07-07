@@ -24,17 +24,6 @@ source /usr/local/lib/environment.sh
 # Configure the environment
 configure_environment
 
-# Check environment variables after running environment.sh
-echo "[INFO] Environment variables after sourcing environment.sh:"
-env
-
-# Verify DOCKER_IMAGE_NAME again
-if [ -z "$DOCKER_IMAGE_NAME" ]; then
-    echo "[ERROR] DOCKER_IMAGE_NAME is not set after sourcing environment.sh"
-else
-    echo "[INFO] DOCKER_IMAGE_NAME is set to $DOCKER_IMAGE_NAME after sourcing environment.sh"
-fi
-
 # If there are arguments, execute them
 if [ "$#" -gt 0 ]; then
     exec "$@"

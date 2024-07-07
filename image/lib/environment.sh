@@ -23,6 +23,10 @@ configure_environment() {
         exit 1
     fi
 
+    # Expand environment variables in worker.yml
+    envsubst < "$env_config" > /home/$USER/.cd/configs/worker_expanded.yml
+    env_config="/home/$USER/.cd/configs/worker_expanded.yml"
+
     local env_vars
     env_vars=$(yq e -o=json '.config.env' "$env_config" | jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')
     
@@ -37,11 +41,7 @@ configure_environment() {
 
     # Cleanup sensitive environment variables
     cleanup_sensitive_env_vars
-
-    # Verify DOCKER_IMAGE_NAME
-    if [ -z "$DOCKER_IMAGE_NAME" ]; then
-        echo "[ERROR] DOCKER_IMAGE_NAME is not set after fetching secrets and cleanup"
-    else
-        echo "[INFO] DOCKER_IMAGE_NAME is set to $DOCKER_IMAGE_NAME after fetching secrets and cleanup"
-    fi
 }
+
+# Call the function to configure the environment
+configure_environment

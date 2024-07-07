@@ -55,9 +55,10 @@ cleanup_actors() {
             ;;
             bitwarden)
                 cleanup_bitwarden
-                *)
-                    echo "Unsupported actor type for cleanup: $type"
-                ;;
+            ;;
+            *)
+                echo "Unsupported actor type for cleanup: $type"
+            ;;
         esac
     done
 }
@@ -95,3 +96,6 @@ cleanup_sensitive_env_vars() {
 init_cleanup() {
     echo "Initializing cleanup module"
 }
+
+# Call init_cleanup to initialize the module
+init_cleanup

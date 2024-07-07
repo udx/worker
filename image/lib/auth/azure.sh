@@ -8,9 +8,7 @@ azure_authenticate() {
     local tenant=$(resolve_env_vars "$(echo "$actor" | jq -r '.tenant')")
     local application=$(resolve_env_vars "$(echo "$actor" | jq -r '.application')")
     local password=$(resolve_env_vars "$(echo "$actor" | jq -r '.password')")
-
-    echo "[DEBUG] Authenticating Azure account with type: $type"
-
+    
     case $type in
         "azure-service-principal")
             echo "[INFO] Authenticating Azure service principal: $application"
@@ -20,7 +18,7 @@ azure_authenticate() {
                 return 1
             fi
             az account set --subscription "$subscription" >/dev/null 2>&1
-            ;;
+        ;;
         "azure-personal-account")
             echo "[INFO] Authenticating Azure personal account: $application"
             az login -u "$application" -p "$password" >/dev/null 2>&1
@@ -31,10 +29,10 @@ azure_authenticate() {
             if [ -n "$subscription" ]; then
                 az account set --subscription "$subscription" >/dev/null 2>&1
             fi
-            ;;
+        ;;
         *)
             echo "[ERROR] Unsupported Azure authentication type $type"
             return 1
-            ;;
+        ;;
     esac
 }

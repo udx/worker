@@ -9,7 +9,6 @@ resolve_bitwarden_secret() {
 
     if [ $? -ne 0 ]; then
         echo "[ERROR] Failed to retrieve Bitwarden secret for ID: $secret_id" >&2
-        echo "[DEBUG] Bitwarden CLI output: $secret_value" >&2
         return 1
     fi
 
