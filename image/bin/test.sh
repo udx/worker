@@ -2,6 +2,13 @@
 
 echo "Starting tests..."
 
+# Load the worker configuration
+WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+if [ ! -f "$WORKER_CONFIG" ]; then
+    echo "Error: Configuration file not found at $WORKER_CONFIG"
+    exit 1
+fi
+
 # Print all environment variables for debugging
 echo "Printing all environment variables:"
 
@@ -15,50 +22,47 @@ env | while IFS='=' read -r name value; do
     fi
 done
 
+# Read environment variables from worker.yml
+env_vars=$(yq e '.config.env' "$WORKER_CONFIG" | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]')
+
 # Test environment variables
-if [ -z "$DOCKER_IMAGE_NAME" ]; then
-    echo "Error: DOCKER_IMAGE_NAME environment variable is not set"
-    exit 1
-    elif [ "$DOCKER_IMAGE_NAME" != "udx-worker" ]; then
-    echo "Error: DOCKER_IMAGE_NAME environment variable is not set correctly"
-    exit 1
-fi
+for env_var in $env_vars; do
+    var_name=$(echo $env_var | cut -d '=' -f 1)
+    expected_value=$(echo $env_var | cut -d '=' -f 2-)
+    actual_value=$(printenv $var_name)
+
+    if [ -z "$actual_value" ]; then
+        echo "Error: $var_name environment variable is not set"
+        exit 1
+    elif [ "$actual_value" != "$expected_value" ]; then
+        echo "Error: $var_name environment variable is not set correctly"
+        exit 1
+    fi
+done
+
+# Read secrets from worker.yml
+secrets=$(yq e '.config.workerSecrets' "$WORKER_CONFIG" | jq -r 'to_entries | map("\(.key)") | .[]')
 
 # Test secret resolution (assuming secrets are set as environment variables)
-if [ -z "$AZURE_SECRET" ]; then
-    echo "Error: Secrets are not resolved correctly"
-    exit 1
-fi
+for secret in $secrets; do
+    if [ -z "$(printenv $secret)" ]; then
+        echo "Error: Secret $secret is not resolved correctly"
+        exit 1
+    fi
+done
 
-# Ensure AZURE_APPLICATION_ID and AZURE_TENANT_ID are set
-if [ -z "$AZURE_APPLICATION_ID" ]; then
-    echo "Error: AZURE_APPLICATION_ID environment variable is not set"
-    exit 1
-fi
+# Extract sensitive variables from workerActors
+actor_vars=$(yq e '.config.workerActors[]' "$WORKER_CONFIG" | jq -r 'to_entries | map("\(.value | tostring)") | .[]' | grep -Ei "$SENSITIVE_PATTERN")
 
-if [ -z "$AZURE_TENANT_ID" ]; then
-    echo "Error: AZURE_TENANT_ID environment variable is not set"
-    exit 1
-fi
-
-# Ensure AZURE_APPLICATION_PASSWORD is not set after cleanup
-if [ -n "$AZURE_APPLICATION_PASSWORD" ]; then
-    echo "Error: AZURE_APPLICATION_PASSWORD environment variable is still set after cleanup"
-    exit 1
-fi
-
-# Test Azure CLI
-az --version
-
-# Perform cleanup
-cleanup_azure
-
-# Test Azure CLI login (this should fail as the AZURE_APPLICATION_PASSWORD is not set)
-az login --service-principal -u $AZURE_APPLICATION_ID -p $AZURE_APPLICATION_PASSWORD --tenant $AZURE_TENANT_ID
-
-if [ $? -eq 0 ]; then
-    echo "Error: Azure CLI login should have failed since AZURE_APPLICATION_PASSWORD is unset"
-    exit 1
-fi
+# Ensure sensitive variables used in workerActors are not set after cleanup, only if they are not defined in worker.yml -> env
+for var in $actor_vars; do
+    var_name=$(echo $var | sed -e 's/^.*{\(.*\)}.*$/\1/')
+    if ! echo "$env_vars" | grep -q "$var_name"; then
+        if [ -n "$(printenv $var_name)" ]; then
+            echo "Error: Sensitive variable $var_name is still set after cleanup"
+            exit 1
+        fi
+    fi
+done
 
 echo "All tests passed successfully."

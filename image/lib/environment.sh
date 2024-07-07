@@ -7,16 +7,6 @@
 . /usr/local/lib/cleanup.sh
 
 configure_environment() {
-    # Load environment variables from .env file if it exists
-    if [ -f /home/$USER/.cd/.env ]; then
-        echo "[INFO] Loading environment variables from .env file"
-        set -a
-        . /home/$USER/.cd/.env
-        set +a
-    else
-        echo "[ERROR] .env file not found"
-    fi
-
     local env_config="/home/$USER/.cd/configs/worker.yml"
     if [ ! -f "$env_config" ]; then
         echo "Error: Configuration file not found at $env_config"
@@ -39,7 +29,8 @@ configure_environment() {
     authenticate_actors
     fetch_secrets
 
-    # Cleanup sensitive environment variables
+    # Only after authentication and fetching secrets, cleanup actors and sensitive environment variables
+    cleanup_actors
     cleanup_sensitive_env_vars
 }
 

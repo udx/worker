@@ -12,22 +12,22 @@ azure_authenticate() {
     case $type in
         "azure-service-principal")
             echo "[INFO] Authenticating Azure service principal: $application"
-            az login --service-principal -u "$application" -p "$password" --tenant "$tenant" >/dev/null 2>&1
+            az login --service-principal -u "$application" -p "$password" --tenant "$tenant"
             if [ $? -ne 0 ]; then
                 echo "[ERROR] Azure service principal authentication failed"
                 return 1
             fi
-            az account set --subscription "$subscription" >/dev/null 2>&1
+            az account set --subscription "$subscription"
         ;;
         "azure-personal-account")
             echo "[INFO] Authenticating Azure personal account: $application"
-            az login -u "$application" -p "$password" >/dev/null 2>&1
+            az login -u "$application" -p "$password"
             if [ $? -ne 0 ]; then
                 echo "[ERROR] Azure personal account authentication failed"
                 return 1
             fi
             if [ -n "$subscription" ]; then
-                az account set --subscription "$subscription" >/dev/null 2>&1
+                az account set --subscription "$subscription"
             fi
         ;;
         *)
