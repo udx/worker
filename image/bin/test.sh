@@ -21,14 +21,9 @@ if [ -z "$AZURE_SECRET" ]; then
     exit 1
 fi
 
-# Ensure AZURE_APPLICATION_ID, AZURE_APPLICATION_PASSWORD, and AZURE_TENANT_ID are set
+# Ensure AZURE_APPLICATION_ID and AZURE_TENANT_ID are set
 if [ -z "$AZURE_APPLICATION_ID" ]; then
     echo "Error: AZURE_APPLICATION_ID environment variable is not set"
-    exit 1
-fi
-
-if [ -z "$AZURE_APPLICATION_PASSWORD" ]; then
-    echo "Error: AZURE_APPLICATION_PASSWORD environment variable is not set"
     exit 1
 fi
 
@@ -37,14 +32,23 @@ if [ -z "$AZURE_TENANT_ID" ]; then
     exit 1
 fi
 
+# Ensure AZURE_APPLICATION_PASSWORD is not set after cleanup
+if [ -n "$AZURE_APPLICATION_PASSWORD" ]; then
+    echo "Error: AZURE_APPLICATION_PASSWORD environment variable is still set after cleanup"
+    exit 1
+fi
+
 # Test Azure CLI
 az --version
 
-# Test Azure CLI login
+# Perform cleanup
+cleanup_azure
+
+# Test Azure CLI login (this should fail as the AZURE_APPLICATION_PASSWORD is not set)
 az login --service-principal -u $AZURE_APPLICATION_ID -p $AZURE_APPLICATION_PASSWORD --tenant $AZURE_TENANT_ID
 
-if [ $? -ne 0 ]; then
-    echo "Error: Azure CLI login failed"
+if [ $? -eq 0 ]; then
+    echo "Error: Azure CLI login should have failed since AZURE_APPLICATION_PASSWORD is unset"
     exit 1
 fi
 
