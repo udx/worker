@@ -4,13 +4,22 @@ echo "Starting tests..."
 
 # Print all environment variables for debugging
 echo "Printing all environment variables:"
-env
+
+# Dynamically redact sensitive environment variables
+SENSITIVE_PATTERN="PASSWORD|SECRET|KEY|TOKEN"
+env | while IFS='=' read -r name value; do
+    if echo "$name" | grep -Eq "$SENSITIVE_PATTERN"; then
+        echo "$name=********"
+    else
+        echo "$name=$value"
+    fi
+done
 
 # Test environment variables
 if [ -z "$DOCKER_IMAGE_NAME" ]; then
     echo "Error: DOCKER_IMAGE_NAME environment variable is not set"
     exit 1
-elif [ "$DOCKER_IMAGE_NAME" != "udx-worker" ]; then
+    elif [ "$DOCKER_IMAGE_NAME" != "udx-worker" ]; then
     echo "Error: DOCKER_IMAGE_NAME environment variable is not set correctly"
     exit 1
 fi
