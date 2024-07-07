@@ -21,6 +21,9 @@ echo "[INFO] Welcome to UDX Worker Container. Initializing environment..."
 # Execute the environment.sh script to set up the environment
 source /usr/local/lib/environment.sh
 
+# Configure the environment
+configure_environment
+
 # Check environment variables after running environment.sh
 echo "[INFO] Environment variables after sourcing environment.sh:"
 env

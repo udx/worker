@@ -35,8 +35,13 @@ configure_environment() {
     authenticate_actors
     fetch_secrets
 
-    # Cleanup actor credentials
-    cleanup_actors
-}
+    # Cleanup sensitive environment variables
+    cleanup_sensitive_env_vars
 
-configure_environment
+    # Verify DOCKER_IMAGE_NAME
+    if [ -z "$DOCKER_IMAGE_NAME" ]; then
+        echo "[ERROR] DOCKER_IMAGE_NAME is not set after fetching secrets and cleanup"
+    else
+        echo "[INFO] DOCKER_IMAGE_NAME is set to $DOCKER_IMAGE_NAME after fetching secrets and cleanup"
+    fi
+}

@@ -2,9 +2,6 @@
 
 # Include specific secret resolving scripts
 . /usr/local/lib/secrets/azure.sh
-. /usr/local/lib/secrets/aws.sh
-. /usr/local/lib/secrets/gcp.sh
-. /usr/local/lib/secrets/bitwarden.sh
 
 # Function to resolve placeholders with environment variables
 resolve_env_vars() {
@@ -14,7 +11,7 @@ resolve_env_vars() {
 
 # Function to redact sensitive URLs
 redact_sensitive_urls() {
-    echo "$1" | sed -E 's|(https://[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)([A-Za-z0-9/_-]*)|\1.*********\2.*********\3|g'
+    echo "$1" | sed -E 's/(https:\/\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)([A-Za-z0-9\/_-]*)/\1.*********\2.*********\3/g'
 }
 
 # Function to fetch secrets and set them as environment variables
@@ -46,7 +43,6 @@ fetch_secrets() {
                     value=""
                 fi
                 ;;
-            # Add cases for other secret managers here
             *)
                 echo "[ERROR] Unsupported secret URL: $(redact_sensitive_urls "$url")" >&2
                 value=""

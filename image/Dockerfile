@@ -85,11 +85,11 @@ COPY ./etc/configs /home/${USER}/.cd/configs
 # Copy the lib directory to the image
 COPY ./lib /usr/local/lib
 
-# Set executable permissions for main.sh, entrypoint.sh, and modules, and set read-only permissions
-RUN chmod +x /usr/local/bin/main.sh /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
+# Set executable permissions for entrypoint.sh and other scripts
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
     find /usr/local/lib -type f -name "*.sh" -exec chmod +x {} \; && \
     chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
-    chmod 555 /usr/local/bin/entrypoint.sh /usr/local/bin/main.sh
+    chmod 555 /usr/local/bin/entrypoint.sh
 
 # Switch to non-root user
 USER ${USER}
