@@ -110,7 +110,7 @@ config:
 
 #### Local Environment
 
-The `.env` file is used to store environment variables required by the UDX Worker. Example .env file:
+The `.udx` file is used to store environment variables required by the UDX Worker. Example .udx file:
 
 ```txt
 AZURE_SUBSCRIPTION_ID=132583e0-0e9d-46a9-b702-66060ca58c1b
@@ -123,7 +123,7 @@ AZURE_APPLICATION_PASSWORD=my-password
 
 ```shell
 docker run --rm -it \
-  -v $(pwd)/.env:/home/udx/.cd/.env:ro \
+  -v $(pwd)/.udx:/home/udx/.cd/.udx:ro \
   udx-worker:latest \
   /bin/sh -c "/usr/local/bin/test.sh"
 ```
@@ -183,7 +183,7 @@ jobs:
 
 The `bin/test.sh` script validates the environment setup by:
 
-- Loading environment variables from `.env`.
+- Loading environment variables from `.udx`.
 
 - Ensuring required environment variables are set.
 

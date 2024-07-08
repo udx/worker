@@ -21,7 +21,7 @@ yarn.lock
 *.iml
 
 # Ignore environment secrets
-.env
+.udx
 
 # Ignore build output
 dist/

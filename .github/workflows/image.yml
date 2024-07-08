@@ -65,12 +65,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Generate .env file
+      - name: Generate .udx file
         run: |
-          echo "AZURE_SUBSCRIPTION_ID=${{ env.AZURE_SUBSCRIPTION_ID }}" >> image/.env
-          echo "AZURE_TENANT_ID=${{ env.AZURE_TENANT_ID }}" >> image/.env
-          echo "AZURE_APPLICATION_ID=${{ env.AZURE_APPLICATION_ID }}" >> image/.env
-          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> image/.env
+          echo "AZURE_SUBSCRIPTION_ID=${{ env.AZURE_SUBSCRIPTION_ID }}" >> image/.udx
+          echo "AZURE_TENANT_ID=${{ env.AZURE_TENANT_ID }}" >> image/.udx
+          echo "AZURE_APPLICATION_ID=${{ env.AZURE_APPLICATION_ID }}" >> image/.udx
+          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> image/.udx
 
       - name: Test build (non-release branches)
         if: github.ref != env.RELEASE_BRANCH_REF
@@ -130,7 +130,7 @@ jobs:
         run: |
           docker run --rm \
             -v $(pwd)/image/etc/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro \
-            -v $(pwd)/image/.env:/home/udx/.cd/.env:ro \
+            -v $(pwd)/image/.udx:/home/udx/.cd/.udx:ro \
             udx-worker:latest /usr/local/bin/test.sh
 
       - name: Build and push
