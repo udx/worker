@@ -13,7 +13,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 ENV USER=${USER}
 ENV HOME=/home/${USER}
-ENV ADDITIONAL_ENTRYPOINT=/usr/local/bin/init.sh
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
