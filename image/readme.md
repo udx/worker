@@ -19,7 +19,7 @@ Before using the UDX Worker Image, make sure you have the following prerequisite
 To build the Docker image locally:
 
 ```shell
-docker build -t udx-worker .
+docker build -t udx-worker/udx-worker:latest .
 ```
 
 ### Run
@@ -27,13 +27,13 @@ docker build -t udx-worker .
 To run the container in the background:
 
 ```shell
-docker run -d --rm --name udx-worker udx-worker
+docker run -d --rm --name udx-worker udx-worker/udx-worker:latest
 ```
 
 To run the container interactively:
 
 ```shell
-docker run --rm -it udx-worker bash
+docker run --rm -it udx-worker/udx-worker:latest bash
 ```
 
 ### Exec
@@ -51,7 +51,7 @@ docker exec -it udx-worker bash
 To pull the Docker image from the Google Cloud Artifact Registry:
 
 ```shell
-docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
+docker pull us-central1-docker.pkg.dev/rabbit-ci-tooling/udx-worker/udx-worker:latest
 ```
 
 ### Run
@@ -59,7 +59,7 @@ docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
 To run the UDX Worker container pulled from the Google Cloud Artifact Registry:
 
 ```shell
-docker run -d --rm --name udx-worker gcr.io/rabbit-ci-tooling/udx-worker:latest
+docker run -d --rm --name udx-worker us-central1-docker.pkg.dev/rabbit-ci-tooling/udx-worker/udx-worker:latest
 ```
 
 ## Features
@@ -136,7 +136,7 @@ Supports an additional entrypoint script defined by the ADDITIONAL_ENTRYPOINT en
 
 ```shell
 # Dockerfile for a child image
-FROM udx-worker:latest
+FROM udx-worker/udx-worker:latest
 
 # Copy custom init script to the specified path
 COPY init.sh /usr/local/bin/init.sh
@@ -176,7 +176,7 @@ jobs:
       - name: Pull and run UDX worker
         run: |
           docker pull gcr.io/rabbit-ci-tooling/udx-worker:latest
-          docker run -v ${{ github.workspace }}/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml gcr.io/rabbit-ci-tooling/udx-worker:latest
+          docker run -v ${{ github.workspace }}/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml us-central1-docker.pkg.dev/rabbit-ci-tooling/udx-worker/udx-worker:latest
 ```
 
 ## Test
