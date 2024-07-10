@@ -8,7 +8,7 @@ resolve_env_vars() {
 
 # Function to authenticate actors
 authenticate_actors() {
-    local WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    local WORKER_CONFIG="/home/$USER/.cd/configs/worker_expanded.yml"
 
     if [ ! -f "$WORKER_CONFIG" ]; then
         echo "Error: YAML configuration file not found at $WORKER_CONFIG"
@@ -47,6 +47,3 @@ authenticate_actors() {
 init_auth() {
     echo "Initializing auth module"
 }
-
-# Execute authentication
-# authenticate_actors

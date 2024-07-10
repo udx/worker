@@ -8,19 +8,20 @@ cleanup_azure() {
 
 # Function to cleanup GCP authentication
 cleanup_gcp() {
-    echo "Cleaning up GCP authentication"
+    echo "[INFO] Cleaning up GCP authentication"
     gcloud auth revoke --all
 }
 
 # Function to cleanup AWS authentication
 cleanup_aws() {
-    echo "Cleaning up AWS authentication"
+    echo "[INFO] Cleaning up AWS authentication"
     # Example: If using AWS CLI v2, this is a placeholder for AWS logout
     # aws sso logout
 }
 
+# Function to cleanup Bitwarden authentication
 cleanup_bitwarden() {
-    echo "Cleaning up Bitwarden authentication"
+    echo "[INFO] Cleaning up Bitwarden authentication"
     bw logout --force
 }
 
@@ -29,7 +30,7 @@ cleanup_actors() {
     echo "[INFO] Cleaning up actors"
     
     # Check the type of each actor and clean up accordingly
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker_expanded.yml"
     
     # Check if the file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
@@ -66,7 +67,7 @@ cleanup_actors() {
 cleanup_sensitive_env_vars() {
     echo "[INFO] Cleaning up sensitive environment variables"
     
-    local env_config="/home/$USER/.cd/configs/worker.yml"
+    local env_config="/home/$USER/.cd/configs/worker_expanded.yml"
     if [ ! -f "$env_config" ]; then
         echo "Error: Configuration file not found at $env_config"
         exit 1

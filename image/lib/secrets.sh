@@ -18,7 +18,7 @@ redact_sensitive_urls() {
 fetch_secrets() {
     echo "[INFO] Fetching secrets"
     
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker_expanded.yml"
     
     if [ ! -f "$WORKER_CONFIG" ]; then
         echo "[ERROR] YAML configuration file not found at $WORKER_CONFIG"
@@ -60,5 +60,4 @@ fetch_secrets() {
     set -a
     . $SECRETS_ENV_FILE
     set +a
-    
 }
