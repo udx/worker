@@ -108,6 +108,33 @@ config:
       keyfile: ${GCP_KEYFILE}
 ```
 
+### Merging worker.yml Configurations
+
+The UDX Worker supports merging configuration files from the base and child images. 
+
+The base worker.yml is located at `/home/$USER/.cd/configs/worker.yml`, while the child image can provide its own worker.yml file, typically located at `/usr/src/app/configs/worker.yml`.
+
+When the container starts, these files are merged, and the child configuration can override settings from the base configuration.
+
+Example `worker.yml` for child image:
+
+```yaml
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    DOCKER_IMAGE_NAME: "custom-sql-backup"
+  workerSecrets:
+    AZURE_SECRET_APP_ONE: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
+    AZURE_SECRET_APP_TWO: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-two"
+  workerActors:
+    - type: azure-service-principal
+      subscription: ${AZURE_SUBSCRIPTION_ID}
+      tenant: ${AZURE_TENANT_ID}
+      application: ${AZURE_APPLICATION_ID}
+      password: ${AZURE_APPLICATION_PASSWORD}
+```
+
 #### Local Environment
 
 The `.udx` file is used to store environment variables required by the UDX Worker. Example .udx file:
@@ -117,32 +144,6 @@ AZURE_SUBSCRIPTION_ID=132583e0-0e9d-46a9-b702-66060ca58c1b
 AZURE_TENANT_ID=ffbbef27-e47d-46b3-8d3c-21aa3438d682
 AZURE_APPLICATION_ID=a6319a29-b3f2-4fc9-ba16-f215664a7d4e
 AZURE_APPLICATION_PASSWORD=my-password
-```
-
-#### Mounting worker.yml
-
-```shell
-docker run --rm -it \
-  -v $(pwd)/.udx:/home/udx/.cd/.udx:ro \
-  udx-worker:latest \
-  /bin/sh -c "/usr/local/bin/test.sh"
-```
-
-### Additional Entrypoint Script
-
-Supports an additional entrypoint script defined by the ADDITIONAL_ENTRYPOINT environment variable. This allows users (child images) to include custom initialization logic without modifying the base image.
-
-#### Example Usage
-
-```shell
-# Dockerfile for a child image
-FROM udx-worker/udx-worker:latest
-
-# Copy custom init script to the specified path
-COPY init.sh /usr/local/bin/init.sh
-
-# Ensure the script is executable
-RUN chmod +x /usr/local/bin/init.sh
 ```
 
 ### GitHub Actions Integration

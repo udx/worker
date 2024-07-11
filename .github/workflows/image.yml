@@ -124,14 +124,13 @@ jobs:
         run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
       - name: Build Docker Image
-        run: docker build -t udx-worker:latest ${{ env.IMAGE_CONTEXT }}
+        run: docker build -t udx-worker/udx-worker:latest ${{ env.IMAGE_CONTEXT }}
 
       - name: Run Tests in Docker Container
         run: |
           docker run --rm \
-            -v $(pwd)/image/etc/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro \
-            -v $(pwd)/image/.udx:/home/udx/.cd/.udx:ro \
-            udx-worker:latest /usr/local/bin/test.sh
+            --env-file ./image/.udx \
+            udx-worker/udx-worker:latest /usr/local/bin/test.sh
 
       - name: Build and push
         if: github.ref == env.RELEASE_BRANCH_REF
