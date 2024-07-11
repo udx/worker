@@ -2,8 +2,7 @@
 
 # Function to print the UDX logo
 udx_logo() {
-    echo "        _|            _   _ |   _  _"
-    echo "__ |_| (_| )( .  \)/ (_) |  |( (- |  __"
+    cat /home/${USER}/etc/logo.txt
 }
 
 # Function to print nice logs with colors
