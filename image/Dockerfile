@@ -55,15 +55,15 @@ RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >
 
 # Install Bitwarden CLI with debugging and retry logic
 RUN for i in {1..5}; do \
-        echo "Attempt $i to download Bitwarden CLI"; \
-        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && break || echo "Retrying..."; \
+    echo "Attempt $i to download Bitwarden CLI"; \
+    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && break || echo "Retrying..."; \
     done && \
     test -f /usr/local/bin/bw && chmod +x /usr/local/bin/bw || { \
-        echo "Failed to download Bitwarden CLI with curl, trying wget"; \
-        wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
-            echo "Failed to download Bitwarden CLI with wget"; \
-            exit 1; \
-        }; \
+    echo "Failed to download Bitwarden CLI with curl, trying wget"; \
+    wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
+    echo "Failed to download Bitwarden CLI with wget"; \
+    exit 1; \
+    }; \
     }
 
 # Create a new user and ensure home directory permissions are set correctly
@@ -84,9 +84,23 @@ COPY ./etc/configs /home/${USER}/.cd/configs
 # Copy the lib directory to the image
 COPY ./lib /usr/local/lib
 
-# Set executable permissions for entrypoint.sh and other scripts
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    find /usr/local/lib -type f -name "*.sh" -exec chmod +x {} \; && \
+# Set executable permissions and ownership for entrypoint.sh and other scripts
+RUN chmod +x /usr/local/bin/{entrypoint.sh,test.sh} && \
+    chmod +x \
+    /usr/local/lib/auth/aws.sh \
+    /usr/local/lib/auth/azure.sh \
+    /usr/local/lib/auth/bitwarden.sh \
+    /usr/local/lib/auth/gcp.sh \
+    /usr/local/lib/auth.sh \
+    /usr/local/lib/cleanup.sh \
+    /usr/local/lib/environment.sh \
+    /usr/local/lib/init_project.sh \
+    /usr/local/lib/secrets/aws.sh \
+    /usr/local/lib/secrets/azure.sh \
+    /usr/local/lib/secrets/bitwarden.sh \
+    /usr/local/lib/secrets/gcp.sh \
+    /usr/local/lib/secrets.sh \
+    /usr/local/lib/utils.sh && \
     chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
     chmod 555 /usr/local/bin/entrypoint.sh
 

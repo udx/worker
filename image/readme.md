@@ -27,13 +27,13 @@ docker build -t udx-worker/udx-worker:latest .
 To run the container in the background:
 
 ```shell
-docker run -d --rm --name udx-worker udx-worker/udx-worker:latest
+docker run -d --rm --env-file ./.udx --name udx-worker udx-worker/udx-worker:latest
 ```
 
 To run the container interactively:
 
 ```shell
-docker run --rm -it udx-worker/udx-worker:latest bash
+docker run --rm --env-file ./.udx -it udx-worker/udx-worker:latest bash
 ```
 
 ### Exec
