@@ -7,6 +7,7 @@ LABEL maintainer="UDX CAG Team"
 # Define arguments
 ARG USER=udx
 ARG NODE_VERSION=20
+ARG BW_CLI_URL="https://vault.bitwarden.com/download/?app=cli&platform=linux"
 
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive
@@ -53,14 +54,11 @@ RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Bitwarden CLI with debugging and retry logic
-RUN for i in {1..5}; do \
-    echo "Attempt $i to download Bitwarden CLI"; \
-    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && break || echo "Retrying..."; \
-    done && \
-    test -f /usr/local/bin/bw && chmod +x /usr/local/bin/bw || { \
+# Install Bitwarden CLI
+RUN curl -Lso /usr/local/bin/bw "$BW_CLI_URL" && \
+    chmod +x /usr/local/bin/bw || { \
     echo "Failed to download Bitwarden CLI with curl, trying wget"; \
-    wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
+    wget -O /usr/local/bin/bw "$BW_CLI_URL" && chmod +x /usr/local/bin/bw || { \
     echo "Failed to download Bitwarden CLI with wget"; \
     exit 1; \
     }; \
