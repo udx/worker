@@ -27,13 +27,13 @@ docker build -t udx-worker/udx-worker:latest .
 To run the container in the background:
 
 ```shell
-docker run -d --rm --name udx-worker udx-worker/udx-worker:latest
+docker run -d --rm --env-file ./.udx --name udx-worker udx-worker/udx-worker:latest
 ```
 
 To run the container interactively:
 
 ```shell
-docker run --rm -it udx-worker/udx-worker:latest bash
+docker run --rm --env-file ./.udx -it udx-worker/udx-worker:latest bash
 ```
 
 ### Exec
@@ -110,7 +110,7 @@ config:
 
 ### Merging worker.yml Configurations
 
-The UDX Worker supports merging configuration files from the base and child images. 
+The UDX Worker supports merging configuration files from the base and child images.
 
 The base worker.yml is located at `/home/$USER/.cd/configs/worker.yml`, while the child image can provide its own worker.yml file, typically located at `/usr/src/app/configs/worker.yml`.
 
@@ -145,6 +145,8 @@ AZURE_TENANT_ID=ffbbef27-e47d-46b3-8d3c-21aa3438d682
 AZURE_APPLICATION_ID=a6319a29-b3f2-4fc9-ba16-f215664a7d4e
 AZURE_APPLICATION_PASSWORD=my-password
 ```
+
+docker run --rm -it --env-file ./.udx --name udx-worker udx-worker/udx-worker:latest
 
 ### GitHub Actions Integration
 
