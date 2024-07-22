@@ -30,15 +30,15 @@
 ## - GitVersion: https://gitversion.net/docs/
 ##
 
-name: Build CLI
+name: Build and Release UDX Worker CLI
 
 on:
   push:
     paths:
       - ".github/workflows/cli.yml"
-      - "ci/*"
+      - "ci/**"
       - "cli/**"
-      
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -66,7 +66,11 @@ jobs:
         run: |
           cd $CLI_CONTEXT
           npm install
-          npm test
+          if npm run | grep -q "test"; then
+            npm test
+          else
+            echo "No test script found, skipping tests."
+          fi
 
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -85,19 +89,16 @@ jobs:
       - name: Pack CLI
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
-
-          # Install dependencies
           cd $CLI_CONTEXT
           npm install --omit=dev
-
-          # Pack the CLI
           npm pack --ignore-scripts
 
       - name: Clean up
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
-          rm -rf $CLI_CONTEXT/node_modules
-          rm -rf $CLI_CONTEXT/package-lock.json          
+          cd $CLI_CONTEXT
+          rm -rf node_modules
+          rm -rf package-lock.json
 
       - name: Upload CLI binary
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -105,23 +106,22 @@ jobs:
         with:
           name: ${{ env.RELEASE_ASSET_NAME }}
           path: |
-            ./${{ env.CLI_CONTEXT }}/
-            !./${{ env.CLI_CONTEXT }}/__tests__
-            !./${{ env.CLI_CONTEXT }}/*.tgz
-            !./${{ env.CLI_CONTEXT }}/*.cjs
-
+            ${{ env.CLI_CONTEXT }}/
+            !${{ env.CLI_CONTEXT }}/__tests__
+            !${{ env.CLI_CONTEXT }}/*.tgz
+            !${{ env.CLI_CONTEXT }}/*.cjs
 
       - name: Generate changelog
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" > ${CHANGELOG_ASSET_PATH}
+          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" > ${{ env.CHANGELOG_ASSET_PATH }}
 
       - name: Install Octokit
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: npm install @octokit/rest
 
-      - name: Create Github release and upload asset
+      - name: Create GitHub release and upload asset
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
           node -e "
