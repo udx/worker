@@ -1,6 +1,6 @@
 {
-  "name": "udx-worker",
-  "version": "latest",
+  "name": "udx-worker-cli",
+  "version": "1.0.0",
   "type": "module",
   "description": "Tool for managing tasks and apps utilizing containerized workers",
   "main": "index.js",
@@ -18,8 +18,7 @@
   "author": "fqjony (Dmitry Smirnov)",
   "license": "ISC",
   "bin": {
-    "udx-worker": "./bin/udx-worker.js",
-    "udx-worker-start": "./bin/start.sh"
+    "udx-worker": "./bin/udx-worker.js"
   },
   "scripts": {
     "test": "jest"
@@ -29,7 +28,8 @@
     "lib/**/*.js",
     "bin/*.sh",
     "templates/*.template",
-    "templates/*.ipynb"
+    "templates/*.ipynb",
+    "Makefile"
   ],
   "dependencies": {
     "chalk": "^4.1.2",
@@ -45,64 +45,5 @@
     "@babel/preset-env": "^7.24.4",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0"
-  },
-  "config": {
-    "commands": [
-      {
-        "name": "exec",
-        "description": "This command executes a command in the context of the udx-worker",
-        "enabled": true,
-        "action": "exec",
-        "options": [
-          {
-            "flags": "-c, --command <command>",
-            "description": "Command to execute",
-            "defaultValue": "echo 'Hello, World!'"
-          }
-        ]
-      },
-      {
-        "name": "configure",
-        "description": "This command configure new tooling worker based on udx-worker",
-        "enabled": true,
-        "action": "configure"
-      },
-      {
-        "name": "integrate",
-        "description": "This command generates CI implemetation utilizing udx-worker tooling worker",
-        "enabled": true,
-        "action": "integrate"
-      },
-      {
-        "name": "build",
-        "description": "This command detects type of project and build it",
-        "enabled": true,
-        "action": "build"
-      },
-      {
-        "name": "test",
-        "description": "This command detects type of project and run tests against it",
-        "enabled": true,
-        "action": "test"
-      },
-      {
-        "name": "deploy",
-        "description": "This command detects type of project and deploy it",
-        "enabled": true,
-        "action": "deploy"
-      },
-      {
-        "name": "chat",
-        "description": "This command starts AI chat bot with internal knowledgebase",
-        "enabled": true,
-        "action": "chat"
-      },
-      {
-        "name": "help",
-        "description": "Show this help message",
-        "enabled": true,
-        "action": "help"
-      }
-    ]
   }
 }

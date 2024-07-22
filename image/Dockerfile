@@ -82,6 +82,9 @@ COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
 
+# Copy the Makefile into the image
+COPY ./etc/home/Makefile /usr/local/Makefile
+
 # Set executable permissions and ownership for scripts
 RUN chmod +x /usr/local/bin/{entrypoint.sh,test.sh} && \
     chmod +x /usr/local/lib/{auth/aws.sh,auth/azure.sh,auth/bitwarden.sh,auth/gcp.sh,auth.sh,cleanup.sh,environment.sh,init_project.sh,secrets/aws.sh,secrets/azure.sh,secrets/bitwarden.sh,secrets/gcp.sh,secrets.sh,utils.sh} && \
