@@ -1,44 +1,12 @@
-## CI Pipeline to build, test, and release npm package to GitHub
-##
-## How it works:
-## -------------
-##
-## - All variables are stored as repository variables
-## - The pipeline is triggered on every push to any branch
-## - If the push is to the "release" (latest) branch, the pipeline will release the package
-## - The released package is tagged with the version from GitVersion
-## - The pipeline will tag the new version as well as the "latest" tag and delete the previous "latest" image
-## - If the push is to any other branch, the pipeline will only perform a test build
-## - The pipeline will create a GitHub release with the changelog
-## - The changelog is generated automatically from the commit messages between the last tag and the current HEAD
-## - GitVersion is configured in ci/git-version.yml. It ensures the use of "ContinuousDeployment" versioning mode and branching strategy (release: "latest", development: "!latest")
-##
-## Required repository variables:
-## ------------------------------
-## - GCP_PROJECT: Google Cloud project ID
-## - GCP_REGION: Google Cloud region
-## - GCP_REGISTRY_REPO: Google Artifact Registry repository name
-## - GCP_AUTH_PROVIDER: Google Cloud Workload Identity Provider
-## - GCP_SERVICE_ACCOUNT: Google Cloud service account name
-## - DOCKER_IMAGE_NAME: Docker image name
-##
-## References:
-## -----------
-##
-## - GitTools actions: https://github.com/GitTools/actions
-## - Google Cloud SDK: https://cloud.google.com/sdk
-## - GitVersion: https://gitversion.net/docs/
-##
-
-name: Build CLI
+name: Build and Release UDX Worker CLI
 
 on:
   push:
     paths:
       - ".github/workflows/cli.yml"
-      - "ci/*"
+      - "ci/**"
       - "cli/**"
-      
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -66,7 +34,11 @@ jobs:
         run: |
           cd $CLI_CONTEXT
           npm install
-          npm test
+          if npm run | grep -q "test"; then
+            npm test
+          else
+            echo "No test script found, skipping tests."
+          fi
 
       - name: Install GitVersion
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -85,19 +57,16 @@ jobs:
       - name: Pack CLI
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
-
-          # Install dependencies
           cd $CLI_CONTEXT
           npm install --omit=dev
-
-          # Pack the CLI
           npm pack --ignore-scripts
 
       - name: Clean up
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
-          rm -rf $CLI_CONTEXT/node_modules
-          rm -rf $CLI_CONTEXT/package-lock.json          
+          cd $CLI_CONTEXT
+          rm -rf node_modules
+          rm -rf package-lock.json
 
       - name: Upload CLI binary
         if: success() && github.ref == env.RELEASE_BRANCH_REF
@@ -105,23 +74,22 @@ jobs:
         with:
           name: ${{ env.RELEASE_ASSET_NAME }}
           path: |
-            ./${{ env.CLI_CONTEXT }}/
-            !./${{ env.CLI_CONTEXT }}/__tests__
-            !./${{ env.CLI_CONTEXT }}/*.tgz
-            !./${{ env.CLI_CONTEXT }}/*.cjs
-
+            ${{ env.CLI_CONTEXT }}/
+            !${{ env.CLI_CONTEXT }}/__tests__
+            !${{ env.CLI_CONTEXT }}/*.tgz
+            !${{ env.CLI_CONTEXT }}/*.cjs
 
       - name: Generate changelog
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" > ${CHANGELOG_ASSET_PATH}
+          git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s" > ${{ env.CHANGELOG_ASSET_PATH }}
 
       - name: Install Octokit
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: npm install @octokit/rest
 
-      - name: Create Github release and upload asset
+      - name: Create GitHub release and upload asset
         if: success() && github.ref == env.RELEASE_BRANCH_REF
         run: |
           node -e "

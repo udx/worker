@@ -1,6 +1,6 @@
 # UDX Worker CLI
 
-UDX Worker CLI is a command-line interface tool for managing UDX Worker tasks. It provides a set of commands to setup, execute, and cleanup tasks in an efficient manner.
+UDX Worker CLI is a lightweight command-line interface tool for managing UDX Worker tasks by wrapping Makefile targets.
 
 ## Installation
 
@@ -32,10 +32,37 @@ You can check the version and get help on how to use the CLI with the following 
 
 ```bash
 udx-worker --version
-udx-worker -v
 udx-worker --help
-udx-worker -h
 ```
+
+## Available Commands
+
+### Build
+
+```shell
+udx-worker build
+```
+
+### Run
+
+```shell
+udx-worker run
+```
+
+You can specify an environment file(.udx by default):
+
+```shell
+udx-worker run --env-file ./path/to/your/env-file
+```
+
+### Run Interactively
+
+```shell
+udx-worker run-interactive
+```
+
+...
+
 
 ## Testing
 

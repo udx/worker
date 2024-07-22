@@ -1,123 +1,52 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { exec } from "child_process";
+import { exec } from 'child_process';
 import { program } from 'commander';
-import readline from 'readline';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import fs from 'fs';
-import yaml from 'yaml';
-import { readFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const configPath = '/src/configs/worker.yml';
+const makefilePath = join(__dirname, '../../image/Makefile');
 
-// Load the worker configuration
-const configFile = readFileSync(configPath, 'utf8');
-const config = yaml.parse(configFile);
-
-const questions = Object.keys(config.config.env).map(key => ({
-  question: `Enter ${key.replace(/_/g, ' ')}: `,
-  key
-}));
-
-function executeCommand(command, actionName) {
+function runMakeTarget(target, options = '') {
+  const command = `make -f ${makefilePath} ${target} ${options}`;
   exec(command, (error, stdout, stderr) => {
     if (error) {
-      console.error(`Error ${actionName}:`, error);
+      console.error(`Error executing ${target}:`, error);
       return;
     }
-    console.log(`stdout: ${stdout}`);
-    console.error(`stderr: ${stderr}`);
+    console.log(stdout);
+    if (stderr) console.error(stderr);
   });
 }
 
-function executeMake(target, actionName, options = '') {
-  const cmd = `make -f ${join(__dirname, '../Makefile')} ${target} ${options}`;
-  executeCommand(cmd, actionName);
-}
+function getMakefileTargets() {
+  const makefileContent = fs.readFileSync(makefilePath, 'utf-8');
+  const targetRegex = /^([a-zA-Z0-9_-]+):/gm;
+  let targets = [];
+  let match;
 
-function generateEnvFile() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  let envContent = '';
-  let currentQuestionIndex = 0;
-
-  function askNextQuestion() {
-    if (currentQuestionIndex < questions.length) {
-      rl.question(questions[currentQuestionIndex].question, (answer) => {
-        envContent += `${questions[currentQuestionIndex].key}=${answer}\n`;
-        currentQuestionIndex++;
-        askNextQuestion();
-      });
-    } else {
-      rl.close();
-      const envFilePath = join(process.cwd(), '.udx');
-      fs.writeFileSync(envFilePath, envContent, 'utf8');
-      console.log('.udx environment file generated successfully.');
+  while ((match = targetRegex.exec(makefileContent)) !== null) {
+    if (match.index === targetRegex.lastIndex) {
+      targetRegex.lastIndex++;
     }
+    targets.push(match[1]);
   }
 
-  askNextQuestion();
+  return targets;
 }
 
-program
-  .command('build')
-  .description('Build the Docker image')
-  .action(() => executeMake('build', 'building'));
+const targets = getMakefileTargets();
 
-program
-  .command('run')
-  .description('Run the Docker container')
-  .option('-e, --env-file <path>', 'Path to the environment file', './.udx')
-  .action((options) => executeMake('run', 'running', `ENV_FILE=${options.envFile}`));
-
-program
-  .command('run-interactive')
-  .description('Run the Docker container interactively')
-  .option('-e, --env-file <path>', 'Path to the environment file', './.udx')
-  .action((options) => executeMake('run-interactive', 'running interactively', `ENV_FILE=${options.envFile}`));
-
-program
-  .command('exec')
-  .description('Exec into the running Docker container')
-  .option('-c, --container-name <name>', 'Container name', 'udx-worker-container')
-  .action((options) => executeMake('exec', 'executing', `CONTAINER_NAME=${options.containerName}`));
-
-program
-  .command('delete')
-  .description('Delete the running Docker container')
-  .action(() => executeMake('delete', 'deleting'));
-
-program
-  .command('log')
-  .description('View the Docker container logs')
-  .action(() => executeMake('log', 'viewing logs'));
-
-program
-  .command('gcr-login')
-  .description('Log in to Google Cloud Artifact Registry')
-  .action(() => executeMake('gcr-login', 'GCR login'));
-
-program
-  .command('generate-env')
-  .description('Generate the .udx environment file')
-  .action(() => generateEnvFile());
-
-program
-  .command('pull')
-  .description('Pull Docker image from repository')
-  .option('-i, --image <image>', 'Docker image to pull', 'udx-worker/udx-worker:latest')
-  .action((options) => executeMake('pull', 'pulling image', `DOCKER_IMAGE=${options.image}`));
-
-program
-  .command('help')
-  .description('Show this help message')
-  .action(() => program.help());
+targets.forEach(target => {
+  program
+    .command(target)
+    .description(`Run the '${target}' target from the Makefile`)
+    .action(() => runMakeTarget(target));
+});
 
 program.parse(process.argv);
