@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { program } from 'commander';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -13,8 +13,8 @@ const __dirname = dirname(__filename);
 const makefilePath = join(__dirname, '../../image/Makefile');
 
 function runMakeTarget(target, options = '') {
-  const command = `make -f ${makefilePath} ${target} ${options}`;
-  exec(command, (error, stdout, stderr) => {
+  const args = ['-f', makefilePath, target, ...options.split(' ')];
+  execFile('make', args, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error executing ${target}:`, error);
       return;
