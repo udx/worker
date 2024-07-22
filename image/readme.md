@@ -1,6 +1,6 @@
 # UDX Worker
 
-The UDX Worker revolutionizes DevSecOps by abstracting secret management complexities, securely handling secrets within its runtime environment.
+The UDX Worker simplifies DevSecOps by providing a secure, containerized environment for handling secrets and running automation tasks.
 
 This repository contains the UDX Worker Docker image, designed for secure and reliable automation tasks.
 
@@ -12,11 +12,109 @@ Before using the UDX Worker Image, make sure you have the following prerequisite
 
 - Docker: [Installation Guide](https://docs.docker.com/get-docker/)
 
+## Key Features and Usage
+
+### Secure Environment:
+
+Run tasks in a secure environment and easily fetch secrets using actor credentials:
+
+_Only [Azure] Auth supported so far._
+
+**src/configs/worker.yml**
+
+```yaml
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    AZURE_SUBSCRIPTION_ID: "your-subscription-id"
+    AZURE_TENANT_ID: "your-tenant-id"
+    AZURE_APPLICATION_ID: "your-application-id"
+    AZURE_APPLICATION_PASSWORD: "your-application-password"
+  workerSecrets:
+    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
+  workerActors:
+    - type: azure-service-principal
+      subscription: ${AZURE_SUBSCRIPTION_ID}
+      tenant: ${AZURE_TENANT_ID}
+      application: ${AZURE_APPLICATION_ID}
+      password: ${AZURE_APPLICATION_PASSWORD}
+```
+
+Start the container:
+
+```shell
+udx-worker run
+```
+
+### Dynamic Configuration:
+
+Generate a local environment configuration file (.udx by default):
+
+```shell
+udx-worker generate-env
+```
+
+Example .udx file:
+
+```txt
+AZURE_SUBSCRIPTION_ID=132583e0-0e9d-46a9-b702-66060ca58c1b
+AZURE_TENANT_ID=ffbbef27-e47d-46b3-8d3c-21aa3438d682
+AZURE_APPLICATION_ID=a6319a29-b3f2-4fc9-ba16-f215664a7d4e
+AZURE_APPLICATION_PASSWORD=*************
+```
+
+Start the container:
+
+```shell
+udx-worker run
+```
+
+src/configs/worker.yml integration:
+
+```yaml
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
+    AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+    ...
+```
+
+### Merging worker.yml Configurations
+
+The UDX Worker supports merging configuration files from the base and child images.
+
+The base worker.yml is located at /home/$USER/.cd/configs/worker.yml, while the child image can provide its own worker.yml file, typically located at /usr/src/app/configs/worker.yml.
+
+When the container starts, these files are merged, and the child configuration can override settings from the base configuration.
+
+Example worker.yml for a child image:
+
+```yaml
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    DOCKER_IMAGE_NAME: "custom-sql-backup"
+  workerSecrets:
+    AZURE_SECRET_APP_ONE: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
+    AZURE_SECRET_APP_TWO: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-two"
+  workerActors:
+    - type: azure-service-principal
+      subscription: ${AZURE_SUBSCRIPTION_ID}
+      tenant: ${AZURE_TENANT_ID}
+      application: ${AZURE_APPLICATION_ID}
+      password: ${AZURE_APPLICATION_PASSWORD}
+```
+
+
 ## Local Development
 
 ### Build
 
-To build the Docker image locally:
+To build the Docker image locally, run:
 
 ```shell
 docker build -t udx-worker/udx-worker:latest .
@@ -62,91 +160,27 @@ To run the UDX Worker container pulled from the Google Cloud Artifact Registry:
 docker run -d --rm --name udx-worker us-central1-docker.pkg.dev/rabbit-ci-tooling/udx-worker/udx-worker:latest
 ```
 
-## Features
+## Makefile Integration
 
-### Dynamic Configuration with worker.yml
+The UDX Worker Makefile provides several commands for managing the Docker image and container. Here are the key commands:
 
-Supports dynamic configuration via worker.yml for environment variables, worker actors auth, and secrets fetching.
+- make build: Build the Docker image.
+- make run: Run the Docker container.
+- make run-interactive: Run the Docker container interactively.
+- make exec: Exec into the running container.
+- make delete: Delete the running container.
+- make log: View the container logs.
+- make gcr-login: Log in to Google Cloud Artifact Registry.
+- make generate-env: Generate the .udx environment file.
 
-_Only [Azure] Auth supported so far._
+Example usage:
 
-```yaml
-kind: workerConfig
-version: udx.io/worker-v1/config
-config:
-  env:
-    DOCKER_IMAGE_NAME: "udx-worker"
-    AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
-    AZURE_TENANT_ID: ${AZURE_TENANT_ID}
-    AZURE_APPLICATION_ID: ${AZURE_APPLICATION_ID}
-    AWS_REGION: ${AWS_REGION}
-    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-    BITWARDEN_EMAIL: ${BITWARDEN_EMAIL}
-    BITWARDEN_PASSWORD: ${BITWARDEN_PASSWORD}
-    GCP_EMAIL: ${GCP_EMAIL}
-    GCP_KEYFILE: ${GCP_KEYFILE}
-  workerSecrets:
-    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
-    AWS_SECRET: "arn:aws:secretsmanager:region:account-id:secret:secret-id"
-    BITWARDEN_SECRET: "bitwarden://vault/secrets/your-secret-id"
-    GCP_SECRET: "projects/your-project/secrets/your-secret"
-  workerActors:
-    - type: azure-service-principal
-      subscription: ${AZURE_SUBSCRIPTION_ID}
-      tenant: ${AZURE_TENANT_ID}
-      application: ${AZURE_APPLICATION_ID}
-      password: ${AZURE_APPLICATION_PASSWORD}
-    - type: aws-role
-      role_arn: ${AWS_ROLE_ARN}
-      session_name: ${AWS_SESSION_NAME}
-    - type: bitwarden
-      email: ${BITWARDEN_EMAIL}
-      password: ${BITWARDEN_PASSWORD}
-    - type: gcp-service-account
-      email: ${GCP_EMAIL}
-      keyfile: ${GCP_KEYFILE}
+```shell
+make build
+make run
+make run-interactive ENV_FILE=./path/to/your/env-file
 ```
 
-### Merging worker.yml Configurations
-
-The UDX Worker supports merging configuration files from the base and child images.
-
-The base worker.yml is located at `/home/$USER/.cd/configs/worker.yml`, while the child image can provide its own worker.yml file, typically located at `/usr/src/app/configs/worker.yml`.
-
-When the container starts, these files are merged, and the child configuration can override settings from the base configuration.
-
-Example `worker.yml` for child image:
-
-```yaml
-kind: workerConfig
-version: udx.io/worker-v1/config
-config:
-  env:
-    DOCKER_IMAGE_NAME: "custom-sql-backup"
-  workerSecrets:
-    AZURE_SECRET_APP_ONE: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
-    AZURE_SECRET_APP_TWO: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-two"
-  workerActors:
-    - type: azure-service-principal
-      subscription: ${AZURE_SUBSCRIPTION_ID}
-      tenant: ${AZURE_TENANT_ID}
-      application: ${AZURE_APPLICATION_ID}
-      password: ${AZURE_APPLICATION_PASSWORD}
-```
-
-#### Local Environment
-
-The `.udx` file is used to store environment variables required by the UDX Worker. Example .udx file:
-
-```txt
-AZURE_SUBSCRIPTION_ID=132583e0-0e9d-46a9-b702-66060ca58c1b
-AZURE_TENANT_ID=ffbbef27-e47d-46b3-8d3c-21aa3438d682
-AZURE_APPLICATION_ID=a6319a29-b3f2-4fc9-ba16-f215664a7d4e
-AZURE_APPLICATION_PASSWORD=my-password
-```
-
-docker run --rm -it --env-file ./.udx --name udx-worker udx-worker/udx-worker:latest
 
 ### GitHub Actions Integration
 

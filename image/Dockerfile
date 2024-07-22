@@ -6,8 +6,6 @@ LABEL maintainer="UDX CAG Team"
 
 # Define arguments
 ARG USER=udx
-ARG NODE_VERSION=20
-ARG BW_CLI_URL="https://vault.bitwarden.com/download/?app=cli&platform=linux"
 
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -49,10 +47,10 @@ RUN apt-get update && \
     apt-get install -y azure-cli && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    curl -Lso /usr/local/bin/bw "$BW_CLI_URL" && \
+    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
     chmod +x /usr/local/bin/bw || { \
     echo "Failed to download Bitwarden CLI with curl, trying wget"; \
-    wget -O /usr/local/bin/bw "$BW_CLI_URL" && chmod +x /usr/local/bin/bw || { \
+    wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
     echo "Failed to download Bitwarden CLI with wget"; \
     exit 1; \
     }; \
@@ -73,7 +71,7 @@ RUN npm cache clean --force && \
     npm install @babel/traverse@7.24.7 braces@3.0.3 http-cache-semantics@4.1.1
 
 # Create necessary directories and set permissions
-RUN mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs && \
+RUN mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs /src/configs && \
     chown -R ${USER}:${USER} /home/${USER}
 
 # Copy the bin, etc, and lib directories
@@ -81,6 +79,9 @@ COPY ./bin /usr/local/bin
 COPY ./etc/home /home/${USER}/etc
 COPY ./etc/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
+
+# Copy the worker.yml to /src/configs
+COPY ./etc/configs/worker.yml /src/configs/worker.yml
 
 # Set executable permissions and ownership for scripts
 RUN chmod +x /usr/local/bin/{entrypoint.sh,test.sh} && \

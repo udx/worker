@@ -1,40 +1,52 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { execFile } from "child_process";
+import { execFile } from 'child_process';
+import { program } from 'commander';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-function executeScript(scriptName, actionName) {
-  const script = join(__dirname, `${scriptName}.sh`);
-  execFile(script, (error, stdout, stderr) => {
+const makefilePath = join(__dirname, '../../image/Makefile');
+
+function runMakeTarget(target, options = '') {
+  const args = ['-f', makefilePath, target, ...options.split(' ')];
+  execFile('make', args, (error, stdout, stderr) => {
     if (error) {
-      console.error(`Error ${actionName}:`, error);
+      console.error(`Error executing ${target}:`, error);
       return;
     }
-    console.log(`stdout: ${stdout}`);
-    console.error(`stderr: ${stderr}`);
+    console.log(stdout);
+    if (stderr) console.error(stderr);
   });
 }
 
-const commands = {
-  start: () => executeScript("start", "starting"),
-  restart: () => executeScript("restart", "restarting"),
-  help: () => console.log("Usage: udx-worker <start|restart|help>")
-};
+function getMakefileTargets() {
+  const makefileContent = fs.readFileSync(makefilePath, 'utf-8');
+  const targetRegex = /^([a-zA-Z0-9_-]+):/gm;
+  let targets = [];
+  let match;
 
-// Command line arguments handling
-const args = process.argv.slice(2);
-if (args.length > 0) {
-  const command = commands[args[0]];
-  if (command) {
-    command();
-  } else {
-    console.log(`Unknown command: ${args[0]}`);
-    commands.help();
+  while ((match = targetRegex.exec(makefileContent)) !== null) {
+    if (match.index === targetRegex.lastIndex) {
+      targetRegex.lastIndex++;
+    }
+    targets.push(match[1]);
   }
-} else {
-  commands.help();
+
+  return targets;
 }
+
+const targets = getMakefileTargets();
+
+targets.forEach(target => {
+  program
+    .command(target)
+    .description(`Run the '${target}' target from the Makefile`)
+    .action(() => runMakeTarget(target));
+});
+
+program.parse(process.argv);
