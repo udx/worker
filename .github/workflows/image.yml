@@ -3,7 +3,7 @@
 ## Overview:
 ## ---------
 ##
-## This CI pipeline is designed to build and push Docker images to the Google Artifact Registry.
+## This CI pipeline is designed to build and push Docker images to the Google Artifact Registry and Azure Container Registry.
 ## It is triggered on every push to any branch.
 ## However, only pushes to the "release" (latest) branch result in the building and pushing of the image.
 ## For all other branches, the pipeline only performs a test build.
@@ -55,6 +55,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: 132583e0-0e9d-46a9-b702-66060ca58c1b
       AZURE_TENANT_ID: ffbbef27-e47d-46b3-8d3c-21aa3438d682
       AZURE_APPLICATION_ID: a6319a29-b3f2-4fc9-ba16-f215664a7d4e
+      ACR_REPO: udxmarketplace.azurecr.io
 
     steps:
       - name: Checkout code
@@ -119,7 +120,7 @@ jobs:
             echo "Image with tag 'latest' does not exist. Skipping delete."
           fi
 
-      - name: Docker Login
+      - name: Docker Login to Google Artifact Registry
         if: github.ref == env.RELEASE_BRANCH_REF
         run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
@@ -132,7 +133,7 @@ jobs:
             --env-file ./image/.udx \
             udx-worker/udx-worker:latest /usr/local/bin/test.sh
 
-      - name: Build and push
+      - name: Build and push to Google Artifact Registry
         if: github.ref == env.RELEASE_BRANCH_REF
         uses: docker/build-push-action@v6
         with:
@@ -141,6 +142,24 @@ jobs:
           tags: |
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
+
+      - name: Login to Azure Container Registry
+        if: github.ref == env.RELEASE_BRANCH_REF
+        uses: azure/docker-login@v1
+        with:
+          login-server: myregistry.azurecr.io
+          username: ${{ env.AZURE_APPLICATION_ID }}
+          password: ${{ secrets.AZURE_APPLICATION_PASSWORD }}
+
+      - name: Build and push to Azure Container Registry
+        if: github.ref == env.RELEASE_BRANCH_REF
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.IMAGE_CONTEXT }}
+          push: true
+          tags: |
+            ${{ env.ACR_REPO }}/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            ${{ env.ACR_REPO }}/udx-worker:latest
 
       - name: Generate changelog
         if: github.ref == env.RELEASE_BRANCH_REF
