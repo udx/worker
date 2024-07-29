@@ -52,7 +52,9 @@ jobs:
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
           CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
-          echo "changelog=$CHANGELOG" >> $GITHUB_ENV
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
   google-release:
     runs-on: ubuntu-latest
