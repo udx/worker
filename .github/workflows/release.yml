@@ -51,7 +51,7 @@ jobs:
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
-          echo "changelog=$(cat changelog.txt | jq -sRr @uri)" >> $GITHUB_ENV
+          echo "changelog=$(cat changelog.txt)" >> $GITHUB_ENV
 
   google-release:
     runs-on: ubuntu-latest
@@ -172,5 +172,6 @@ jobs:
         run: bash ci/scripts/github_release.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           semVer: ${{ needs.test-pipeline.outputs.semVer }}
           changelog: ${{ env.changelog }}

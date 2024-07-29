@@ -6,7 +6,7 @@ set -e
 GITHUB_TOKEN=$GITHUB_TOKEN
 GITHUB_REPOSITORY=$GITHUB_REPOSITORY
 SEMVER=$semVer
-CHANGELOG=$changelog
+CHANGELOG=$(echo -e "$changelog")
 
 # Create GitHub Release
 RELEASE_RESPONSE=$(curl -s -X POST \
