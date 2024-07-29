@@ -90,11 +90,11 @@ COPY ./src/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
 
 # Copy the worker.yml to /src/configs
-COPY ./src/configs/worker.yml /src/configs/worker.yml
+COPY ./src/configs/worker.yml /home/${USER}/.cd/configs/worker.yml
 
 # Set executable permissions and ownership for scripts
-RUN chmod +x /usr/local/bin/{entrypoint.sh,test.sh} && \
-    chmod +x /usr/local/lib/{auth/aws.sh,auth/azure.sh,auth/bitwarden.sh,auth/gcp.sh,auth.sh,cleanup.sh,environment.sh,init_project.sh,secrets/aws.sh,secrets/azure.sh,secrets/bitwarden.sh,secrets/gcp.sh,secrets.sh,utils.sh} && \
+RUN chmod +x /usr/local/bin/* && \
+    chmod +x /usr/local/lib/* && \
     chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
     chmod 555 /usr/local/bin/entrypoint.sh
 
@@ -104,5 +104,5 @@ USER ${USER}
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Default command to display NodeJS version
-CMD ["sh", "-c", "echo NodeJS@$(node -v)"]
+# Set the default command to execute bin/test.sh
+CMD ["/usr/local/bin/test.sh"]

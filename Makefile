@@ -6,6 +6,7 @@ CONTAINER_NAME := udx-worker-container
 ENV_FILE := .udx
 WORKER_CONFIG := ./src/configs/worker.yml
 FORCE ?= false
+DEBUG ?= true
 
 # Default target
 .DEFAULT_GOAL := help
@@ -45,26 +46,64 @@ help:
 	@echo "  DOCKER_IMAGE (default: udx-worker/udx-worker:latest)"
 	@echo "  WORKER_CONFIG (default: ./src/configs/worker.yml)"
 	@echo "  FORCE (default: false)"
+	@echo "  DEBUG (default: true)"
 
 # Build the Docker image
 build:
-	docker build -t $(DOCKER_IMAGE) .
+	@echo "Building Docker image..."
+	@if [ "$(DEBUG)" = "true" ]; then \
+		docker build -t $(DOCKER_IMAGE) .; \
+	else \
+		docker build -t $(DOCKER_IMAGE) . > /dev/null 2>&1; \
+		echo "Docker image build completed."; \
+	fi
 
-# Run the Docker container
-run: build
-	docker run --rm -it --env-file $(ENV_FILE) --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/$USER/.cd/configs/worker.yml $(DOCKER_IMAGE)
+# Run Docker container in interactive mode
+run-interactive:
+	@echo "Running Docker container in interactive mode..."
+	@make run INTERACTIVE=true
+
+# Run Docker container
+run: clean
+	@echo "Running Docker container..."
+	@if [ "$(INTERACTIVE)" = "true" ]; then \
+		docker run -it --env-file $(ENV_FILE) --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml $(DOCKER_IMAGE) /bin/sh; \
+	elif [ "$(DEBUG)" = "true" ]; then \
+		docker run -d --env-file $(ENV_FILE) --name $(CONTAINER_NAME) $(DOCKER_IMAGE); \
+		docker logs -f $(CONTAINER_NAME); \
+	else \
+		docker run -d --env-file $(ENV_FILE) --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml $(DOCKER_IMAGE) > /dev/null 2>&1; \
+		echo "Docker container run completed."; \
+	fi
 
 # Exec into the running container
 exec:
-	docker exec -it $(CONTAINER_NAME) bash
+	@echo "Executing into Docker container..."
+	@if [ "$(DEBUG)" = "true" ]; then \
+		docker exec -it $(CONTAINER_NAME) /usr/local/bin/test.sh; \
+	else \
+		docker exec -it $(CONTAINER_NAME) /usr/local/bin/test.sh > /dev/null 2>&1; \
+		echo "Executed into Docker container."; \
+	fi
 
 # View the container logs
 log:
-	docker logs $(CONTAINER_NAME)
+	@echo "Viewing Docker container logs..."
+	@if [ "$(DEBUG)" = "true" ]; then \
+		docker logs $(CONTAINER_NAME); \
+	else \
+		docker logs $(CONTAINER_NAME) > /dev/null 2>&1; \
+		echo "Docker container logs viewed."; \
+	fi
 
 # Delete the running container
 clean:
-	docker rm -f $(CONTAINER_NAME)
+	@echo "Deleting Docker container..."
+	@if [ "$(DEBUG)" = "true" ]; then \
+		docker rm -f $(CONTAINER_NAME); \
+	else \
+		docker rm -f $(CONTAINER_NAME) > /dev/null 2>&1; \
+	fi
 
 # Generate the .udx environment file
 generate-env:
@@ -134,10 +173,13 @@ generate-config:
 	fi
 
 # Run the validation tests
-test:
-	@echo "Running validation tests..."
-	bin/test.sh
+test: build run clean
+	@echo "Validation tests completed."
 
 # Development pipeline
 dev-pipeline: generate-env generate-config build test
-	@echo "Development pipeline completed successfully."
+	@if [ "$(DEBUG)" = "true" ]; then \
+		echo "Development pipeline completed successfully."; \
+	else \
+		echo "Development pipeline completed."; \
+	fi

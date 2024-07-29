@@ -7,7 +7,7 @@ config:
     AZURE_APPLICATION_ID: a6319a29-b3f2-4fc9-ba16-f215664a7d4e
     DOCKER_IMAGE_NAME: udx-worker
   workerSecrets:
-    AZURE_APPLICATION_PASSWORD: ${AZURE_APPLICATION_PASSWORD}
+    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
   workerActors:
     - type: azure-service-principal
       subscription: ${AZURE_SUBSCRIPTION_ID}

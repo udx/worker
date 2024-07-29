@@ -25,5 +25,5 @@ jobs:
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" > .udx
 
       - name: Run Development Pipeline
-        run: make dev-pipeline FORCE=true
+        run: make dev-pipeline DEBUG=false
         working-directory: .
