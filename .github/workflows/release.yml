@@ -2,7 +2,7 @@ name: Release UDX Worker
 
 on:
   push:
-    branches-ignore:
+    branches:
       - latest
 
 jobs:
@@ -26,14 +26,25 @@ jobs:
 
       - name: Generate .udx file
         run: |
-          echo "AZURE_SUBSCRIPTION_ID=${{ vars.AZURE_SUBSCRIPTION_ID }}" > .udx
-          echo "AZURE_TENANT_ID=${{ vars.AZURE_TENANT_ID }}" >> .udx
-          echo "AZURE_APPLICATION_ID=${{ vars.AZURE_APPLICATION_ID }}" >> .udx
+          echo "AZURE_SUBSCRIPTION_ID=132583e0-0e9d-46a9-b702-66060ca58c1b" > .udx
+          echo "AZURE_TENANT_ID=ffbbef27-e47d-46b3-8d3c-21aa3438d682" >> .udx
+          echo "AZURE_APPLICATION_ID=a6319a29-b3f2-4fc9-ba16-f215664a7d4e" >> .udx
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
 
+      - name: Generate AZURE_CREDENTIALS from .udx
+        run: ci/scripts/generate_azure_credentials.sh
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ env.AZURE_CREDENTIALS }}
+
+      - name: Clean up AZURE_CREDENTIALS
+        run: |
+          echo "AZURE_CREDENTIALS=" >> $GITHUB_ENV
+
       - name: Run Development Pipeline
-        run: make dev-pipeline FORCE=true DEBUG=false          
-        working-directory: .
+        run: make dev-pipeline FORCE=true DEBUG=false
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
@@ -84,37 +95,6 @@ jobs:
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
-      - name: Generate AZURE_CREDENTIALS from .udx
-        id: generate_azure_credentials
-        run: |
-          AZURE_SUBSCRIPTION_ID=$(grep AZURE_SUBSCRIPTION_ID .udx | cut -d '=' -f2)
-          AZURE_TENANT_ID=$(grep AZURE_TENANT_ID .udx | cut -d '=' -f2)
-          AZURE_APPLICATION_ID=$(grep AZURE_APPLICATION_ID .udx | cut -d '=' -f2)
-          AZURE_APPLICATION_PASSWORD=$(grep AZURE_APPLICATION_PASSWORD .udx | cut -d '=' -f2)
-
-          AZURE_CREDENTIALS=$(jq -n --arg clientId "$AZURE_APPLICATION_ID" --arg clientSecret "$AZURE_APPLICATION_PASSWORD" --arg subscriptionId "$AZURE_SUBSCRIPTION_ID" --arg tenantId "$AZURE_TENANT_ID" \
-          '{
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            subscriptionId: $subscriptionId,
-            tenantId: $tenantId,
-            activeDirectoryEndpointUrl: "https://login.microsoftonline.com",
-            resourceManagerEndpointUrl: "https://management.azure.com/",
-            activeDirectoryGraphResourceId: "https://graph.windows.net/",
-            sqlManagementEndpointUrl: "https://management.core.windows.net:8443/",
-            galleryEndpointUrl: "https://gallery.azure.com/",
-            managementEndpointUrl: "https://management.core.windows.net/"
-          }')
-          echo "AZURE_CREDENTIALS=$AZURE_CREDENTIALS" >> $GITHUB_ENV
-    
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ env.AZURE_CREDENTIALS }}     
-          
-      - name: Login to Azure Container Registry
-        run: az acr login --name ${{ env.ACR_REPO }}          
-
       - name: Delete previous "latest" image from Azure Container Registry
         run: |
           IMAGE_NAME="${{ env.ACR_REPO }}/udx-worker"
@@ -126,6 +106,9 @@ jobs:
             echo "Image with tag 'latest' does not exist. Skipping delete."
           fi
 
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_REPO }}
+
       - name: Build and push to Azure Container Registry
         uses: docker/build-push-action@v6
         with:
@@ -135,23 +118,17 @@ jobs:
             ${{ env.ACR_REPO }}/udx-worker:${{ steps.gitversion.outputs.semVer }}
             ${{ env.ACR_REPO }}/udx-worker:latest
 
-      - name: Clean up AZURE_CREDENTIALS
-        run: |
-          echo "AZURE_CREDENTIALS=" >> $GITHUB_ENV                 
-
       - name: Generate changelog
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
           echo "::set-output name=changelog::$(cat changelog.txt)"
 
-      - name: Create GitHub release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
         with:
-          tag_name: v${{ steps.gitversion.outputs.semVer }}
-          release_name: Release v${{ steps.gitversion.outputs.semVer }}
-          body: |
-            Release Notes:
-            ${{ steps.changelog.outputs.changelog }}
+          node-version: '20.x'
+
+      - name: Create GitHub release
+        run: |
+          node ci/scripts/github.js createRelease changelog.txt
