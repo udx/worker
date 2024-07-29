@@ -11,6 +11,9 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
     env:
       FORCE: true
     steps:
@@ -98,7 +101,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ needs.test-pipeline.outputs['gitversion.outputs.semVer'] }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ needs.test-pipeline.outputs.semVer }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
   azure-release:
@@ -146,7 +149,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.ACR_REPO }}/udx-worker:${{ needs.test-pipeline.outputs['gitversion.outputs.semVer'] }}
+            ${{ env.ACR_REPO }}/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             ${{ env.ACR_REPO }}/udx-worker:latest
 
       - name: Clean up AZURE_CREDENTIALS
@@ -165,11 +168,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: '20.x'
+
+      - name: Install Dependencies
+        run: npm install @octokit/rest
 
       - name: Create GitHub release
         run: node ci/scripts/github.js createRelease changelog.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          semVer: ${{ needs.test-pipeline.outputs['gitversion.outputs.semVer'] }}
+          semVer: ${{ needs.test-pipeline.outputs.semVer }}
           changelog: ${{ env.changelog }}

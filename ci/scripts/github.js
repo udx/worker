@@ -8,8 +8,9 @@ const octokit = new Octokit({
 
 /**
  * This function creates a release on a GitHub repository using the Octokit library.
- * @param {*} changelogFile
- * @returns release.data.id
+ *
+ * @param {string} changelogFile
+ * @returns {Promise<number>}
  */
 async function createRelease(changelogFile) {
   const semVer = process.env.semVer;
@@ -25,17 +26,20 @@ async function createRelease(changelogFile) {
   return release.data.id;
 }
 
+module.exports = { createRelease };
+
 /**
  * This function uploads a release asset to a GitHub repository using the Octokit library.
- * @param {*} releaseId
- * @param {*} assetPath
- * @param {*} assetName
- * @returns
+ *
+ * @param {number} releaseId
+ * @param {string} assetPath
+ * @param {string} assetName
+ * @returns {Promise<void>}
  */
-async function uploadReleaseAsset(releaseId, assetPath, assetName) {
+export async function uploadReleaseAsset(releaseId, assetPath, assetName) {
   const assetMimeType = "application/gzip";
   const file = fs.readFileSync(
-    path.join(__dirname, "../../", assetPath, assetName)
+    path.join(process.cwd(), assetPath, assetName)
   );
 
   await octokit.rest.repos.uploadReleaseAsset({
@@ -50,8 +54,3 @@ async function uploadReleaseAsset(releaseId, assetPath, assetName) {
     },
   });
 }
-
-module.exports = {
-  createRelease,
-  uploadReleaseAsset,
-};
