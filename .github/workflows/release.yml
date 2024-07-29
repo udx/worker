@@ -2,7 +2,7 @@ name: Release UDX Worker
 
 on:
   push:
-    branches:
+    branches-ignore:
       - latest
 
 jobs:
