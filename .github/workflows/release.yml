@@ -51,7 +51,8 @@ jobs:
         id: changelog
         run: |
           git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
-          echo "changelog=$(cat changelog.txt)" >> $GITHUB_ENV
+          CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
+          echo "changelog=$CHANGELOG" >> $GITHUB_ENV
 
   google-release:
     runs-on: ubuntu-latest
