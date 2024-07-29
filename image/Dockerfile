@@ -86,11 +86,11 @@ RUN mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs /src/configs && \
 # Copy the bin, etc, and lib directories
 COPY ./bin /usr/local/bin
 COPY ./etc/home /home/${USER}/etc
-COPY ./etc/configs /home/${USER}/.cd/configs
+COPY ./src/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
 
 # Copy the worker.yml to /src/configs
-COPY ./etc/configs/worker.yml /src/configs/worker.yml
+COPY ./src/configs/worker.yml /src/configs/worker.yml
 
 # Set executable permissions and ownership for scripts
 RUN chmod +x /usr/local/bin/{entrypoint.sh,test.sh} && \

@@ -32,4 +32,4 @@ config:
     #   password: ${BITWARDEN_PASSWORD}
     # - type: gcp-service-account
     #   email: ${GCP_EMAIL}
-    #   keyfile: ${GCP_KEYFILE}
+    #   keyfile: ${GCP_KEYFILE}    DOCKER_IMAGE_NAME: udx-worker-test

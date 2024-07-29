@@ -1,12 +1,10 @@
-# General Makefile for UDX Worker
-
 # Variables
-IMAGE_NAME ?= udx-worker/udx-worker
-TAG ?= latest
-CONTAINER_NAME ?= udx-worker-container
-ENV_FILE ?= ./.udx
-DOCKER_IMAGE ?= $(IMAGE_NAME):$(TAG)
-WORKER_CONFIG ?= $(if $(wildcard ./etc/configs/worker.yml),./etc/configs/worker.yml,./src/configs/worker.yml)
+IMAGE_NAME := udx-worker/udx-worker
+TAG := latest
+DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
+CONTAINER_NAME := udx-worker-container
+ENV_FILE := .udx
+WORKER_CONFIG := ./src/configs/worker.yml
 
 # Default target
 .DEFAULT_GOAL := help
@@ -14,84 +12,122 @@ WORKER_CONFIG ?= $(if $(wildcard ./etc/configs/worker.yml),./etc/configs/worker.
 # Help target
 help:
 	@echo "Usage:"
-	@echo "  make build                 Build the Docker image"
-	@echo "  make run                   Run the Docker container"
-	@echo "  make run-interactive       Run the Docker container interactively"
-	@echo "  make exec                  Exec into the running container"
-	@echo "  make delete                Delete the running container"
-	@echo "  make log                   View the container logs"
-	@echo "  make gcr-login             Log in to Google Cloud Artifact Registry"
-	@echo "  make generate-env          Generate the .udx environment file"
-	@echo "  make pull                  Pull Docker image from repository"
+	@echo "Build the Docker image:"
+	@echo "  make build"
+	@echo ""
+	@echo "Run the Docker container:"
+	@echo "  make run"
+	@echo ""
+	@echo "Exec into the running container:"
+	@echo "  make exec"
+	@echo ""
+	@echo "View the container logs:"
+	@echo "  make log"
+	@echo ""
+	@echo "Delete the running container:"
+	@echo "  make clean"
+	@echo ""
+	@echo "Generate the .udx environment file:"
+	@echo "  make generate-env"
+	@echo ""
+	@echo "Generate the worker.yml configuration file:"
+	@echo "  make generate-config"
+	@echo ""
+	@echo "Run the development pipeline (generate env, generate config, build, test):"
+	@echo "  make dev-pipeline"
 	@echo ""
 	@echo "Variables:"
 	@echo "  IMAGE_NAME (default: udx-worker/udx-worker)"
 	@echo "  TAG (default: latest)"
 	@echo "  CONTAINER_NAME (default: udx-worker-container)"
-	@echo "  ENV_FILE (default: ./.udx)"
+	@echo "  ENV_FILE (default: .udx)"
 	@echo "  DOCKER_IMAGE (default: udx-worker/udx-worker:latest)"
-	@echo "  WORKER_CONFIG (default: ./etc/configs/worker.yml or ./src/configs/worker.yml)"
-	@echo ""
-	@echo "Examples:"
-	@echo "  make build"
-	@echo "  make run"
-	@echo "  make run-interactive"
-	@echo "  make exec"
-	@echo "  make delete"
-	@echo "  make log"
-	@echo "  make gcr-login"
-	@echo "  make generate-env"
-	@echo "  make pull DOCKER_IMAGE=myrepo/myimage:tag"
+	@echo "  WORKER_CONFIG (default: ./src/configs/worker.yml)"
 
 # Build the Docker image
 build:
-	@echo "Building Docker image..."
-	docker build -t $(IMAGE_NAME):$(TAG) . || { echo "Docker build failed"; exit 1; }
+	docker build -t $(DOCKER_IMAGE) .
 
 # Run the Docker container
-run:
-	@echo "Running Docker container..."
-	docker run --rm -d --name $(CONTAINER_NAME) --env-file $(ENV_FILE) $(IMAGE_NAME):$(TAG) || { echo "Failed to run Docker container"; exit 1; }
-
-# Run the Docker container interactively
-run-interactive:
-	@echo "Running Docker container interactively..."
-	docker run --rm -it --name $(CONTAINER_NAME) --env-file $(ENV_FILE) $(IMAGE_NAME):$(TAG) /bin/bash || { echo "Failed to run Docker container interactively"; exit 1; }
+run: build
+	docker run --rm -it --env-file $(ENV_FILE) --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/$USER/.cd/configs/worker.yml $(DOCKER_IMAGE)
 
 # Exec into the running container
 exec:
-	@echo "Executing into Docker container..."
-	docker exec -it $(CONTAINER_NAME) bash || { echo "Failed to exec into Docker container"; exit 1; }
-
-# Delete the running container
-delete:
-	@echo "Deleting Docker container..."
-	docker rm -f $(CONTAINER_NAME) || { echo "Failed to delete Docker container"; exit 1; }
+	docker exec -it $(CONTAINER_NAME) bash
 
 # View the container logs
 log:
-	@echo "Viewing Docker container logs..."
-	docker logs $(CONTAINER_NAME) || { echo "Failed to view Docker container logs"; exit 1; }
+	docker logs $(CONTAINER_NAME)
 
-# Log in to Google Cloud Artifact Registry
-gcr-login:
-	@echo "Logging into Google Cloud Artifact Registry..."
-	@gcloud auth configure-docker || { echo "Failed to log into Google Cloud Artifact Registry"; exit 1; }
+# Delete the running container
+clean:
+	docker rm -f $(CONTAINER_NAME)
 
 # Generate the .udx environment file
 generate-env:
 	@echo "Generating .udx environment file..."
-	@read -p "Enter Azure Subscription ID: " AZURE_SUBSCRIPTION_ID; \
-	read -p "Enter Azure Tenant ID: " AZURE_TENANT_ID; \
-	read -p "Enter Azure Application ID: " AZURE_APPLICATION_ID; \
-	read -p "Enter Azure Application Password: " AZURE_APPLICATION_PASSWORD; \
-	echo "AZURE_SUBSCRIPTION_ID=$$AZURE_SUBSCRIPTION_ID" > $(ENV_FILE); \
-	echo "AZURE_TENANT_ID=$$AZURE_TENANT_ID" >> $(ENV_FILE); \
-	echo "AZURE_APPLICATION_ID=$$AZURE_APPLICATION_ID" >> $(ENV_FILE); \
-	echo "AZURE_APPLICATION_PASSWORD=$$AZURE_APPLICATION_PASSWORD" >> $(ENV_FILE); \
-	echo ".udx environment file generated successfully."
+	@echo "Enter key:value pairs for environment variables (leave key empty to finish):"
+	@touch $(ENV_FILE)
+	@while true; do \
+		read -p "Key: " key; \
+		if [ -z "$$key" ]; then break; fi; \
+		read -p "Value: " value; \
+		echo "$$key=$$value" >> $(ENV_FILE); \
+	done
+	@echo ".udx environment file generated successfully."
 
-# Pull Docker image from repository
-pull:
-	@echo "Pulling Docker image: $(DOCKER_IMAGE)..."
-	docker pull $(DOCKER_IMAGE) || { echo "Failed to pull Docker image"; exit 1; }
+# Generate the worker.yml configuration file
+generate-config:
+	@echo "Generating worker.yml configuration file..."
+	@echo "Enter key:value pairs for environment variables (leave key empty to finish):"
+	@mkdir -p $(dir $(WORKER_CONFIG))
+	@touch $(WORKER_CONFIG)
+	@echo "kind: workerConfig" > $(WORKER_CONFIG)
+	@echo "version: udx.io/worker-v1/config" >> $(WORKER_CONFIG)
+	@echo "config:" >> $(WORKER_CONFIG)
+	@echo "  env:" >> $(WORKER_CONFIG)
+	@while true; do \
+		read -p "Key: " key; \
+		if [ -z "$$key" ]; then break; fi; \
+		read -p "Value: " value; \
+		read -p "Is this a reference to an environment variable? (y/n): " ref; \
+		if [ "$$ref" = "y" ]; then \
+			echo "    $$key: \$$$${value}" >> $(WORKER_CONFIG); \
+		else \
+			echo "    $$key: $$value" >> $(WORKER_CONFIG); \
+		fi; \
+	done
+	@echo "  workerSecrets:" >> $(WORKER_CONFIG)
+	@echo "  workerActors:" >> $(WORKER_CONFIG)
+	@echo "Enter key:value pairs for workerSecrets (leave key empty to finish):"
+	@while true; do \
+		read -p "Key: " key; \
+		if [ -z "$$key" ]; then break; fi; \
+		read -p "Value: " value; \
+		echo "    $$key: $$value" >> $(WORKER_CONFIG); \
+	done
+	@echo "Enter worker actors (type subscription tenant application password) (leave type empty to finish):"
+	@while true; do \
+		read -p "Type: " type; \
+		if [ -z "$$type" ]; then break; fi; \
+		read -p "Subscription: " subscription; \
+		read -p "Tenant: " tenant; \
+		read -p "Application: " application; \
+		read -p "Password: " password; \
+		echo "    - type: $$type" >> $(WORKER_CONFIG); \
+		echo "      subscription: $$subscription" >> $(WORKER_CONFIG); \
+		echo "      tenant: $$tenant" >> $(WORKER_CONFIG); \
+		echo "      application: $$application" >> $(WORKER_CONFIG); \
+		echo "      password: $$password" >> $(WORKER_CONFIG); \
+	done
+	@echo "worker.yml configuration file generated successfully."
+
+# Run the validation tests
+test:
+	@echo "Running validation tests..."
+	bin/test.sh
+
+# Development pipeline
+dev-pipeline: generate-env generate-config build test
+	@echo "Development pipeline completed successfully."
