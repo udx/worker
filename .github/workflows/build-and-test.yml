@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      AZURE_SUBSCRIPTION_ID: 132583e0-0e9d-46a9-b702-66060ca58c1b
+      AZURE_TENANT_ID: ffbbef27-e47d-46b3-8d3c-21aa3438d682
+      AZURE_APPLICATION_ID: a6319a29-b3f2-4fc9-ba16-f215664a7d4e
 
     steps:
       - name: Checkout code
@@ -22,6 +26,9 @@ jobs:
 
       - name: Generate .udx file
         run: |
+          echo "AZURE_SUBSCRIPTION_ID=${{ env.AZURE_SUBSCRIPTION_ID }}" > .udx
+          echo "AZURE_TENANT_ID=${{ env.AZURE_TENANT_ID }}" > .udx
+          echo "AZURE_APPRICATIoN_ID=${{ env.AZURE_APPLICATION_ID }}" > .udx
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" > .udx
 
       - name: Run Development Pipeline
