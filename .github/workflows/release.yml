@@ -6,15 +6,13 @@ on:
       - latest
 
 jobs:
-  release:
+  test-pipeline:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
     env:
-      ACR_REPO: udxmarketplace.azurecr.io
       FORCE: true
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +30,7 @@ jobs:
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
 
       - name: Run Development Pipeline
-        run: make dev-pipeline FORCE=true DEBUG=false
+        run: make dev-pipeline DEBUG=false
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
@@ -45,6 +43,26 @@ jobs:
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
+          echo "changelog=$(cat changelog.txt | jq -sRr @uri)" >> $GITHUB_ENV
+
+  google-release:
+    runs-on: ubuntu-latest
+    needs: test-pipeline
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      FORCE: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Authenticate to Google Cloud
         id: google_auth
@@ -80,14 +98,29 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ needs.test-pipeline.outputs['gitversion.outputs.semVer'] }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
+
+  azure-release:
+    runs-on: ubuntu-latest
+    needs: test-pipeline
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      ACR_REPO: udxmarketplace.azurecr.io
+      FORCE: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Generate AZURE_CREDENTIALS from .udx
         run: |
           chmod +x ci/scripts/generate_azure_credentials.sh
           sh ci/scripts/generate_azure_credentials.sh
-    
+
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -97,9 +130,9 @@ jobs:
         run: |
           IMAGE_NAME="${{ env.ACR_REPO }}/udx-worker"
           IMAGE_TAG="latest"
-          IMAGE_DIGEST=$(az acr repository show-tags --name ${{ env.ACR_REPO }} --repository udx-worker --filter "tag eq '$IMAGE_TAG'" --output tsv --query '[0]')
+          IMAGE_DIGEST=$(az acr repository show-manifests --name ${{ env.ACR_REPO }} --repository udx-worker --query "[?tags[?contains(@, '${IMAGE_TAG}')]].digest" -o tsv)
           if [ -n "$IMAGE_DIGEST" ]; then
-            az acr repository delete --name ${{ env.ACR_REPO }} --image "${IMAGE_NAME}:latest" --yes
+            az acr repository delete --name ${{ env.ACR_REPO }} --image "${IMAGE_NAME}@${IMAGE_DIGEST}" --yes
           else
             echo "Image with tag 'latest' does not exist. Skipping delete."
           fi
@@ -113,26 +146,30 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.ACR_REPO }}/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            ${{ env.ACR_REPO }}/udx-worker:${{ needs.test-pipeline.outputs['gitversion.outputs.semVer'] }}
             ${{ env.ACR_REPO }}/udx-worker:latest
 
       - name: Clean up AZURE_CREDENTIALS
         run: |
-          echo "AZURE_CREDENTIALS=" >> $GITHUB_ENV            
+          echo "AZURE_CREDENTIALS=" >> $GITHUB_ENV
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
-          echo "::set-output name=changelog::$(cat changelog.txt)"
+  github-release:
+    runs-on: ubuntu-latest
+    needs: test-pipeline
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: "14"
+          node-version: "20.x"
 
       - name: Create GitHub release
         run: node ci/scripts/github.js createRelease changelog.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          semVer: ${{ steps.gitversion.outputs.semVer }}
+          semVer: ${{ needs.test-pipeline.outputs['gitversion.outputs.semVer'] }}
+          changelog: ${{ env.changelog }}
