@@ -2,41 +2,27 @@
 
 set -e
 
-# Environment Variables
-GITHUB_TOKEN=$GITHUB_TOKEN
-GITHUB_REPOSITORY=$GITHUB_REPOSITORY
-SEMVER=$semVer
-CHANGELOG=$(echo -e "$changelog")
-
-# Create GitHub Release
-RELEASE_RESPONSE=$(curl -s -X POST \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/$GITHUB_REPOSITORY/releases \
-  -d @- <<EOF
+# Create a new release on GitHub
+response=$(curl -s -X POST \
+-H "Authorization: token ${GITHUB_TOKEN}" \
+-H "Accept: application/vnd.github.v3+json" \
+https://api.github.com/repos/${GITHUB_REPOSITORY}/releases \
+-d @- << EOF
 {
-  "tag_name": "v$SEMVER",
-  "name": "Release v$SEMVER",
-  "body": "$CHANGELOG"
+  "tag_name": "${semVer}",
+  "target_commitish": "main",
+  "name": "${semVer}",
+  "body": "${changelog}",
+  "draft": false,
+  "prerelease": false
 }
 EOF
 )
 
-# Extract the release ID from the response
-RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-
-# Function to upload release asset
-upload_asset() {
-  local RELEASE_ID=$1
-  local ASSET_PATH=$2
-  local ASSET_NAME=$3
-
-  curl -s -X POST \
-    -H "Authorization: token $GITHUB_TOKEN" \
-    -H "Content-Type: $(file -b --mime-type "$ASSET_PATH")" \
-    --data-binary @"$ASSET_PATH" \
-    "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$ASSET_NAME"
-}
-
-# Example of uploading an asset (if any)
-# upload_asset "$RELEASE_ID" "path/to/your/asset.zip" "asset.zip"
+# Check for errors in the response
+if echo "${response}" | grep -q "errors"; then
+  echo "Failed to create release: ${response}"
+  exit 1
+else
+  echo "Release created successfully."
+fi
