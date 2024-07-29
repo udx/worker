@@ -1,0 +1,114 @@
+name: Release UDX Worker
+
+on:
+  push:
+    branches:
+      - latest
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      ACR_REPO: udxmarketplace.azurecr.io
+      FORCE: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate .udx file
+        run: |
+          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" > .udx
+
+      - name: Run Development Pipeline
+        run: make dev-pipeline FORCE=true
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v2
+        with:
+          versionSpec: "5.12.0"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v2
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
+
+      - name: Authenticate to Google Cloud
+        id: google_auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: "access_token"
+          workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Login to Google Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Delete previous "latest" image
+        run: |
+          IMAGE_NAME="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}"
+          IMAGE_TAG="latest"
+          IMAGE_DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format='get(digest)')
+          if [ -n "$IMAGE_DIGEST" ]; then
+            gcloud container images delete "${IMAGE_NAME}@${IMAGE_DIGEST}" --quiet --force-delete-tags
+          else
+            echo "Image with tag 'latest' does not exist. Skipping delete."
+          fi
+
+      - name: Docker Login to Google Artifact Registry
+        run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push to Google Artifact Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: myregistry.azurecr.io
+          username: ${{ env.AZURE_APPLICATION_ID }}
+          password: ${{ secrets.AZURE_APPLICATION_PASSWORD }}
+
+      - name: Build and push to Azure Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ACR_REPO }}/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            ${{ env.ACR_REPO }}/udx-worker:latest
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
+          echo "::set-output name=changelog::$(cat changelog.txt)"
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.gitversion.outputs.semVer }}
+          release_name: Release v${{ steps.gitversion.outputs.semVer }}
+          body: |
+            Release Notes:
+            ${{ steps.changelog.outputs.changelog }}

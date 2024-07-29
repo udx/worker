@@ -1,0 +1,29 @@
+name: Build and Test Docker Image
+
+on:
+  push:
+    branches-ignore:
+      - latest
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate .udx file
+        run: |
+          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" > .udx
+
+      - name: Run Development Pipeline
+        run: make dev-pipeline FORCE=true
+        working-directory: .
