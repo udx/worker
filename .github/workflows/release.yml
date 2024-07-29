@@ -26,13 +26,15 @@ jobs:
 
       - name: Generate .udx file
         run: |
-          echo "AZURE_SUBSCRIPTION_ID=132583e0-0e9d-46a9-b702-66060ca58c1b" > .udx
-          echo "AZURE_TENANT_ID=ffbbef27-e47d-46b3-8d3c-21aa3438d682" >> .udx
-          echo "AZURE_APPLICATION_ID=a6319a29-b3f2-4fc9-ba16-f215664a7d4e" >> .udx
+          echo "AZURE_SUBSCRIPTION_ID=${{ vars.AZURE_SUBSCRIPTION_ID }}" > .udx
+          echo "AZURE_TENANT_ID=${{ vars.AZURE_TENANT_ID }}" >> .udx
+          echo "AZURE_APPLICATION_ID=${{ vars.AZURE_APPLICATION_ID }}" >> .udx
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
 
       - name: Generate AZURE_CREDENTIALS from .udx
-        run: sh ci/scripts/generate_azure_credentials.sh
+        run: |
+          chmod +x ci/scripts/generate_azure_credentials.sh
+          sh ci/scripts/generate_azure_credentials.sh
 
       - name: Login to Azure
         uses: azure/login@v1
@@ -127,7 +129,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: "14"
 
       - name: Create GitHub release
         run: node ci/scripts/github.js createRelease changelog.txt

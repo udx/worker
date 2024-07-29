@@ -21,5 +21,5 @@ AZURE_CREDENTIALS=$(jq -n --arg clientId "$AZURE_APPLICATION_ID" --arg clientSec
   managementEndpointUrl: "https://management.core.windows.net/"
 }')
 
-# Export the generated credentials as a GitHub environment variable
-echo "AZURE_CREDENTIALS=$AZURE_CREDENTIALS" >> $GITHUB_ENV
+# Escape newlines and export the credentials
+echo "AZURE_CREDENTIALS=$(echo $AZURE_CREDENTIALS | jq -c .)" >> $GITHUB_ENV
