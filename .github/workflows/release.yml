@@ -31,20 +31,6 @@ jobs:
           echo "AZURE_APPLICATION_ID=${{ vars.AZURE_APPLICATION_ID }}" >> .udx
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
 
-      - name: Generate AZURE_CREDENTIALS from .udx
-        run: |
-          chmod +x ci/scripts/generate_azure_credentials.sh
-          sh ci/scripts/generate_azure_credentials.sh
-
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ env.AZURE_CREDENTIALS }}
-
-      - name: Clean up AZURE_CREDENTIALS
-        run: |
-          echo "AZURE_CREDENTIALS=" >> $GITHUB_ENV
-
       - name: Run Development Pipeline
         run: make dev-pipeline FORCE=true DEBUG=false
 
@@ -97,6 +83,16 @@ jobs:
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
 
+      - name: Generate AZURE_CREDENTIALS from .udx
+        run: |
+          chmod +x ci/scripts/generate_azure_credentials.sh
+          sh ci/scripts/generate_azure_credentials.sh
+    
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ env.AZURE_CREDENTIALS }}
+
       - name: Delete previous "latest" image from Azure Container Registry
         run: |
           IMAGE_NAME="${{ env.ACR_REPO }}/udx-worker"
@@ -119,6 +115,10 @@ jobs:
           tags: |
             ${{ env.ACR_REPO }}/udx-worker:${{ steps.gitversion.outputs.semVer }}
             ${{ env.ACR_REPO }}/udx-worker:latest
+
+      - name: Clean up AZURE_CREDENTIALS
+        run: |
+          echo "AZURE_CREDENTIALS=" >> $GITHUB_ENV            
 
       - name: Generate changelog
         id: changelog
