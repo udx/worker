@@ -2,7 +2,7 @@ name: Release UDX Worker
 
 on:
   push:
-    branches:
+    branches-ignore:
       - latest
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
           echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
 
       - name: Generate AZURE_CREDENTIALS from .udx
-        run: ci/scripts/generate_azure_credentials.sh
+        run: sh ci/scripts/generate_azure_credentials.sh
 
       - name: Login to Azure
         uses: azure/login@v1
@@ -127,8 +127,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '20.x'
+          node-version: '14'
 
       - name: Create GitHub release
-        run: |
-          node ci/scripts/github.js createRelease changelog.txt
+        run: node ci/scripts/github.js createRelease changelog.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          semVer: ${{ steps.gitversion.outputs.semVer }}
