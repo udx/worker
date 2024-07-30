@@ -80,17 +80,6 @@ jobs:
       - name: Login to Google Artifact Registry
         run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
 
-      # - name: Delete previous "latest" image from Google Artifact Registry
-      #   run: |
-      #     IMAGE_NAME="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}"
-      #     IMAGE_TAG="latest"
-      #     IMAGE_DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format='get(digest)')
-      #     if [ -n "$IMAGE_DIGEST" ]; then
-      #       gcloud container images delete "${IMAGE_NAME}@${IMAGE_DIGEST}" --quiet --force-delete-tags
-      #     else
-      #       echo "Image with tag 'latest' does not exist. Skipping delete."
-      #     fi
-
       - name: Docker Login to Google Artifact Registry
         run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
 
@@ -127,16 +116,6 @@ jobs:
       - name: Login to Azure Container Registry
         run: az acr login --name ${{ env.ACR_REPO }}
 
-      # - name: Delete previous "latest" image from Azure Container Registry
-      #   run: |
-      #     IMAGE_TAG="latest"
-      #     IMAGE_DIGEST=$(az acr manifest list-metadata -r ${{ env.ACR_REPO }} -n ${{ env.IMAGE_NAME }} --query "[?tags[?contains(@, '$IMAGE_TAG')]].digest" -o tsv)
-      #     if [ -n "$IMAGE_DIGEST" ]; then
-      #       az acr repository delete -r ${{ env.ACR_REPO }} -n ${{ env.IMAGE_NAME }} --image "${{ env.IMAGE_NAME }}@$IMAGE_DIGEST" --yes
-      #     else
-      #       echo "Image with tag 'latest' does not exist. Skipping delete."
-      #     fi      
-
       - name: Build and push to Azure Container Registry
         uses: docker/build-push-action@v6
         with:
@@ -145,9 +124,6 @@ jobs:
           tags: |
             ${{ env.ACR_REPO }}/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             ${{ env.ACR_REPO }}/udx-worker:latest
-
-      - name: Clean up AZURE_CREDENTIALS
-        run: rm azure_credentials.json
 
   github-release:
     runs-on: ubuntu-latest
