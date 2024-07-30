@@ -4,8 +4,10 @@ FROM ubuntu:24.04
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
-# Define arguments
+# Define the user to be created
 ARG USER=udx
+ARG UID=500
+ARG GID=500
 
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -30,12 +32,15 @@ RUN apt-get update && \
     npm \
     e2fsprogs \
     jq \
-    gettext-base && \
+    gettext-base \
+    sudo && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    wget -qO- https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install yq, Go, Azure CLI, and Bitwarden CLI
+RUN wget -qO- https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
     mv yq_linux_amd64 /usr/bin/yq && \
     wget https://golang.org/dl/go1.20.5.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz && \
@@ -56,8 +61,12 @@ RUN apt-get update && \
     }; \
     }
 
-# Create a new user and set permissions
-RUN useradd -m ${USER}
+# Create a new user and group with specific UID and GID, and set permissions
+RUN groupadd -g ${GID} ${USER} && \
+    useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USER} && \
+    usermod -aG sudo ${USER} && \
+    echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
+    chmod 0440 /etc/sudoers.d/${USER}
 
 # Switch to the user directory
 WORKDIR /home/${USER}
@@ -77,15 +86,15 @@ RUN mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs /src/configs && \
 # Copy the bin, etc, and lib directories
 COPY ./bin /usr/local/bin
 COPY ./etc/home /home/${USER}/etc
-COPY ./etc/configs /home/${USER}/.cd/configs
+COPY ./src/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
 
 # Copy the worker.yml to /src/configs
-COPY ./etc/configs/worker.yml /src/configs/worker.yml
+COPY ./src/configs/worker.yml /home/${USER}/.cd/configs/worker.yml
 
 # Set executable permissions and ownership for scripts
-RUN chmod +x /usr/local/bin/{entrypoint.sh,test.sh} && \
-    chmod +x /usr/local/lib/{auth/aws.sh,auth/azure.sh,auth/bitwarden.sh,auth/gcp.sh,auth.sh,cleanup.sh,environment.sh,init_project.sh,secrets/aws.sh,secrets/azure.sh,secrets/bitwarden.sh,secrets/gcp.sh,secrets.sh,utils.sh} && \
+RUN chmod +x /usr/local/bin/* && \
+    chmod +x /usr/local/lib/* && \
     chown -R ${USER}:${USER} /usr/local/bin /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs && \
     chmod 555 /usr/local/bin/entrypoint.sh
 
@@ -95,5 +104,5 @@ USER ${USER}
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Default command to display NodeJS version
-CMD ["sh", "-c", "echo NodeJS@$(node -v)"]
+# Set the default command to execute bin/test.sh
+CMD ["/usr/local/bin/test.sh"]

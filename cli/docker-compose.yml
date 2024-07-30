@@ -1,8 +1,0 @@
-services:
-  udx-worker:
-    container_name: udx-worker
-    build:
-      context: ../image
-      dockerfile: Dockerfile
-    tty: true
-    stdin_open: true

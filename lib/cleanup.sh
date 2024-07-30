@@ -30,7 +30,7 @@ cleanup_actors() {
     echo "[INFO] Cleaning up actors"
     
     # Check the type of each actor and clean up accordingly
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker_expanded.yml"
+    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
     # Check if the file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
@@ -67,7 +67,7 @@ cleanup_actors() {
 cleanup_sensitive_env_vars() {
     echo "[INFO] Cleaning up sensitive environment variables"
     
-    local env_config="/home/$USER/.cd/configs/worker_expanded.yml"
+    local env_config="/home/$USER/.cd/configs/worker.yml"
     if [ ! -f "$env_config" ]; then
         echo "Error: Configuration file not found at $env_config"
         exit 1

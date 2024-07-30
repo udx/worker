@@ -1,0 +1,163 @@
+name: Release UDX Worker
+
+on:
+  push:
+    branches:
+      - latest
+
+jobs:
+  test-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate .udx file
+        run: |
+          echo "AZURE_SUBSCRIPTION_ID=${{ vars.AZURE_SUBSCRIPTION_ID }}" > .udx
+          echo "AZURE_TENANT_ID=${{ vars.AZURE_TENANT_ID }}" >> .udx
+          echo "AZURE_APPLICATION_ID=${{ vars.AZURE_APPLICATION_ID }}" >> .udx
+          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
+
+      - name: Run Development Pipeline
+        run: make dev-pipeline DEBUG=false
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v2
+        with:
+          versionSpec: "5.12.0"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v2
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
+          CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+  google-release:
+    runs-on: ubuntu-latest
+    needs: test-pipeline
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Authenticate to Google Cloud
+        id: google_auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: "access_token"
+          workload_identity_provider: ${{ vars.GCP_AUTH_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Login to Google Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Docker Login to Google Artifact Registry
+        run: docker login -u oauth2accesstoken -p "${{ steps.google_auth.outputs.access_token }}" ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push to Google Artifact Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:${{ needs.test-pipeline.outputs.semVer }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.GCP_REGISTRY_REPO }}/${{ vars.DOCKER_IMAGE_NAME }}:latest
+
+  azure-release:
+    runs-on: ubuntu-latest
+    needs: test-pipeline
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      ACR_REPO: udxmarketplace.azurecr.io
+      IMAGE_NAME: udx-worker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Azure CLI Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_REPO }}
+
+      - name: Build and push to Azure Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ACR_REPO }}/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
+            ${{ env.ACR_REPO }}/udx-worker:latest
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: [test-pipeline, google-release, azure-release]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Configure git for pushing
+        run: |
+          git config --global user.email "worker@udx.io"
+          git config --global user.name "UDX Worker"
+
+      - name: Create GitHub Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag ${{ needs.test-pipeline.outputs.semVer }}
+          git push origin ${{ needs.test-pipeline.outputs.semVer }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ needs.test-pipeline.outputs.semVer }}
+          release_name: ${{ needs.test-pipeline.outputs.semVer }}
+          body: ${{ needs.test-pipeline.outputs.changelog }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
