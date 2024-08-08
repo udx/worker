@@ -29,6 +29,7 @@ authenticate_actors() {
 
         if [ -f "$auth_script" ]; then
             echo "[INFO] Found authentication script for provider: $provider"
+            # shellcheck source=/dev/null
             source "$auth_script"
             if command -v "$auth_function" > /dev/null; then
                 $auth_function "$actor_data"

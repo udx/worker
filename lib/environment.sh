@@ -1,9 +1,13 @@
 #!/bin/bash
 
 # Include utility functions, secrets fetching, authentication, and cleanup
+# shellcheck source=/dev/null
 source /usr/local/lib/utils.sh
+# shellcheck source=/dev/null
 source /usr/local/lib/secrets.sh
+# shellcheck source=/dev/null
 source /usr/local/lib/auth.sh
+# shellcheck source=/dev/null
 source /usr/local/lib/cleanup.sh
 
 # Path to the configuration file and temporary resolved file

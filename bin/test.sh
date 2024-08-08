@@ -45,7 +45,8 @@ done
 # Confirm that sensitive actor variables are not set
 ACTOR_VARS=$(yq e '.config.workerActors[] | to_entries | .[].value' "$WORKER_CONFIG" | grep -E "PASSWORD|SECRET|KEY|TOKEN")
 for var in $ACTOR_VARS; do
-    var_name=$(echo "$var" | sed -e 's/^.*{\(.*\)}.*$/\1/')
+    var_name="${var//*\{/\{}"
+    var_name="${var_name//\}*/\}}"
     if [ -n "$(printenv "$var_name")" ]; then
         echo "Error: Sensitive variable $var_name is still set after cleanup."
         exit 1

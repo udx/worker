@@ -27,6 +27,7 @@ aws_authenticate() {
 }
 
 # Include utility functions
+# shellcheck source=/dev/null
 source /usr/local/lib/utils.sh
 
 # Initialize the AWS auth module
