@@ -29,9 +29,7 @@ RUN apt-get update && \
     lsb-release \
     nodejs \
     npm \
-    e2fsprogs \
     jq \
-    gettext-base \
     sudo && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
@@ -52,10 +50,7 @@ RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
-    chmod +x /usr/local/bin/bw || { \
-    echo "Failed to download Bitwarden CLI with curl"; \
-    exit 1; \
-    }
+    chmod +x /usr/local/bin/bw
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
