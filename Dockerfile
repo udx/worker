@@ -25,7 +25,6 @@ RUN apt-get update && \
     curl \
     bash \
     gnupg \
-    wget \
     ca-certificates \
     lsb-release \
     nodejs \
@@ -40,30 +39,27 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install yq, Go, Azure CLI, and Bitwarden CLI
-RUN wget -qO- https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
+RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
     mv yq_linux_amd64 /usr/bin/yq && \
-    wget https://golang.org/dl/go1.20.5.linux-amd64.tar.gz && \
+    curl -sL https://golang.org/dl/go1.20.5.linux-amd64.tar.gz -o go1.20.5.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz && \
     ln -s /usr/local/go/bin/go /usr/bin/go && \
     rm go1.20.5.linux-amd64.tar.gz && \
     curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y azure-cli && \
+    apt-get install -y --no-install-recommends azure-cli && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
     chmod +x /usr/local/bin/bw || { \
-    echo "Failed to download Bitwarden CLI with curl, trying wget"; \
-    wget -O /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && chmod +x /usr/local/bin/bw || { \
-    echo "Failed to download Bitwarden CLI with wget"; \
+    echo "Failed to download Bitwarden CLI with curl"; \
     exit 1; \
-    }; \
     }
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
-    useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USER} && \
+    useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER} && \
     usermod -aG sudo ${USER} && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
     chmod 0440 /etc/sudoers.d/${USER}
