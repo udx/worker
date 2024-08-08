@@ -17,9 +17,7 @@ resolve_gcp_secret() {
     fi
     
     echo "[INFO] Resolving GCP secret for project: $project_id, secret: $secret_name" >&2
-    secret_value=$(gcloud secrets versions access latest --secret="$secret_name" --project="$project_id" 2>&1)
-    
-    if [ $? -ne 0 ]; then
+    if ! secret_value=$(gcloud secrets versions access latest --secret="$secret_name" --project="$project_id" 2>&1); then
         echo "[ERROR] Failed to retrieve GCP secret for URL: $secret_url" >&2
         return 1
     fi

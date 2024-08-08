@@ -37,8 +37,7 @@ fetch_secrets() {
         
         case $url in
             https://*.vault.azure.net/*)
-                value=$(resolve_azure_secret "$url")
-                if [ $? -ne 0 ]; then
+                if ! value=$(resolve_azure_secret "$url"); then
                     echo "[ERROR] Error resolving Azure secret for $name: $(redact_sensitive_urls "$url")" >&2
                     value=""
                 fi
@@ -58,6 +57,11 @@ fetch_secrets() {
     done
     
     set -a
-    source "$SECRETS_ENV_FILE"
+    if [ -f "$SECRETS_ENV_FILE" ]; then
+        source "$SECRETS_ENV_FILE"
+    else
+        echo "[ERROR] Secrets environment file not found: $SECRETS_ENV_FILE"
+        return 1
+    fi
     set +a
 }
