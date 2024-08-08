@@ -1,10 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 # Include utility functions, secrets fetching, authentication, and cleanup
-. /usr/local/lib/utils.sh
-. /usr/local/lib/secrets.sh
-. /usr/local/lib/auth.sh
-. /usr/local/lib/cleanup.sh
+# shellcheck source=/dev/null
+source /usr/local/lib/utils.sh
+# shellcheck source=/dev/null
+source /usr/local/lib/secrets.sh
+# shellcheck source=/dev/null
+source /usr/local/lib/auth.sh
+# shellcheck source=/dev/null
+source /usr/local/lib/cleanup.sh
 
 # Path to the configuration file and temporary resolved file
 config_path="/home/$USER/.cd/configs/worker.yml"
@@ -15,8 +19,7 @@ resolve_env_in_config() {
     touch "$temp_config_path"
 
     # Use envsubst to resolve environment variables and write to a temporary file
-    envsubst < "$config_path" > "$temp_config_path"
-    if [ $? -eq 0 ]; then
+    if envsubst < "$config_path" > "$temp_config_path"; then
         # No need to overwrite the source file, just use the temp file
         echo "[INFO] Resolved configuration written to $temp_config_path"
     else
@@ -41,9 +44,9 @@ set_env_vars() {
     fi
 
     # Use a loop to export each environment variable
-    while IFS= read -r var; do
+    echo "$env_vars" | while IFS= read -r var; do
         eval export "$var"
-    done <<< "$env_vars"
+    done
 
     # Clean up temporary file
     rm "$temp_config_path"

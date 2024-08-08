@@ -1,13 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to resolve secrets from Bitwarden
 resolve_bitwarden_secret() {
-    local secret_id=$1
+    local secret_id="$1"
+    local secret_value
 
     echo "[INFO] Resolving Bitwarden secret for ID: $secret_id" >&2
-    secret_value=$(bw get item "$secret_id" | jq -r '.notes' 2>&1)
-
-    if [ $? -ne 0 ]; then
+    if ! secret_value=$(bw get item "$secret_id" | jq -r '.notes' 2>&1); then
         echo "[ERROR] Failed to retrieve Bitwarden secret for ID: $secret_id" >&2
         return 1
     fi

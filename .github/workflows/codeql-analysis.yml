@@ -48,7 +48,6 @@ jobs:
         run: sudo apt-get install -y shellcheck
 
       - name: Run ShellCheck
-        continue-on-error: true
         run: |
           find . -name '*.sh' -print0 | xargs -0 shellcheck
 
@@ -65,6 +64,5 @@ jobs:
           wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint
 
       - name: Run hadolint
-        continue-on-error: true
         run: |
           find . -name 'Dockerfile' -print0 | xargs -0 /usr/local/bin/hadolint

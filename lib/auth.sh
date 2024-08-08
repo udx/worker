@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to resolve placeholders with environment variables
 resolve_env_vars() {
@@ -29,7 +29,8 @@ authenticate_actors() {
 
         if [ -f "$auth_script" ]; then
             echo "[INFO] Found authentication script for provider: $provider"
-            . "$auth_script"
+            # shellcheck source=/dev/null
+            source "$auth_script"
             if command -v "$auth_function" > /dev/null; then
                 $auth_function "$actor_data"
             else

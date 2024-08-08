@@ -1,9 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to resolve Azure secret
 resolve_azure_secret() {
-    local secret_url=$1
-    local vault_name secret_name secret_value
+    local secret_url="$1"
+    local vault_name
+    local secret_name
+    local secret_value
     
     # Extract vault name and secret name from the URL
     vault_name=$(echo "$secret_url" | sed -n 's|https://\([^\.]*\)\.vault.azure.net.*|\1|p')
@@ -16,9 +18,7 @@ resolve_azure_secret() {
     
     # Retrieve the secret value using Azure CLI with detailed logging
     echo "[INFO] Retrieving secret from Azure Key Vault: vault_name=$vault_name, secret_name=$secret_name" >&2
-    secret_value=$(az keyvault secret show --vault-name "$vault_name" --name "$secret_name" --query value -o tsv 2>&1)
-    
-    if [ $? -ne 0 ]; then
+    if ! secret_value=$(az keyvault secret show --vault-name "$vault_name" --name "$secret_name" --query value -o tsv 2>&1); then
         echo "[ERROR] Failed to retrieve secret from Azure Key Vault: $secret_url" >&2
         echo "[DEBUG] Azure CLI output: $secret_value" >&2
         return 1
