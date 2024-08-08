@@ -48,7 +48,6 @@ jobs:
         run: sudo apt-get install -y shellcheck
 
       - name: Run ShellCheck
-        continue-on-error: true
         run: |
           find . -name '*.sh' -print0 | xargs -0 shellcheck
 
