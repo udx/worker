@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
 # Include specific secret resolving scripts
-. /usr/local/lib/secrets/azure.sh
+source /usr/local/lib/secrets/azure.sh
 
 # Function to resolve placeholders with environment variables
 resolve_env_vars() {
@@ -26,7 +26,7 @@ fetch_secrets() {
     fi
     
     SECRETS_ENV_FILE="/tmp/secret_vars.sh"
-    echo "# Secrets environment variables" > $SECRETS_ENV_FILE
+    echo "# Secrets environment variables" > "$SECRETS_ENV_FILE"
     
     SECRETS_JSON=$(yq e -o=json '.config.workerSecrets' "$WORKER_CONFIG")
     echo "$SECRETS_JSON" | jq -c 'to_entries[]' | while read -r secret; do
@@ -50,7 +50,7 @@ fetch_secrets() {
         esac
         
         if [ -n "$value" ]; then
-            echo "export $name=\"$value\"" >> $SECRETS_ENV_FILE
+            echo "export $name=\"$value\"" >> "$SECRETS_ENV_FILE"
             echo "[INFO] Secret $name resolved and set as environment variable." >&2
         else
             echo "[ERROR] Failed to resolve secret for $name" >&2
@@ -58,6 +58,6 @@ fetch_secrets() {
     done
     
     set -a
-    . $SECRETS_ENV_FILE
+    source "$SECRETS_ENV_FILE"
     set +a
 }

@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to resolve AWS secret
 resolve_aws_secret() {
-    local secret_arn=$1
-    local region=$2
+    local secret_arn="$1"
+    local region="$2"
     local secret_value
 
     if [ -z "$region" ]; then

@@ -1,14 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to print the UDX logo
 udx_logo() {
-    cat /home/${USER}/etc/logo.txt
+    cat /home/"${USER}"/etc/logo.txt
 }
 
 # Function to print nice logs with colors
 nice_logs() {
-    local log_type=$1
-    local log_message=$2
+    local log_type="$1"
+    local log_message="$2"
     
     case $log_type in
         "info")

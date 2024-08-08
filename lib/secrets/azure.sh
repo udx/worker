@@ -1,9 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to resolve Azure secret
 resolve_azure_secret() {
-    local secret_url=$1
-    local vault_name secret_name secret_value
+    local secret_url="$1"
+    local vault_name
+    local secret_name
+    local secret_value
     
     # Extract vault name and secret name from the URL
     vault_name=$(echo "$secret_url" | sed -n 's|https://\([^\.]*\)\.vault.azure.net.*|\1|p')

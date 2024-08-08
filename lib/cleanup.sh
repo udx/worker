@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to cleanup Azure authentication
 cleanup_azure() {
@@ -30,7 +30,7 @@ cleanup_actors() {
     echo "[INFO] Cleaning up actors"
     
     # Check the type of each actor and clean up accordingly
-    WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    local WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
     # Check if the file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
@@ -38,9 +38,11 @@ cleanup_actors() {
         return 1
     fi
     
+    local ACTORS_JSON
     ACTORS_JSON=$(yq e -o=json '.config.workerActors' "$WORKER_CONFIG")
     
     echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while read -r actor; do
+        local type
         type=$(echo "$actor" | jq -r '.value.type')
         
         case $type in
@@ -83,7 +85,7 @@ cleanup_sensitive_env_vars() {
     # Find all environment variables that match the sensitive keywords and are not in defined_vars
     for var in $(env | grep -iE "$sensitive_keywords" | cut -d '=' -f 1); do
         if ! echo "$defined_vars" | grep -q "^$var\$"; then
-            unset $var
+            unset "$var"
             echo "[INFO] Unset sensitive variable: $var"
         fi
     done

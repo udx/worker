@@ -21,11 +21,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Install necessary packages, set timezone, and clean up in a single RUN statement
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2024a-3ubuntu1.1 \
-    curl=8.5.0-2ubuntu10.1 \
-    bash=5.2.21-2ubuntu4 \
-    gnupg=2.4.4-2ubuntu17 \
-    wget=1.21.4-1ubuntu4 \
+    tzdata \
+    curl \
+    bash \
+    gnupg \
+    wget \
     ca-certificates \
     lsb-release \
     nodejs \

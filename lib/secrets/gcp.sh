@@ -1,9 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 # Function to resolve secrets from GCP Secret Manager
 resolve_gcp_secret() {
-    local secret_url=$1
-    local project_id secret_name secret_value
+    local secret_url="$1"
+    local project_id
+    local secret_name
+    local secret_value
     
     # Extract project ID and secret name from the URL
     project_id=$(echo "$secret_url" | sed -n 's|https://secretmanager.googleapis.com/v1/projects/\([^/]*\)/secrets/\([^/]*\)/.*|\1|p')
