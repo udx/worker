@@ -21,35 +21,41 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Install necessary packages, set timezone, and clean up in a single RUN statement
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata \
-    curl \
-    bash \
-    gnupg \
-    ca-certificates \
-    lsb-release \
-    nodejs \
-    npm \
-    jq \
-    sudo && \
+    tzdata=2024a-3ubuntu1.1 \
+    curl=8.5.0-2ubuntu10.2 \
+    bash=5.2.21-2ubuntu4 \
+    gnupg=2.4.4-2ubuntu17 \
+    ca-certificates=20240203 \
+    lsb-release=12.0-2 \
+    nodejs=18.19.1+dfsg-6ubuntu5 \
+    npm=9.2.0~ds1-2 \
+    jq=1.7.1-3build1 \
+    sudo=1.9.15p5-3ubuntu5 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install yq, Go, Azure CLI, and Bitwarden CLI
+# Install yq
 RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
-    mv yq_linux_amd64 /usr/bin/yq && \
-    curl -sL https://golang.org/dl/go1.20.5.linux-amd64.tar.gz -o go1.20.5.linux-amd64.tar.gz && \
+    mv yq_linux_amd64 /usr/bin/yq
+
+# Install Go
+RUN curl -sL https://golang.org/dl/go1.20.5.linux-amd64.tar.gz -o go1.20.5.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz && \
     ln -s /usr/local/go/bin/go /usr/bin/go && \
-    rm go1.20.5.linux-amd64.tar.gz && \
-    curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
+    rm go1.20.5.linux-amd64.tar.gz
+
+# Install Azure CLI
+RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli && \
+    apt-get install -y --no-install-recommends azure-cli=2.63.0-1~noble && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Bitwarden CLI
+RUN curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
     chmod +x /usr/local/bin/bw
 
 # Create a new user and group with specific UID and GID, and set permissions
