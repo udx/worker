@@ -18,7 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install necessary packages, set timezone, and clean up in a single RUN statement
+# Install necessary packages, including gettext for envsubst, set timezone, and clean up in a single RUN statement
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2024a-3ubuntu1.1 \
@@ -30,7 +30,8 @@ RUN apt-get update && \
     nodejs=18.19.1+dfsg-6ubuntu5 \
     npm=9.2.0~ds1-2 \
     jq=1.7.1-3build1 \
-    sudo=1.9.15p5-3ubuntu5 && \
+    sudo=1.9.15p5-3ubuntu5 \
+    gettext=0.21-14ubuntu2 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \

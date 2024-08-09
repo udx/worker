@@ -33,7 +33,7 @@ resolve_secret() {
     local name="$1"
     local url="$2"
     local value
-
+    
     echo "[INFO] Resolved URL for $name: $(redact_sensitive_urls "$url")"
     
     case $url in
@@ -66,7 +66,7 @@ resolve_secret() {
             value=""
         ;;
     esac
-
+    
     echo "$value"
 }
 
@@ -85,27 +85,32 @@ fetch_secrets() {
     echo "# Secrets environment variables" > "$SECRETS_ENV_FILE"
     
     SECRETS_JSON=$(yq e -o=json '.config.workerSecrets' "$WORKER_CONFIG")
-    echo "$SECRETS_JSON" | jq -c 'to_entries[]' | while read -r secret; do
-        name=$(echo "$secret" | jq -r '.key')
-        url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
-        
-        value=$(resolve_secret "$name" "$url")
-        
-        if [ -n "$value" ]; then
-            echo "export $name=\"$value\"" >> "$SECRETS_ENV_FILE"
-            echo "[INFO] Secret $name resolved and set as environment variable." >&2
-        else
-            echo "[ERROR] Failed to resolve secret for $name" >&2
-        fi
-    done
     
-    set -a
-    if [ -f "$SECRETS_ENV_FILE" ]; then
-        # shellcheck source=/dev/null
-        source "$SECRETS_ENV_FILE"
+    if [ -z "$SECRETS_JSON" ]; then
+        echo "[INFO] No worker secrets found in the configuration"
     else
-        echo "[ERROR] Secrets environment file not found: $SECRETS_ENV_FILE"
-        return 1
+        echo "$SECRETS_JSON" | jq -c 'to_entries[]' | while read -r secret; do
+            name=$(echo "$secret" | jq -r '.key')
+            url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
+            
+            value=$(resolve_secret "$name" "$url")
+            
+            if [ -n "$value" ]; then
+                echo "export $name=\"$value\"" >> "$SECRETS_ENV_FILE"
+                echo "[INFO] Secret $name resolved and set as environment variable." >&2
+            else
+                echo "[ERROR] Failed to resolve secret for $name" >&2
+            fi
+        done
+        
+        set -a
+        if [ -f "$SECRETS_ENV_FILE" ]; then
+            # shellcheck source=/dev/null
+            source "$SECRETS_ENV_FILE"
+        else
+            echo "[ERROR] Secrets environment file not found: $SECRETS_ENV_FILE"
+            return 1
+        fi
+        set +a
     fi
-    set +a
 }
