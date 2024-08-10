@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Include utility functions, secrets fetching, authentication, and cleanup
+# Include utility functions and worker config utilities
 # shellcheck source=/dev/null
 source /usr/local/lib/utils.sh
 # shellcheck source=/dev/null
@@ -9,53 +9,22 @@ source /usr/local/lib/secrets.sh
 source /usr/local/lib/auth.sh
 # shellcheck source=/dev/null
 source /usr/local/lib/cleanup.sh
-
-# Path to the configuration file and temporary resolved file
-config_path="/home/$USER/.cd/configs/worker.yml"
-temp_config_path="/tmp/worker.yml.resolved"
-
-# Function to resolve environment variables in the configuration file
-resolve_env_in_config() {
-    touch "$temp_config_path"
-
-    # Use envsubst to resolve environment variables and write to a temporary file
-    if envsubst < "$config_path" > "$temp_config_path"; then
-        # No need to overwrite the source file, just use the temp file
-        echo "[INFO] Resolved configuration written to $temp_config_path"
-    else
-        echo "[ERROR] Failed to resolve environment variables in the configuration"
-        rm "$temp_config_path"
-        return 1
-    fi
-}
-
-# Function to set environment variables from the configuration file
-set_env_vars() {
-    local env_vars
-
-    # Extract environment variables from the temporary file and export them
-    env_vars=$(yq e -o=json '.config.env' "$temp_config_path" | jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')
-
-    # Check if env_vars is empty
-    if [ -z "$env_vars" ]; then
-        echo "[ERROR] No environment variables found in the configuration"
-        rm "$temp_config_path"
-        return 1
-    fi
-
-    # Use a loop to export each environment variable
-    echo "$env_vars" | while IFS= read -r var; do
-        eval export "$var"
-    done
-
-    # Clean up temporary file
-    rm "$temp_config_path"
-}
+# shellcheck source=/dev/null
+source /usr/local/lib/worker_config.sh
 
 # Main function to coordinate resolving and setting up the environment
 configure_environment() {
-    resolve_env_in_config
-    set_env_vars
+    # Load and resolve the worker configuration
+    local resolved_config
+    resolved_config=$(load_and_resolve_worker_config)
+    
+    if [ $? -ne 0 ]; then
+        nice_logs "error" "Failed to load and resolve worker configuration."
+        return 1
+    fi
+
+    # Set environment variables from the resolved configuration
+    set_env_vars_from_config "$resolved_config"
 
     # Authenticate actors before fetching secrets
     authenticate_actors
@@ -63,9 +32,12 @@ configure_environment() {
     # Fetch secrets using the existing fetch_secrets script
     fetch_secrets
 
-    # Only after authentication and fetching secrets, cleanup actors and sensitive environment variables
+    # Only after authentication and fetching secrets, clean up actors and sensitive environment variables
     cleanup_actors
     cleanup_sensitive_env_vars
+
+    # Clean up the temporary resolved config file
+    rm -f "$resolved_config"
 }
 
 # Call the main function to configure the environment

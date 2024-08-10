@@ -58,3 +58,10 @@ make
 ## Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
+
+
+- worker.yml is used as config file for the environment.
+- it should be handled by the container entryppoint logic.
+- it should be graceful info message when there is no worker.yml found.
+- it should be graceful info message when there are no workerActors.
+- it should be graceful info message when there are no workerSecrets.

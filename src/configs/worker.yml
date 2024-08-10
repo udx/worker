@@ -6,11 +6,11 @@ config:
     AZURE_TENANT_ID: ${AZURE_TENANT_ID}
     AZURE_APPLICATION_ID: ${AZURE_APPLICATION_ID}
     DOCKER_IMAGE_NAME: udx-worker
-  workerSecrets:
-    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
-  workerActors:
-    - type: azure-service-principal
-      subscription: ${AZURE_SUBSCRIPTION_ID}
-      tenant: ${AZURE_TENANT_ID}
-      application: ${AZURE_APPLICATION_ID}
-      password: ${AZURE_APPLICATION_PASSWORD}
+  # workerSecrets:
+  #   AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
+  # workerActors:
+  #   - type: azure-service-principal
+  #     subscription: ${AZURE_SUBSCRIPTION_ID}
+  #     tenant: ${AZURE_TENANT_ID}
+  #     application: ${AZURE_APPLICATION_ID}
+  #     password: ${AZURE_APPLICATION_PASSWORD}
