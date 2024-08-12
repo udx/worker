@@ -18,7 +18,7 @@ build:
 	fi
 
 # Run Docker container in interactive mode
-run-interactive:
+run-it:
 	@echo "Running Docker container in interactive mode..."
 	@make run INTERACTIVE=true
 
@@ -26,12 +26,12 @@ run-interactive:
 run: clean
 	@echo "Running Docker container..."
 	@if [ "$(INTERACTIVE)" = "true" ]; then \
-		docker run -it --env-file $(ENV_FILE) --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml $(DOCKER_IMAGE) /bin/sh; \
+		docker run -it --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml $(DOCKER_IMAGE) /bin/sh; \
 	elif [ "$(DEBUG)" = "true" ]; then \
-		docker run -d --env-file $(ENV_FILE) --name $(CONTAINER_NAME) $(DOCKER_IMAGE); \
+		docker run -d --name $(CONTAINER_NAME) $(DOCKER_IMAGE); \
 		docker logs -f $(CONTAINER_NAME); \
 	else \
-		docker run -d --env-file $(ENV_FILE) --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml $(DOCKER_IMAGE) > /dev/null 2>&1; \
+		docker run -d --name $(CONTAINER_NAME) -v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml $(DOCKER_IMAGE) > /dev/null 2>&1; \
 		echo "Docker container run completed."; \
 	fi
 
@@ -62,23 +62,6 @@ clean:
 		docker rm -f $(CONTAINER_NAME); \
 	else \
 		docker rm -f $(CONTAINER_NAME) > /dev/null 2>&1; \
-	fi
-
-# Generate the .udx environment file
-generate-env:
-	@if [ -f $(ENV_FILE) ] && [ $(FORCE) = false ]; then \
-		echo ".udx file already exists and FORCE is false. Not overwriting."; \
-	else \
-		echo "Generating .udx environment file..."; \
-		echo "Enter key:value pairs for environment variables (leave key empty to finish):"; \
-		touch $(ENV_FILE); \
-		while true; do \
-			read -p "Key: " key; \
-			if [ -z "$$key" ]; then break; fi; \
-			read -p "Value: " value; \
-			echo "$$key=$$value" >> $(ENV_FILE); \
-		done; \
-		echo ".udx environment file generated successfully."; \
 	fi
 
 # Generate the worker.yml configuration file

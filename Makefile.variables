@@ -3,7 +3,6 @@ IMAGE_NAME := udx-worker/udx-worker
 TAG := latest
 DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
 CONTAINER_NAME := udx-worker-container
-ENV_FILE := .udx
 WORKER_CONFIG := ./src/configs/worker.yml
 FORCE ?= false
 DEBUG ?= true
