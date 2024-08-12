@@ -1,52 +1,11 @@
-# Variables
-IMAGE_NAME := udx-worker/udx-worker
-TAG := latest
-DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
-CONTAINER_NAME := udx-worker-container
-ENV_FILE := .udx
-WORKER_CONFIG := ./src/configs/worker.yml
-FORCE ?= false
-DEBUG ?= true
+# Include variables module
+include Makefile.variables
 
 # Default target
 .DEFAULT_GOAL := help
 
-# Help target
-help:
-	@echo "Usage:"
-	@echo "Build the Docker image:"
-	@echo "  make build"
-	@echo ""
-	@echo "Run the Docker container:"
-	@echo "  make run"
-	@echo ""
-	@echo "Exec into the running container:"
-	@echo "  make exec"
-	@echo ""
-	@echo "View the container logs:"
-	@echo "  make log"
-	@echo ""
-	@echo "Delete the running container:"
-	@echo "  make clean"
-	@echo ""
-	@echo "Generate the .udx environment file:"
-	@echo "  make generate-env"
-	@echo ""
-	@echo "Generate the worker.yml configuration file:"
-	@echo "  make generate-config"
-	@echo ""
-	@echo "Run the development pipeline (generate env, generate config, build, test):"
-	@echo "  make dev-pipeline"
-	@echo ""
-	@echo "Variables:"
-	@echo "  IMAGE_NAME (default: udx-worker/udx-worker)"
-	@echo "  TAG (default: latest)"
-	@echo "  CONTAINER_NAME (default: udx-worker-container)"
-	@echo "  ENV_FILE (default: .udx)"
-	@echo "  DOCKER_IMAGE (default: udx-worker/udx-worker:latest)"
-	@echo "  WORKER_CONFIG (default: ./src/configs/worker.yml)"
-	@echo "  FORCE (default: false)"
-	@echo "  DEBUG (default: true)"
+# Include help module
+include Makefile.help
 
 # Build the Docker image
 build:
