@@ -3,3 +3,9 @@ version: udx.io/worker-v1/config
 config:
   env:
     DOCKER_IMAGE_NAME: udx-worker
+  workerSecrets:
+    NEW_RELIC_API_KEY: "$secret_url"
+  workerActors:
+    - type: gcp-service-account
+      email: ${GCP_SERVICE_ACCOUNT_EMAIL}
+      keyfile: ${GCP_KEYFILE_CONTENT}

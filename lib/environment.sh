@@ -14,6 +14,10 @@ source /usr/local/lib/worker_config.sh
 
 # Main function to coordinate environment setup
 configure_environment() {
+
+    # Load environment variables from .env file
+    export $(grep -v '^#' .env | xargs)
+
     # Load and resolve the worker configuration
     local resolved_config
     resolved_config=$(load_and_resolve_worker_config)

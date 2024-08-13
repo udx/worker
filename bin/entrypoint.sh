@@ -15,7 +15,4 @@ source /usr/local/lib/environment.sh
 # If there are arguments, execute them
 if [ "$#" -gt 0 ]; then
     exec "$@"
-else
-    # Default command if no arguments are provided
-    exec sh -c "echo NodeJS@$(node -v)"
 fi

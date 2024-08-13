@@ -14,7 +14,6 @@ get_worker_config_path() {
 load_and_resolve_worker_config() {
     local config_path
     config_path=$(get_worker_config_path)
-    local temp_config_path="/tmp/worker.yml.resolved"
 
     # Debugging statement
     nice_logs "info" "Looking for config file at: $config_path"
@@ -27,17 +26,19 @@ load_and_resolve_worker_config() {
     # Debugging statement
     nice_logs "info" "Found config file, resolving environment variables..."
 
-    if envsubst < "$config_path" > "$temp_config_path"; then
-        nice_logs "info" "Resolved configuration written to $temp_config_path"
-        echo "$temp_config_path"
-    else
+    # Read the configuration file content
+    local config_content
+    config_content=$(envsubst < "$config_path")
+
+    if [ $? -ne 0 ]; then
         nice_logs "error" "Failed to resolve environment variables in the configuration"
         return 1
     fi
 
-    # Final check to ensure the file was created
-    if [ ! -f "$temp_config_path" ]; then
-        nice_logs "error" "Resolved configuration file not created at $temp_config_path"
-        return 1
-    fi
+    # Output the resolved configuration content
+    echo "$config_content"
 }
+
+# Example usage
+# resolved_config=$(load_and_resolve_worker_config)
+# echo "$resolved_config"

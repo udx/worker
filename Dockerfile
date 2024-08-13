@@ -24,6 +24,7 @@ RUN apt-get update && \
     tzdata=2024a-3ubuntu1.1 \
     curl=8.5.0-2ubuntu10.2 \
     bash=5.2.21-2ubuntu4 \
+    gettext \
     gnupg=2.4.4-2ubuntu17 \
     ca-certificates=20240203 \
     lsb-release=12.0-2 \
