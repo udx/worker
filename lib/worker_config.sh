@@ -14,31 +14,33 @@ get_worker_config_path() {
 load_and_resolve_worker_config() {
     local config_path
     config_path=$(get_worker_config_path)
-
+    
     # Debugging statement
     nice_logs "info" "Looking for config file at: $config_path"
-
+    
     if [ ! -f "$config_path" ]; then
-        nice_logs "error" "Configuration file not found at $config_path"
+        nice_logs "info" "No config file found at: $config_path"
         return 1
     fi
 
-    # Debugging statement
-    nice_logs "info" "Found config file, resolving environment variables..."
+    # Load configuration
+    nice_logs "info" "Found config file, processing configuration..."
+    
+    # Use yq to parse and extract configurations
+    local env_config
+    env_config=$(yq eval '.config.variables' "$config_path")
 
-    # Read the configuration file content
-    local config_content
-    config_content=$(envsubst < "$config_path")
+    echo "test"
+    echo $env_config
 
-    if [ $? -ne 0 ]; then
-        nice_logs "error" "Failed to resolve environment variables in the configuration"
-        return 1
-    fi
+    # Set environment variables
+    echo "$env_config" | jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' | while IFS='=' read -r key value; do
+        # Skip empty keys or values
+        if [ -n "$key" ] && [ -n "$value" ]; then
+            export "$key=$value"
+        fi
+    done
 
-    # Output the resolved configuration content
-    echo "$config_content"
+    # Return path to the configuration file (if needed)
+    echo "$config_path"
 }
-
-# Example usage
-# resolved_config=$(load_and_resolve_worker_config)
-# echo "$resolved_config"

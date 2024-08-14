@@ -15,4 +15,7 @@ source /usr/local/lib/environment.sh
 # If there are arguments, execute them
 if [ "$#" -gt 0 ]; then
     exec "$@"
+else
+    echo "[INFO] No command provided, the container will run interactively."
+    # Add any additional logic here if needed
 fi

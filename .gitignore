@@ -25,5 +25,3 @@ yarn.lock
 
 # Ignore build output
 dist/
-
-.env
