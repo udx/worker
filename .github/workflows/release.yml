@@ -23,13 +23,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Generate .udx file
-        run: |
-          echo "AZURE_SUBSCRIPTION_ID=${{ vars.AZURE_SUBSCRIPTION_ID }}" > .udx
-          echo "AZURE_TENANT_ID=${{ vars.AZURE_TENANT_ID }}" >> .udx
-          echo "AZURE_APPLICATION_ID=${{ vars.AZURE_APPLICATION_ID }}" >> .udx
-          echo "AZURE_APPLICATION_PASSWORD=${{ secrets.AZURE_APPLICATION_PASSWORD }}" >> .udx
-
       - name: Run Development Pipeline
         run: make dev-pipeline DEBUG=false
 
@@ -122,8 +115,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.ACR_REPO }}/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
-            ${{ env.ACR_REPO }}/udx-worker:latest
+            ${{ env.ACR_REPO }}/${{ env.IMAGE_NAME }}:${{ needs.test-pipeline.outputs.semVer }}
+            ${{ env.ACR_REPO }}/${{ env.IMAGE_NAME }}:latest
 
   github-release:
     runs-on: ubuntu-latest
@@ -135,9 +128,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
 
       - name: Configure git for pushing
         run: |

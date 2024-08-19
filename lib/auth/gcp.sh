@@ -15,19 +15,13 @@ gcp_authenticate() {
     keyfile=$(resolve_env_vars "$(echo "$actor" | jq -r '.keyfile')")
 
     echo "[INFO] Authenticating GCP service account: $email"
-    
-    # Write the keyfile content to a temporary file
-    echo "$keyfile" > /tmp/gcp_keyfile.json
-    
-    # Authenticate using the keyfile
-    if ! gcloud auth activate-service-account "$email" --key-file=/tmp/gcp_keyfile.json >/dev/null 2>&1; then
+
+    # Authenticate using the keyfile directly, if possible
+    # Check if gcloud can accept keyfile content directly, otherwise use a secure method
+    if ! gcloud auth activate-service-account "$email" --key-file=<(echo "$keyfile") >/dev/null 2>&1; then
         echo "[ERROR] GCP service account authentication failed"
-        rm /tmp/gcp_keyfile.json
         return 1
     fi
-    
-    # Clean up the temporary keyfile
-    rm /tmp/gcp_keyfile.json
 }
 
 # Example usage

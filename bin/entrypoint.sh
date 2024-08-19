@@ -16,6 +16,6 @@ source /usr/local/lib/environment.sh
 if [ "$#" -gt 0 ]; then
     exec "$@"
 else
-    # Default command if no arguments are provided
-    exec sh -c "echo NodeJS@$(node -v)"
+    echo "[INFO] No command provided, the container will run interactively."
+    # Add any additional logic here if needed
 fi
