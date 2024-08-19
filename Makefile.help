@@ -6,7 +6,6 @@ HELP_RUN_IT = "Run the Docker container interactively: "
 HELP_EXEC = "Exec into the running container:"
 HELP_LOG = "View the container logs:"
 HELP_CLEAN = "Delete the running container:"
-HELP_GENERATE_CONFIG = "Generate the worker.yml configuration file:"
 HELP_DEV_PIPELINE = "Run the development pipeline:"
 
 # Help target
@@ -32,9 +31,6 @@ help:
 	@echo "$(HELP_CLEAN)"
 	@echo "make clean"
 	@echo ""
-	@echo "$(HELP_GENERATE_CONFIG)"
-	@echo "make generate-config"
-	@echo ""
 	@echo "$(HELP_DEV_PIPELINE)"
 	@echo "make dev-pipeline"
 	@echo ""
@@ -45,5 +41,4 @@ help:
 	@echo "  ENV_FILE (default: .udx)"
 	@echo "  DOCKER_IMAGE (default: udx-worker/udx-worker:latest)"
 	@echo "  WORKER_CONFIG (default: ./src/configs/worker.yml)"
-	@echo "  FORCE (default: false)"
 	@echo "  DEBUG (default: true)"

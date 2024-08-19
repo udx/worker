@@ -64,62 +64,12 @@ clean:
 		docker rm -f $(CONTAINER_NAME) > /dev/null 2>&1; \
 	fi
 
-# Generate the worker.yml configuration file
-generate-config:
-	@if [ -f $(WORKER_CONFIG) ] && [ $(FORCE) = false ]; then \
-		echo "worker.yml file already exists and FORCE is false. Not overwriting."; \
-	else \
-		echo "Generating worker.yml configuration file..."; \
-		mkdir -p $(dir $(WORKER_CONFIG)); \
-		touch $(WORKER_CONFIG); \
-		echo "kind: workerConfig" > $(WORKER_CONFIG); \
-		echo "version: udx.io/worker-v1/config" >> $(WORKER_CONFIG); \
-		echo "config:" >> $(WORKER_CONFIG); \
-		echo "  env:" >> $(WORKER_CONFIG); \
-		echo "Enter key:value pairs for environment variables (leave key empty to finish):"; \
-		while true; do \
-			read -p "Key: " key; \
-			if [ -z "$$key" ]; then break; fi; \
-			read -p "Value: " value; \
-			read -p "Is this a reference to an environment variable? (y/n): " ref; \
-			if [ "$$ref" = "y" ]; then \
-				echo "    $$key: \$$$${value}" >> $(WORKER_CONFIG); \
-			else \
-				echo "    $$key: $$value" >> $(WORKER_CONFIG); \
-			fi; \
-		done; \
-		echo "  workerSecrets:" >> $(WORKER_CONFIG); \
-		echo "Enter key:value pairs for workerSecrets (leave key empty to finish):"; \
-		while true; do \
-			read -p "Key: " key; \
-			if [ -z "$$key" ]; then break; fi; \
-			read -p "Value: " value; \
-			echo "    $$key: $$value" >> $(WORKER_CONFIG); \
-		done; \
-		echo "  workerActors:" >> $(WORKER_CONFIG); \
-		echo "Enter worker actors (type, subscription, tenant, application, password) (leave type empty to finish):"; \
-		while true; do \
-			read -p "Type: " type; \
-			if [ -z "$$type" ]; then break; fi; \
-			read -p "Subscription: " subscription; \
-			read -p "Tenant: " tenant; \
-			read -p "Application: " application; \
-			read -p "Password: " password; \
-			echo "    - type: $$type" >> $(WORKER_CONFIG); \
-			echo "      subscription: $$subscription" >> $(WORKER_CONFIG); \
-			echo "      tenant: $$tenant" >> $(WORKER_CONFIG); \
-			echo "      application: $$application" >> $(WORKER_CONFIG); \
-			echo "      password: $$password" >> $(WORKER_CONFIG); \
-		done; \
-		echo "worker.yml configuration file generated successfully."; \
-	fi
-
 # Run the validation tests
 test: build run clean
 	@echo "Validation tests completed."
 
 # Development pipeline
-dev-pipeline: generate-config build test
+dev-pipeline: build test
 	@if [ "$(DEBUG)" = "true" ]; then \
 		echo "Development pipeline completed successfully."; \
 	else \

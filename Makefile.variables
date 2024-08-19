@@ -4,5 +4,4 @@ TAG := latest
 DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
 CONTAINER_NAME := udx-worker-container
 WORKER_CONFIG := ./src/configs/worker.yml
-FORCE ?= false
 DEBUG ?= true
