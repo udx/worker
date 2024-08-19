@@ -119,7 +119,7 @@ test: build run clean
 	@echo "Validation tests completed."
 
 # Development pipeline
-dev-pipeline: generate-env generate-config build test
+dev-pipeline: generate-config build test
 	@if [ "$(DEBUG)" = "true" ]; then \
 		echo "Development pipeline completed successfully."; \
 	else \
