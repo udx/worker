@@ -24,12 +24,12 @@ RUN apt-get update && \
     tzdata=2024a-3ubuntu1.1 \
     curl=8.5.0-2ubuntu10.2 \
     bash=5.2.21-2ubuntu4 \
-    gettext \
+    gettext=0.21-14ubuntu2 \
     gnupg=2.4.4-2ubuntu17 \
     ca-certificates=20240203 \
     lsb-release=12.0-2 \
     jq=1.7.1-3build1 \
-    unzip && \
+    unzip=6.0-28ubuntu4 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -42,11 +42,11 @@ RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_
 # Install Google Cloud SDK
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    apt-transport-https && \
+    apt-transport-https=2.7.14build2 && \
     curl -sSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | tee /etc/apt/sources.list.d/google-cloud-sdk.list && \
     apt-get update && \
-    apt-get install -y google-cloud-sdk && \
+    apt-get install -y --no-install-recommends google-cloud-sdk=467.0.0-0 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
