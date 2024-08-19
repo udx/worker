@@ -4,19 +4,6 @@ on:
   push:
 
 jobs:
-  analyze:
-    name: Analyze
-    runs-on: ubuntu-latest
-
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: []
 
   analyze-shell:
     name: Analyze Shell Scripts
