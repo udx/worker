@@ -38,7 +38,7 @@ set_env_vars_from_yaml() {
 load_and_resolve_worker_config() {
     local config_path
     config_path=$(get_worker_config_path)
-    
+
     if [ ! -f "$config_path" ]; then
         log_error "No config file found at: $config_path"
         return 1
@@ -53,4 +53,7 @@ load_and_resolve_worker_config() {
     }
 
     log_info "Environment variables loaded successfully."
+
+    # Return only the config path without any log output
+    echo "$config_path"
 }

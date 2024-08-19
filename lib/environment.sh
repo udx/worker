@@ -28,17 +28,8 @@ configure_environment() {
     fi
     
     # Load and resolve the worker configuration
-    local resolved_config
-    if ! resolved_config=$(load_and_resolve_worker_config) || [ ! -f "$resolved_config" ]; then
-        nice_logs "error" "Failed to load and resolve worker configuration or file not found."
-        return 1
-    fi
-    
-    nice_logs "info" "Using resolved configuration file at: $resolved_config"
-    
-    # Set environment variables from the resolved configuration
-    if ! set_env_vars_from_config "$resolved_config"; then
-        nice_logs "error" "Failed to set environment variables from configuration."
+    if ! load_and_resolve_worker_config; then
+        nice_logs "error" "Failed to load and resolve worker configuration."
         return 1
     fi
     

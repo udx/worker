@@ -11,7 +11,7 @@ if [ -z "${UTILS_SH_INCLUDED+x}" ]; then
     
     # Function to print nice logs with colors
     nice_logs() {
-        local log_message="$1"
+        local log_message="$1 $2"
 
         echo "$log_message"
     }
