@@ -17,7 +17,12 @@ configure_environment() {
     # Load environment variables from .env file if it exists
     if [ -f .env ]; then
         echo "[INFO] Loading environment variables from .env file."
-        export $(grep -v '^#' .env | xargs -I {} echo "{}")
+        while IFS= read -r line; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+            # Export the variable
+            eval "export $line"
+        done < .env
     else
         echo "[INFO] No .env file found. Proceeding with environment variables from the host."
     fi
