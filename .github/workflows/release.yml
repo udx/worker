@@ -129,9 +129,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Configure git for pushing
         run: |
           git config --global user.email "worker@udx.io"

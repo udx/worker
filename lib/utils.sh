@@ -8,13 +8,15 @@ if [ -z "${UTILS_SH_INCLUDED+x}" ]; then
     udx_logo() {
         cat /home/"${USER}"/etc/logo.txt
     }
-    
-    # Function to print nice logs with colors
-    nice_logs() {
-        local log_message="$1 $2"
 
-        echo "$log_message"
+    # Simple logging functions
+    log_info() {
+        echo "[INFO] $1"
     }
+
+    log_error() {
+        echo "[ERROR] $1"
+    }    
     
     # Function to resolve placeholders with environment variables
     resolve_env_vars() {

@@ -29,19 +29,23 @@ cleanup_bitwarden() {
 cleanup_actors() {
     echo "[INFO] Cleaning up actors"
     
-    # Check the type of each actor and clean up accordingly
     local WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
     
-    # Check if the file exists
+    # Check if the configuration file exists
     if [ ! -f "$WORKER_CONFIG" ]; then
-        echo "Error: YAML configuration file not found at $WORKER_CONFIG"
+        echo "[ERROR] YAML configuration file not found at $WORKER_CONFIG"
         return 1
     fi
     
     local ACTORS_JSON
-    ACTORS_JSON=$(yq e -o=json '.config.workerActors' "$WORKER_CONFIG")
+    ACTORS_JSON=$(yq e -o=json '.config.actors' "$WORKER_CONFIG")
     
-    echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while read -r actor; do
+    if [ -z "$ACTORS_JSON" ] || [ "$ACTORS_JSON" = "null" ]; then
+        echo "[INFO] No actors found for cleanup."
+        return 0
+    fi
+
+    echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while IFS= read -r actor; do
         local type
         type=$(echo "$actor" | jq -r '.value.type')
         
@@ -59,7 +63,7 @@ cleanup_actors() {
                 cleanup_bitwarden
             ;;
             *)
-                echo "Unsupported actor type for cleanup: $type"
+                echo "[WARN] Unsupported actor type for cleanup: $type"
             ;;
         esac
     done
@@ -70,14 +74,16 @@ cleanup_sensitive_env_vars() {
     echo "[INFO] Cleaning up sensitive environment variables"
     
     local env_config="/home/$USER/.cd/configs/worker.yml"
+    
+    # Check if the configuration file exists
     if [ ! -f "$env_config" ]; then
-        echo "Error: Configuration file not found at $env_config"
-        exit 1
+        echo "[ERROR] Configuration file not found at $env_config"
+        return 1
     fi
     
-    # Extract environment variable names defined in worker.yml (both env and workerSecrets)
+    # Extract environment variable names defined in worker.yml (both variables and secrets)
     local defined_vars
-    defined_vars=$(yq e -o=json '.config.env, .config.workerSecrets' "$env_config" | jq -r 'to_entries | map("\(.key)") | .[]')
+    defined_vars=$(yq e -o=json '.config.variables, .config.secrets' "$env_config" | jq -r 'to_entries | map("\(.key)") | .[]')
     
     # Build a regex pattern for sensitive keywords
     local sensitive_keywords="(secret|password|token|key)"
@@ -91,10 +97,12 @@ cleanup_sensitive_env_vars() {
     done
 }
 
-# Initialize the cleanup module
+# Example of initializing the cleanup process
+# Uncomment if needed in your setup
 # init_cleanup() {
-#     echo "Initializing cleanup module"
+#     echo "[INFO] Initializing cleanup module"
 # }
 
 # Call init_cleanup to initialize the module
+# Uncomment if needed
 # init_cleanup
