@@ -11,25 +11,9 @@ if [ -z "${UTILS_SH_INCLUDED+x}" ]; then
     
     # Function to print nice logs with colors
     nice_logs() {
-        local log_type="$1"
-        local log_message="$2"
+        local log_message="$1"
 
         echo "$log_message"
-        
-        # case $log_type in
-        #     "info")
-        #         echo -e "\033[1;34m[INFO]\033[0m $log_message"
-        #     ;;
-        #     "error")
-        #         echo -e "\033[1;31m[ERROR]\033[0m $log_message"
-        #     ;;
-        #     "success")
-        #         echo -e "\033[1;32m[SUCCESS]\033[0m $log_message"
-        #     ;;
-        #     *)
-        #         echo "$log_message"
-        #     ;;
-        # esac
     }
     
     # Function to resolve placeholders with environment variables

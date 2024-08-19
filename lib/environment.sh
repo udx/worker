@@ -17,17 +17,14 @@ configure_environment() {
     # Load environment variables from .env file if it exists
     if [ -f .env ]; then
         echo "[INFO] Loading environment variables from .env file."
-        export $(grep -v '^#' .env | xargs)
+        export $(grep -v '^#' .env | xargs -I {} echo "{}")
     else
         echo "[INFO] No .env file found. Proceeding with environment variables from the host."
     fi
     
     # Load and resolve the worker configuration
     local resolved_config
-    resolved_config=$(load_and_resolve_worker_config)
-    
-    # Check if configuration loading was successful
-    if [ $? -ne 0 ] || [ ! -f "$resolved_config" ]; then
+    if ! resolved_config=$(load_and_resolve_worker_config) || [ ! -f "$resolved_config" ]; then
         nice_logs "error" "Failed to load and resolve worker configuration or file not found."
         return 1
     fi
@@ -35,22 +32,19 @@ configure_environment() {
     nice_logs "info" "Using resolved configuration file at: $resolved_config"
     
     # Set environment variables from the resolved configuration
-    set_env_vars_from_config "$resolved_config"
-    if [ $? -ne 0 ]; then
+    if ! set_env_vars_from_config "$resolved_config"; then
         nice_logs "error" "Failed to set environment variables from configuration."
         return 1
     fi
     
     # Authenticate actors
-    authenticate_actors
-    if [ $? -ne 0 ]; then
+    if ! authenticate_actors; then
         nice_logs "error" "Authentication of actors failed."
         return 1
     fi
     
     # Fetch secrets
-    fetch_secrets
-    if [ $? -ne 0 ]; then
+    if ! fetch_secrets; then
         nice_logs "error" "Fetching secrets failed."
         return 1
     fi

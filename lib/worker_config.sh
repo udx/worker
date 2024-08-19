@@ -52,8 +52,7 @@ load_and_resolve_worker_config() {
     nice_logs "info" "Found config file, processing configuration..."
     
     # Set environment variables from the resolved configuration
-    set_env_vars_from_config "$config_path"
-    if [ $? -ne 0 ]; then
+    if ! set_env_vars_from_config "$config_path"; then
         nice_logs "error" "Failed to set environment variables from configuration."
         return 1
     fi

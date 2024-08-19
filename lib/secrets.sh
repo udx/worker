@@ -11,9 +11,7 @@ fetch_secrets() {
     nice_logs "info" "Fetching secrets"
     
     local resolved_config
-    resolved_config=$(load_and_resolve_worker_config)
-    
-    if [ $? -ne 0 ]; then
+    if ! resolved_config=$(load_and_resolve_worker_config); then
         nice_logs "error" "Failed to load and resolve worker configuration."
         return 1
     fi
@@ -22,7 +20,10 @@ fetch_secrets() {
     echo "# Secrets environment variables" > "$SECRETS_ENV_FILE"
     
     local SECRETS_JSON
-    SECRETS_JSON=$(get_worker_secrets "$resolved_config")
+    if ! SECRETS_JSON=$(get_worker_secrets "$resolved_config"); then
+        nice_logs "error" "Failed to get worker secrets."
+        return 1
+    fi
     
     if [ -z "$SECRETS_JSON" ]; then
         nice_logs "info" "No worker secrets found in the configuration"
