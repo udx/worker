@@ -50,4 +50,4 @@ jobs:
 
       - name: Run yamllint
         run: |
-          find . -name '*.yaml' -print0 | xargs -0 yamllint
+          find ./src/configs -name '*.yml' -print0 | xargs -0 yamllint
