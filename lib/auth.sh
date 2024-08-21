@@ -10,14 +10,15 @@ source /usr/local/lib/worker_config.sh
 authenticate_actors() {
     # Load and resolve the worker configuration
     local resolved_config
-    if ! resolved_config=$(load_and_resolve_worker_config); then
+    resolved_config=$(load_and_resolve_worker_config)
+    if [[ $? -ne 0 ]]; then
         log_error "Failed to load and resolve worker configuration."
         return 1
     fi
 
     # Extract actors from the configuration
     local ACTORS_JSON
-    ACTORS_JSON=$(yq eval '.config.actors' "$resolved_config")
+    ACTORS_JSON=$(echo "$resolved_config" | yq eval -o=json '.config.actors')
 
     if [ -z "$ACTORS_JSON" ] || [ "$ACTORS_JSON" = "null" ]; then
         log_info "No worker actors found in the configuration."
@@ -43,7 +44,9 @@ authenticate_actors() {
             source "$auth_script"
             if command -v "$auth_function" > /dev/null; then
                 log_info "Authenticating with $provider"
-                if ! $auth_function "$actor_data"; then
+
+                # Handle authentication based on provider type
+                if ! authenticate_provider "$provider" "$auth_function" "$actor_data"; then
                     log_error "Authentication failed for provider $provider"
                     return 1
                 fi
@@ -56,7 +59,37 @@ authenticate_actors() {
             return 1
         fi
     done
-
-    # Clean up the temporary resolved config file
-    rm -f "$resolved_config"
 }
+
+# Function to handle provider-specific authentication
+authenticate_provider() {
+    local provider="$1"
+    local auth_function="$2"
+    local actor_data="$3"
+    local temp_config_file
+
+    if [ "$provider" = "azure" ]; then
+        # Save the actor data to a temporary file for Azure
+        temp_config_file=$(mktemp)
+        echo "$actor_data" > "$temp_config_file"
+
+        # Call the Azure authenticate function with the temp file
+        if ! $auth_function "$temp_config_file"; then
+            log_error "Azure authentication failed."
+            rm -f "$temp_config_file"
+            return 1
+        fi
+
+        # Clean up the temporary file
+        rm -f "$temp_config_file"
+    else
+        # For other providers, pass the actor data directly
+        if ! $auth_function "$actor_data"; then
+            log_error "Authentication failed for provider $provider"
+            return 1
+        fi
+    fi
+}
+
+# Example usage:
+# authenticate_actors

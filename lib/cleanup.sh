@@ -1,51 +1,65 @@
 #!/bin/bash
 
-# Function to cleanup Azure authentication
+# Function to log messages
+log_info() {
+    echo "[INFO] $1"
+}
+
+log_error() {
+    echo "[ERROR] $1" >&2
+}
+
+log_warn() {
+    echo "[WARN] $1"
+}
+
+# Function to clean up Azure authentication
 cleanup_azure() {
-    echo "[INFO] Cleaning up Azure authentication"
-    az logout
+    log_info "Cleaning up Azure authentication"
+    az logout || log_error "Failed to log out of Azure"
 }
 
-# Function to cleanup GCP authentication
+# Function to clean up GCP authentication
 cleanup_gcp() {
-    echo "[INFO] Cleaning up GCP authentication"
-    gcloud auth revoke --all
+    log_info "Cleaning up GCP authentication"
+    gcloud auth revoke --all || log_error "Failed to revoke GCP authentication"
 }
 
-# Function to cleanup AWS authentication
+# Function to clean up AWS authentication
 cleanup_aws() {
-    echo "[INFO] Cleaning up AWS authentication"
+    log_info "Cleaning up AWS authentication"
     # Example: If using AWS CLI v2, this is a placeholder for AWS logout
-    # aws sso logout
+    # aws sso logout || log_error "Failed to log out of AWS"
 }
 
-# Function to cleanup Bitwarden authentication
+# Function to clean up Bitwarden authentication
 cleanup_bitwarden() {
-    echo "[INFO] Cleaning up Bitwarden authentication"
-    bw logout --force
+    log_info "Cleaning up Bitwarden authentication"
+    bw logout --force || log_error "Failed to log out of Bitwarden"
 }
 
-# Function to cleanup actors
+# Function to clean up actors
 cleanup_actors() {
-    echo "[INFO] Cleaning up actors"
+    log_info "Starting cleanup of actors"
     
-    local WORKER_CONFIG="/home/$USER/.cd/configs/worker.yml"
+    local worker_config="/home/$USER/.cd/configs/worker.yml"
     
     # Check if the configuration file exists
-    if [ ! -f "$WORKER_CONFIG" ]; then
-        echo "[ERROR] YAML configuration file not found at $WORKER_CONFIG"
+    if [ ! -f "$worker_config" ]; then
+        log_error "YAML configuration file not found at $worker_config"
         return 1
     fi
     
-    local ACTORS_JSON
-    ACTORS_JSON=$(yq e -o=json '.config.actors' "$WORKER_CONFIG")
+    local actors_json
+    actors_json=$(yq e -o=json '.config.actors' "$worker_config")
     
-    if [ -z "$ACTORS_JSON" ] || [ "$ACTORS_JSON" = "null" ]; then
-        echo "[INFO] No actors found for cleanup."
+    if [ -z "$actors_json" ] || [ "$actors_json" = "null" ]; then
+        log_info "No actors found for cleanup."
         return 0
     fi
 
-    echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while IFS= read -r actor; do
+    # Process each actor in the configuration
+    echo "$actors_json" | jq -c 'to_entries[]' | while IFS= read -r actor; do
         local type
         type=$(echo "$actor" | jq -r '.value.type')
         
@@ -63,21 +77,21 @@ cleanup_actors() {
                 cleanup_bitwarden
             ;;
             *)
-                echo "[WARN] Unsupported actor type for cleanup: $type"
+                log_warn "Unsupported actor type for cleanup: $type"
             ;;
         esac
     done
 }
 
-# Function to cleanup sensitive environment variables
+# Function to clean up sensitive environment variables
 cleanup_sensitive_env_vars() {
-    echo "[INFO] Cleaning up sensitive environment variables"
+    log_info "Cleaning up sensitive environment variables"
     
     local env_config="/home/$USER/.cd/configs/worker.yml"
     
     # Check if the configuration file exists
     if [ ! -f "$env_config" ]; then
-        echo "[ERROR] Configuration file not found at $env_config"
+        log_error "Configuration file not found at $env_config"
         return 1
     fi
     
@@ -88,21 +102,22 @@ cleanup_sensitive_env_vars() {
     # Build a regex pattern for sensitive keywords
     local sensitive_keywords="(secret|password|token|key)"
     
-    # Find all environment variables that match the sensitive keywords and are not in defined_vars
+    # Find and unset all environment variables that match the sensitive keywords and are not in defined_vars
     for var in $(env | grep -iE "$sensitive_keywords" | cut -d '=' -f 1); do
         if ! echo "$defined_vars" | grep -q "^$var\$"; then
             unset "$var"
-            echo "[INFO] Unset sensitive variable: $var"
+            log_info "Unset sensitive variable: $var"
         fi
     done
 }
 
 # Example of initializing the cleanup process
-# Uncomment if needed in your setup
-# init_cleanup() {
-#     echo "[INFO] Initializing cleanup module"
-# }
+init_cleanup() {
+    log_info "Initializing cleanup module"
+    cleanup_actors
+    cleanup_sensitive_env_vars
+    log_info "Cleanup process completed."
+}
 
-# Call init_cleanup to initialize the module
-# Uncomment if needed
+# Uncomment to automatically call the cleanup process
 # init_cleanup

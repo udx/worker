@@ -23,3 +23,10 @@ jobs:
       - name: Run Development Pipeline
         run: make dev-pipeline DEBUG=false
         working-directory: .
+
+      - name: Download Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+
+      - name: Run Trivy scan on Docker image
+        run: |
+          trivy image --severity HIGH,CRITICAL --exit-code 1 udx-worker:latest
