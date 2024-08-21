@@ -5,16 +5,12 @@ config:
   variables:
     DOCKER_IMAGE_NAME: "udx-worker"
   secrets:
-    NEW_RELIC_API_KEY: "azure/new_relic_api_key"
+    NEW_RELIC_API_KEY: "azure/kv-udx-worker/udx-worker-secret-one"
+    # for testing
     OCTOPUS_API_KEY: "bitwarden/octetopus_api_key"
-    SLACK_API_KEY: "aws/slack_api_key"
-    K8S_PRIVATE_KEY: "gcp/k8s_private_key"
   actors:
     - type: azure
-      creds_file: "${AZURE_CREDS_FILE}"
-    - type: aws
-      creds_file: "${AWS_CREDS_FILE}"
+      creds: "${AZURE_CREDS}"
+    # for testing
     - type: gcp
-      creds_file: "${GCP_CREDS_FILE}"
-    - type: bitwarden
-      creds_file: "${BITWARDEN_CREDS_FILE}"
+      creds: "${GCP_CREDS}"

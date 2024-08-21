@@ -1,52 +1,50 @@
 #!/bin/bash
 
-# Include utility functions and worker config utilities
-# shellcheck source=/dev/null
+# Include utility and worker config modules
 source /usr/local/lib/utils.sh
-# shellcheck source=/dev/null
-source /usr/local/lib/worker_config.sh
 
 # Function to authenticate actors
 authenticate_actors() {
-    # Load and resolve the worker configuration
-    local resolved_config
-    resolved_config=$(load_and_resolve_worker_config)
-    if [[ $? -ne 0 ]]; then
-        log_error "Failed to load and resolve worker configuration."
-        return 1
-    fi
+    local actors_json="$1"  # Expect the extracted actors JSON as a parameter
 
-    # Extract actors from the configuration
-    local ACTORS_JSON
-    ACTORS_JSON=$(echo "$resolved_config" | yq eval -o=json '.config.actors')
-
-    if [ -z "$ACTORS_JSON" ] || [ "$ACTORS_JSON" = "null" ]; then
+    if [[ -z "$actors_json" || "$actors_json" == "null" ]]; then
         log_info "No worker actors found in the configuration."
         return 0
     fi
-
+    
     # Process each actor in the configuration
-    echo "$ACTORS_JSON" | jq -c 'to_entries[]' | while IFS= read -r actor; do
-        local type provider actor_data auth_script auth_function
+    echo "$actors_json" | jq -c '.[]' | while IFS= read -r actor; do
+        local type provider creds auth_script auth_function
 
         # Extract the type and provider from the actor data
-        type=$(resolve_env_vars "$(echo "$actor" | jq -r '.value.type')")
+        type=$(resolve_env_vars "$(echo "$actor" | jq -r '.type')")
         provider=$(echo "$type" | cut -d '-' -f 1)
-        actor_data=$(echo "$actor" | jq -c '.value')
+        
+        # Extract the credentials from the actor data
+        creds=$(echo "$actor" | jq -r '.creds')
 
+        # Try to evaluate the credentials as an environment variable
+        creds=$(resolve_env_vars "$creds")
+        
+        if [[ -z "$creds" || "$creds" == "null" ]]; then
+            log_info "Skipping $provider authentication as no credentials were provided."
+            continue
+        fi
+        
         # Determine the authentication script and function to use
         auth_script="/usr/local/lib/auth/${provider}.sh"
         auth_function="${provider}_authenticate"
-
-        if [ -f "$auth_script" ]; then
+        
+        if [[ -f "$auth_script" ]]; then
             log_info "Found authentication script for provider: $provider"
             # shellcheck source=/dev/null
             source "$auth_script"
+            
             if command -v "$auth_function" > /dev/null; then
                 log_info "Authenticating with $provider"
-
+                
                 # Handle authentication based on provider type
-                if ! authenticate_provider "$provider" "$auth_function" "$actor_data"; then
+                if ! authenticate_provider "$provider" "$auth_function" "$creds"; then
                     log_error "Authentication failed for provider $provider"
                     return 1
                 fi
@@ -59,37 +57,36 @@ authenticate_actors() {
             return 1
         fi
     done
+
+    return 0
 }
 
 # Function to handle provider-specific authentication
 authenticate_provider() {
     local provider="$1"
     local auth_function="$2"
-    local actor_data="$3"
+    local creds="$3"
     local temp_config_file
-
-    if [ "$provider" = "azure" ]; then
-        # Save the actor data to a temporary file for Azure
-        temp_config_file=$(mktemp)
-        echo "$actor_data" > "$temp_config_file"
-
-        # Call the Azure authenticate function with the temp file
-        if ! $auth_function "$temp_config_file"; then
-            log_error "Azure authentication failed."
-            rm -f "$temp_config_file"
-            return 1
-        fi
-
-        # Clean up the temporary file
-        rm -f "$temp_config_file"
-    else
-        # For other providers, pass the actor data directly
-        if ! $auth_function "$actor_data"; then
-            log_error "Authentication failed for provider $provider"
-            return 1
-        fi
+    
+    # Save the credentials data to a temporary file
+    temp_config_file=$(mktemp /tmp/actor_creds.XXXXXX)
+    echo "$creds" > "$temp_config_file"
+    
+    # Ensure cleanup with a trap in case of unexpected exit
+    trap 'rm -f "$temp_config_file"' EXIT
+    
+    # Call the authentication function with the temp file
+    if ! $auth_function "$temp_config_file"; then
+        log_error "Authentication failed for provider $provider."
+        return 1
     fi
+    
+    # Clean up the temporary file
+    rm -f "$temp_config_file"
+    trap - EXIT
+
+    return 0
 }
 
-# Example usage:
-# authenticate_actors
+# Example usage (expects actors JSON to be passed):
+# authenticate_actors "$actors_json"

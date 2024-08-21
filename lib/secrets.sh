@@ -1,78 +1,93 @@
 #!/bin/bash
 
 # Include utility functions and worker config utilities
-# shellcheck source=/dev/null
 source /usr/local/lib/utils.sh
-# shellcheck source=/dev/null
-source /usr/local/lib/worker_config.sh
 
-# Function to fetch secrets and set them as environment variables
+# Dynamically source the required provider-specific modules
+source_provider_module() {
+    local provider="$1"
+    local module_path="/usr/local/lib/secrets/${provider}.sh"
+
+    if [[ -f "$module_path" ]]; then
+        source "$module_path"
+        log_info "Loaded module for provider: $provider"
+    else
+        log_warn "No module found for provider: $provider"
+    fi
+}
+
+# Fetch secrets and set them as environment variables
 fetch_secrets() {
+    local secrets_json="$1"
     log_info "Fetching secrets and setting them as environment variables."
     
-    # Load and resolve the worker configuration
-    local resolved_config
-    resolved_config=$(load_and_resolve_worker_config)
-    if [[ $? -ne 0 ]]; then
-        log_error "Failed to load and resolve worker configuration."
-        return 1
-    fi
-    
-    local secrets_env_file="/tmp/secret_vars.sh"
+    local secrets_env_file
+    secrets_env_file=$(mktemp /tmp/secret_vars.XXXXXX)
     echo "# Secrets environment variables" > "$secrets_env_file"
     
-    # Extract secrets from the configuration
-    local secrets_json
-    secrets_json=$(echo "$resolved_config" | yq eval -o=json '.config.secrets')
+    secrets_json=$(echo "$resolved_config" | jq -r '.config.secrets')
 
-    if [ -z "$secrets_json" ] || [ "$secrets_json" = "null" ]; then
+    if [[ -z "$secrets_json" || "$secrets_json" == "null" ]]; then
         log_info "No worker secrets found in the configuration."
-        clean_up_files "$resolved_config" "$secrets_env_file"
+        clean_up_files "$secrets_env_file"
         return 0
     fi
 
-    # Process each secret in the configuration
     echo "$secrets_json" | jq -c 'to_entries[]' | while IFS= read -r secret; do
-        local name url value
+        local name url value provider key_vault_name secret_name
         name=$(echo "$secret" | jq -r '.key')
         url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
         
-        value=$(resolve_secret "$name" "$url")
+        # Extract provider, key_vault_name, and secret_name from the URL
+        provider=$(echo "$url" | cut -d '/' -f 1)
+        key_vault_name=$(echo "$url" | cut -d '/' -f 2)
+        secret_name=$(echo "$url" | cut -d '/' -f 3)
         
-        if [ -n "$value" ]; then
-            echo "export $name=\"$value\"" >> "$secrets_env_file"
-            log_info "Resolved secret for $name."
+        # Ensure provider, key_vault_name, and secret_name are all set
+        if [[ -z "$provider" || -z "$key_vault_name" || -z "$secret_name" ]]; then
+            log_error "Invalid secret format: $url"
+            continue
+        fi
+        
+        source_provider_module "$provider"
+
+        local resolve_function="resolve_${provider}_secret"
+        if command -v "$resolve_function" > /dev/null; then
+            value=$("$resolve_function" "$key_vault_name" "$secret_name")
         else
-            log_error "Failed to resolve secret for $name."
+            log_warn "No resolve function found for provider: $provider"
+            continue
+        fi
+        
+        if [[ -n "$value" ]]; then
+            echo "export $name=\"$value\"" >> "$secrets_env_file"
+            log_info "Resolved secret for $name from $provider."
+        else
+            log_error "Failed to resolve secret for $name from $provider."
         fi
     done
 
-    # Source the secrets environment variables
-    if [ -f "$secrets_env_file" ]; then
+    if [[ -f "$secrets_env_file" ]]; then
         set -a
-        # shellcheck source=/dev/null
         source "$secrets_env_file"
         set +a
         log_info "Secrets environment variables sourced successfully."
     else
         log_error "Secrets environment file not found: $secrets_env_file"
-        clean_up_files "$resolved_config" "$secrets_env_file"
         return 1
     fi
     
-    # Clean up temporary files
-    clean_up_files "$resolved_config" "$secrets_env_file"
+    clean_up_files "$secrets_env_file"
 }
 
-# Function to clean up temporary files
+# Clean up temporary files
 clean_up_files() {
     for file in "$@"; do
-        if [ -f "$file" ]; then
+        if [[ -f "$file" ]]; then
             rm -f "$file"
             log_info "Cleaned up temporary file: $file"
+        else
+            log_warn "Temporary file not found for cleanup: $file"
         fi
     done
 }
-
-# Example usage:
-# fetch_secrets

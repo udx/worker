@@ -1,103 +1,69 @@
 #!/bin/bash
 
-# Simple logging functions
+# Utility functions for logging
 log_info() {
     echo "[INFO] $1"
 }
 
 log_error() {
-    echo "[ERROR] $1" >&2
+    echo "[ERROR] $1"
 }
 
-# Get the path to the worker.yml configuration file
+# Function to get the path to the worker.yml configuration file
 get_worker_config_path() {
-    local config_path=".cd/configs/worker.yml"
+    echo "/home/${USER}/.cd/configs/worker.yml"
+}
+
+# Function to load the worker configuration from YAML and convert it to JSON
+load_and_resolve_worker_config() {
+    local config_path
+    config_path=$(get_worker_config_path)
+
     if [[ ! -f "$config_path" ]]; then
         log_error "No config file found at: $config_path"
         return 1
     fi
-    echo "$config_path"
-}
 
-# Set environment variables from the YAML file
-set_env_vars_from_yaml() {
-    local config_file="$1"
-    local temp_file
+    # Convert the YAML configuration to JSON using yq
+    local json_output
+    json_output=$(yq eval -o=json "$config_path" 2>/dev/null)
 
-    # Create a temporary file for exporting environment variables
-    temp_file=$(mktemp)
-    if ! yq eval '.config.variables | to_entries | .[] | "export " + .key + "=" + .value' "$config_file" > "$temp_file"; then
-        log_error "Failed to process environment variables from $config_file"
-        rm -f "$temp_file"
+    if [[ $? -ne 0 || -z "$json_output" ]]; then
+        log_error "Failed to parse YAML from $config_path. yq returned an error."
         return 1
     fi
 
-    log_info "Exporting environment variables from $config_file"
-    # shellcheck source=/dev/null
-    source "$temp_file"
-
-    # Clean up the temporary file
-    rm -f "$temp_file"
+    echo "$json_output"
 }
 
-# Extract and return secrets from the YAML file
-get_worker_secrets() {
-    local config_file="$1"
-    yq eval -o=json '.config.secrets' "$config_file" || {
-        log_error "Failed to extract secrets from $config_file"
+# Function to extract a specific section from the JSON configuration
+get_worker_section() {
+    local config_json="$1"
+    local section="$2"
+
+    if [[ -z "$config_json" ]]; then
+        log_error "Empty configuration JSON provided."
         return 1
-    }
-}
+    fi
 
-# Extract and return actors from the YAML file
-get_worker_actors() {
-    local config_file="$1"
-    yq eval -o=json '.config.actors' "$config_file" || {
-        log_error "Failed to extract actors from $config_file"
-        return 1
-    }
-}
+    local extracted_section
+    extracted_section=$(echo "$config_json" | jq -r ".${section}" 2>&1)
 
-# Main function to load and resolve worker configuration
-load_and_resolve_worker_config() {
-    local config_path resolved_config
-
-    # Get the configuration file path
-    config_path=$(get_worker_config_path)
     if [[ $? -ne 0 ]]; then
-        log_error "Failed to retrieve worker configuration file path."
+        log_error "Failed to extract section '$section' from worker config. jq error: $extracted_section"
         return 1
     fi
-    log_info "Config file found: $config_path"
 
-    # Set environment variables from the configuration file
-    if ! set_env_vars_from_yaml "$config_path"; then
-        log_error "Failed to set environment variables."
+    if [[ -z "$extracted_section" || "$extracted_section" == "null" ]]; then
+        log_error "Section '$section' is empty or null."
         return 1
     fi
-    log_info "Environment variables loaded successfully."
 
-    # Extract secrets
-    resolved_config=$(get_worker_secrets "$config_path")
-    if [[ $? -ne 0 ]]; then
-        log_error "Failed to extract secrets."
-        return 1
-    fi
-    echo "$resolved_config" > /tmp/worker_secrets.json
-    log_info "Secrets extracted successfully."
-
-    # Extract actors
-    resolved_config=$(get_worker_actors "$config_path")
-    if [[ $? -ne 0 ]]; then
-        log_error "Failed to extract actors."
-        return 1
-    fi
-    echo "$resolved_config" > /tmp/worker_actors.json
-    log_info "Actors extracted successfully."
-
-    # Return the configuration path
-    echo "$config_path"
+    echo "$extracted_section"
 }
 
-# Example usage:
-# load_and_resolve_worker_config
+# Example usage of the above functions
+# You can comment this out if it’s just a library
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    configure_environment
+fi

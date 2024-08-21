@@ -36,7 +36,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install yq
-RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.18.1/yq_linux_amd64.tar.gz | tar xz && \
+RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz | tar xz && \
     mv yq_linux_amd64 /usr/bin/yq
 
 # Install Google Cloud SDK
