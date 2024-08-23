@@ -5,7 +5,7 @@ include Makefile.help
 # Default target
 .DEFAULT_GOAL := help
 
-.PHONY: run run-it run-debug clean build stringify-creds exec log test dev-pipeline
+.PHONY: run run-it clean build stringify-creds exec log test dev-pipeline
 
 # Automatically detect JSON credentials file, stringify its content, and set it as an environment variable
 stringify-creds:
