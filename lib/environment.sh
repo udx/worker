@@ -67,10 +67,10 @@ configure_environment() {
     fi
 
     # # Fetch secrets using the resolved configuration
-    # if ! fetch_secrets "$secrets"; then
-    #     log_error "Failed to fetch secrets."
-    #     return 1
-    # fi
+    if ! fetch_secrets "$secrets"; then
+        log_error "Failed to fetch secrets."
+        return 1
+    fi
 
     # # Clean up actors and sensitive environment variables
     # if ! cleanup_actors; then
