@@ -11,7 +11,14 @@ log_error() {
 
 # Function to get the path to the worker.yml configuration file
 get_worker_config_path() {
-    echo "/home/${USER}/.cd/configs/worker.yml"
+    local config_path="/home/${USER}/.cd/configs/worker.yml"
+    
+    if [[ ! -f "$config_path" ]]; then
+        log_error "Configuration file not found: $config_path"
+        return 1
+    fi
+    
+    echo "$config_path"
 }
 
 # Function to load the worker configuration from YAML and convert it to JSON
@@ -19,8 +26,7 @@ load_and_resolve_worker_config() {
     local config_path
     config_path=$(get_worker_config_path)
 
-    if [[ ! -f "$config_path" ]]; then
-        log_error "No config file found at: $config_path"
+    if [[ $? -ne 0 ]]; then
         return 1
     fi
 
@@ -47,14 +53,9 @@ get_worker_section() {
     fi
 
     local extracted_section
-    extracted_section=$(echo "$config_json" | jq -r ".${section}" 2>&1)
+    extracted_section=$(echo "$config_json" | jq -r ".${section}")
 
-    if [[ $? -ne 0 ]]; then
-        log_error "Failed to extract section '$section' from worker config. jq error: $extracted_section"
-        return 1
-    fi
-
-    if [[ -z "$extracted_section" || "$extracted_section" == "null" ]]; then
+    if [[ $? -ne 0 || -z "$extracted_section" || "$extracted_section" == "null" ]]; then
         log_error "Section '$section' is empty or null."
         return 1
     fi

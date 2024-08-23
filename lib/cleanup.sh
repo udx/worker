@@ -10,10 +10,10 @@ source /usr/local/lib/worker_config.sh
 cleanup_azure() {
     log_info "Cleaning up Azure authentication"
     if command -v az > /dev/null; then
-        if ! az account show > /dev/null 2>&1; then
-            log_info "No active Azure accounts found."
-        else
+        if az account show > /dev/null 2>&1; then
             az logout || log_error "Failed to log out of Azure"
+        else
+            log_info "No active Azure accounts found."
         fi
     else
         log_warn "Azure CLI not found. Skipping Azure cleanup."
@@ -24,10 +24,10 @@ cleanup_azure() {
 cleanup_gcp() {
     log_info "Cleaning up GCP authentication"
     if command -v gcloud > /dev/null; then
-        if ! gcloud auth list --format="value(account)" > /dev/null 2>&1; then
-            log_info "No active GCP accounts found."
-        else
+        if gcloud auth list --format="value(account)" > /dev/null 2>&1; then
             gcloud auth revoke --all || log_error "Failed to revoke GCP authentication"
+        else
+            log_info "No active GCP accounts found."
         fi
     else
         log_warn "GCP CLI not found. Skipping GCP cleanup."
@@ -58,7 +58,7 @@ cleanup_bitwarden() {
             log_info "No active Bitwarden sessions found."
         fi
     else
-        log_warn "Bitwarden CLI not found or cannot be executed. Skipping Bitwarden cleanup."
+        log_warn "Bitwarden CLI not found. Skipping Bitwarden cleanup."
     fi
 }
 
@@ -68,16 +68,16 @@ cleanup_actors() {
     
     local worker_config
     worker_config=$(get_worker_config_path)
-    
+
     if [[ $? -ne 0 ]]; then
         log_error "Failed to retrieve worker configuration path."
         return 1
     fi
-    
+
     local actors_json
     actors_json=$(yq e -o=json '.config.actors' "$worker_config" 2>/dev/null)
-    
-    if [ -z "$actors_json" ] || [ "$actors_json" = "null" ]; then
+
+    if [[ -z "$actors_json" || "$actors_json" == "null" ]]; then
         log_info "No actors found for cleanup."
         return 0
     fi
@@ -88,7 +88,7 @@ cleanup_actors() {
         type=$(echo "$actor" | jq -r '.type')
         
         local cleanup_function="cleanup_${type//[-]/_}"
-        if command -v "$cleanup_function" > /dev/null; then
+        if declare -F "$cleanup_function" > /dev/null; then
             $cleanup_function
         else
             log_warn "Unsupported or unavailable actor type for cleanup: $type"
@@ -102,17 +102,17 @@ cleanup_sensitive_env_vars() {
     
     local env_config
     env_config=$(get_worker_config_path)
-    
+
     if [[ $? -ne 0 ]]; then
         log_error "Failed to retrieve configuration path."
         return 1
     fi
-    
+
     # Extract environment variable names defined in worker.yml (both variables and secrets)
     local defined_vars
     defined_vars=$(yq e -o=json '.config.variables, .config.secrets' "$env_config" 2>/dev/null | jq -r 'to_entries[].key')
 
-    if [ -z "$defined_vars" ]; then
+    if [[ -z "$defined_vars" ]]; then
         log_info "No sensitive environment variables found."
         return 0
     fi
