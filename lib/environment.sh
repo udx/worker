@@ -73,15 +73,15 @@ configure_environment() {
     fi
 
     # # Clean up actors and sensitive environment variables
-    # if ! cleanup_actors; then
-    #     log_error "Failed to clean up actors."
-    #     return 1
-    # fi
+    if ! cleanup_actors; then
+        log_error "Failed to clean up actors."
+        return 1
+    fi
 
-    # if ! cleanup_sensitive_env_vars; then
-    #     log_error "Failed to clean up sensitive environment variables."
-    #     return 1
-    # fi
+    if ! cleanup_sensitive_env_vars; then
+        log_error "Failed to clean up sensitive environment variables."
+        return 1
+    fi
 
     log_info "Environment setup completed successfully."
 }

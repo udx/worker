@@ -2,15 +2,9 @@
 azure_authenticate() {
     local creds_json="$1"
 
-    echo "Received credentials JSON file path:"
-    echo "$creds_json"
-
     # Read the contents of the file
     local creds_content
     creds_content=$(cat "$creds_json")
-    
-    echo "Content of credentials JSON:"
-    echo "$creds_content" | jq .
 
     if [[ -z "$creds_content" ]]; then
         echo "[ERROR] No Azure credentials provided." >&2

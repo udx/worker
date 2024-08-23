@@ -22,7 +22,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2024a-3ubuntu1.1 \
-    curl=8.5.0-2ubuntu10.2 \
+    curl=8.5.0-2ubuntu10.3 \
     bash=5.2.21-2ubuntu4 \
     gettext=0.21-14ubuntu2 \
     gnupg=2.4.4-2ubuntu17 \
