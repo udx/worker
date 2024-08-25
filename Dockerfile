@@ -1,4 +1,4 @@
-# Use the latest version of the Ubuntu image
+# Use the latest version of the Ubuntu image with a specific tag for stability
 FROM ubuntu:24.04
 
 # Set the maintainer of the image
@@ -33,11 +33,12 @@ RUN apt-get update && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install yq
 RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz | tar xz && \
-    mv yq_linux_amd64 /usr/bin/yq
+    mv yq_linux_amd64 /usr/bin/yq && \
+    rm -rf /tmp/*
 
 # Install Google Cloud SDK
 RUN apt-get update && \
@@ -48,13 +49,13 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends google-cloud-sdk=467.0.0-0 && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
-    rm -rf awscliv2.zip aws
+    rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
 
 # Install Azure CLI
 RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
@@ -62,11 +63,12 @@ RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >
     apt-get update && \
     apt-get install -y --no-install-recommends azure-cli=2.63.0-1~noble && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Bitwarden CLI
 RUN curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
-    chmod +x /usr/local/bin/bw
+    chmod +x /usr/local/bin/bw && \
+    rm -rf /tmp/* /var/tmp/*
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
