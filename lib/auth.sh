@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
 source /usr/local/lib/utils.sh
 
 # Function to authenticate actors
