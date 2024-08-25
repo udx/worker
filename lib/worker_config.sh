@@ -27,7 +27,7 @@ load_and_resolve_worker_config() {
     config_path=$(get_worker_config_path)
 
     # Check if the config_path retrieval was successful
-    if [[ $? -ne 0 ]]; then
+    if [[ -z "$config_path" ]]; then
         return 1
     fi
 
