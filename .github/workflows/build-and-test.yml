@@ -24,11 +24,10 @@ jobs:
         run: make dev-pipeline DEBUG=false
         working-directory: .
 
-      - name: Download Trivy
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: image
-          image-ref: udx-worker/udx-worker:latest
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+
+      - name: Trivy Scanning
+        run: |
+          trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | grep -v 'INFO'
