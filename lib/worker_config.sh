@@ -26,16 +26,20 @@ load_and_resolve_worker_config() {
     local config_path
     config_path=$(get_worker_config_path)
 
+    # Check if the config_path retrieval was successful
     if [[ $? -ne 0 ]]; then
         return 1
     fi
 
     # Convert the YAML configuration to JSON using yq
     local json_output
-    json_output=$(yq eval -o=json "$config_path" 2>/dev/null)
-
-    if [[ $? -ne 0 || -z "$json_output" ]]; then
+    if ! json_output=$(yq eval -o=json "$config_path" 2>/dev/null); then
         log_error "Failed to parse YAML from $config_path. yq returned an error."
+        return 1
+    fi
+
+    if [[ -z "$json_output" ]]; then
+        log_error "YAML parsed to an empty JSON output."
         return 1
     fi
 
@@ -53,9 +57,12 @@ get_worker_section() {
     fi
 
     local extracted_section
-    extracted_section=$(echo "$config_json" | jq -r ".${section}")
+    if ! extracted_section=$(echo "$config_json" | jq -r ".${section}"); then
+        log_error "Failed to extract section '$section' from JSON."
+        return 1
+    fi
 
-    if [[ $? -ne 0 || -z "$extracted_section" || "$extracted_section" == "null" ]]; then
+    if [[ -z "$extracted_section" || "$extracted_section" == "null" ]]; then
         log_error "Section '$section' is empty or null."
         return 1
     fi

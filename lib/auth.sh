@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Include utility and worker config modules
+# shellcheck source=/usr/local/lib/utils.sh
 source /usr/local/lib/utils.sh
 
 # Function to authenticate actors

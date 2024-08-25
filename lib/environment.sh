@@ -12,14 +12,13 @@ source /usr/local/lib/worker_config.sh
 load_env_file() {
     if [ -f .env ]; then
         log_info "Loading environment variables from .env file."
-        # Directly export each line from the .env file
-        export $(grep -v '^#' .env | xargs -r)
+        # Quote the command substitution to prevent word splitting
+        export "$(grep -v '^#' .env | xargs -r)"
     else
         log_info "No .env file found. Proceeding with environment variables from the host."
     fi
 }
 
-# Main function to coordinate environment setup
 # Main function to coordinate environment setup
 configure_environment() {
     # Load environment variables from .env file if it exists
@@ -28,7 +27,8 @@ configure_environment() {
     # Load and resolve the worker configuration
     local resolved_config
     resolved_config=$(load_and_resolve_worker_config)
-    if [ $? -ne 0 ]; then
+    # Directly check the command success, not using $?
+    if [ -z "$resolved_config" ]; then
         log_error "Failed to resolve worker configuration."
         return 1
     fi
@@ -51,7 +51,7 @@ configure_environment() {
         return 1
     fi
 
-    # # Authenticate actors using the extracted actors section
+    # Authenticate actors using the extracted actors section
     if ! authenticate_actors "$actors"; then
         log_error "Failed to authenticate actors."
         return 1
@@ -66,13 +66,13 @@ configure_environment() {
         return 1
     fi
 
-    # # Fetch secrets using the resolved configuration
+    # Fetch secrets using the resolved configuration
     if ! fetch_secrets "$secrets"; then
         log_error "Failed to fetch secrets."
         return 1
     fi
 
-    # # Clean up actors and sensitive environment variables
+    # Clean up actors and sensitive environment variables
     if ! cleanup_actors; then
         log_error "Failed to clean up actors."
         return 1
@@ -85,7 +85,6 @@ configure_environment() {
 
     log_info "Environment setup completed successfully."
 }
-
 
 # Call the main function
 configure_environment

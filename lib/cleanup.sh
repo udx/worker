@@ -11,7 +11,9 @@ cleanup_azure() {
     log_info "Cleaning up Azure authentication"
     if command -v az > /dev/null; then
         if az account show > /dev/null 2>&1; then
-            az logout || log_error "Failed to log out of Azure"
+            if ! az logout; then
+                log_error "Failed to log out of Azure"
+            fi
         else
             log_info "No active Azure accounts found."
         fi
@@ -25,7 +27,9 @@ cleanup_gcp() {
     log_info "Cleaning up GCP authentication"
     if command -v gcloud > /dev/null; then
         if gcloud auth list --format="value(account)" > /dev/null 2>&1; then
-            gcloud auth revoke --all || log_error "Failed to revoke GCP authentication"
+            if ! gcloud auth revoke --all; then
+                log_error "Failed to revoke GCP authentication"
+            fi
         else
             log_info "No active GCP accounts found."
         fi
@@ -39,7 +43,9 @@ cleanup_aws() {
     log_info "Cleaning up AWS authentication"
     if command -v aws > /dev/null; then
         if aws sso list-accounts > /dev/null 2>&1; then
-            aws sso logout || log_warn "AWS SSO logout not configured or failed"
+            if ! aws sso logout; then
+                log_warn "AWS SSO logout not configured or failed"
+            fi
         else
             log_info "No active AWS SSO sessions found."
         fi
@@ -53,7 +59,9 @@ cleanup_bitwarden() {
     log_info "Cleaning up Bitwarden authentication"
     if command -v bw > /dev/null; then
         if bw status > /dev/null 2>&1; then
-            bw logout --force || log_error "Failed to log out of Bitwarden"
+            if ! bw logout --force; then
+                log_error "Failed to log out of Bitwarden"
+            fi
         else
             log_info "No active Bitwarden sessions found."
         fi
@@ -67,9 +75,7 @@ cleanup_actors() {
     log_info "Starting cleanup of actors"
     
     local worker_config
-    worker_config=$(get_worker_config_path)
-
-    if [[ $? -ne 0 ]]; then
+    if ! worker_config=$(get_worker_config_path); then
         log_error "Failed to retrieve worker configuration path."
         return 1
     fi
@@ -101,9 +107,7 @@ cleanup_sensitive_env_vars() {
     log_info "Cleaning up sensitive environment variables"
     
     local env_config
-    env_config=$(get_worker_config_path)
-
-    if [[ $? -ne 0 ]]; then
+    if ! env_config=$(get_worker_config_path); then
         log_error "Failed to retrieve configuration path."
         return 1
     fi

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Function to authenticate Azure accounts
 azure_authenticate() {
     local creds_json="$1"
