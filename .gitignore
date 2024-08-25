@@ -25,3 +25,9 @@ yarn.lock
 
 # Ignore build output
 dist/
+
+# Ignore the Azure credentials file
+azure_creds.json
+
+# Ignore the .env file
+.env

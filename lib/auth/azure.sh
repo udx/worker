@@ -1,53 +1,41 @@
 #!/bin/bash
 
-# Function to resolve environment variables
-resolve_env_vars() {
-    local value="$1"
-    eval echo "$value"
-}
-
 # Function to authenticate Azure accounts
 azure_authenticate() {
-    local actor="$1"
-    local type
-    type=$(echo "$actor" | jq -r '.type')
-    local subscription
-    subscription=$(resolve_env_vars "$(echo "$actor" | jq -r '.subscription')")
-    local tenant
-    tenant=$(resolve_env_vars "$(echo "$actor" | jq -r '.tenant')")
-    local application
-    application=$(resolve_env_vars "$(echo "$actor" | jq -r '.application')")
-    local password
-    password=$(resolve_env_vars "$(echo "$actor" | jq -r '.password')")
-    
-    case $type in
-        "azure-service-principal")
-            echo "[INFO] Authenticating Azure service principal: $application"
-            if ! az login --service-principal -u "$application" -p "$password" --tenant "$tenant" >/dev/null 2>&1; then
-                echo "[ERROR] Azure service principal authentication failed"
-                return 1
-            fi
-            if ! az account set --subscription "$subscription" >/dev/null 2>&1; then
-                echo "[ERROR] Failed to set Azure subscription"
-                return 1
-            fi
-        ;;
-        "azure-personal-account")
-            echo "[INFO] Authenticating Azure personal account: $application"
-            if ! az login -u "$application" -p "$password" >/dev/null 2>&1; then
-                echo "[ERROR] Azure personal account authentication failed"
-                return 1
-            fi
-            if [ -n "$subscription" ]; then
-                if ! az account set --subscription "$subscription" >/dev/null 2>&1; then
-                    echo "[ERROR] Failed to set Azure subscription"
-                    return 1
-                fi
-            fi
-        ;;
-        *)
-            echo "[ERROR] Unsupported Azure authentication type $type"
-            return 1
-        ;;
-    esac
+    local creds_json="$1"
+
+    # Read the contents of the file
+    local creds_content
+    creds_content=$(cat "$creds_json")
+
+    if [[ -z "$creds_content" ]]; then
+        echo "[ERROR] No Azure credentials provided." >&2
+        return 1
+    fi
+
+    # Extract necessary fields from the JSON credentials
+    local clientId clientSecret subscriptionId tenantId
+
+    clientId=$(echo "$creds_content" | jq -r '.clientId')
+    clientSecret=$(echo "$creds_content" | jq -r '.clientSecret')
+    subscriptionId=$(echo "$creds_content" | jq -r '.subscriptionId')
+    tenantId=$(echo "$creds_content" | jq -r '.tenantId')
+
+    if [[ -z "$clientId" || -z "$clientSecret" || -z "$subscriptionId" || -z "$tenantId" ]]; then
+        echo "[ERROR] Missing required Azure credentials." >&2
+        return 1
+    fi
+
+    echo "[INFO] Authenticating Azure service principal..."
+    if ! az login --service-principal -u "$clientId" -p "$clientSecret" --tenant "$tenantId" >/dev/null 2>&1; then
+        echo "[ERROR] Azure service principal authentication failed." >&2
+        return 1
+    fi
+
+    if ! az account set --subscription "$subscriptionId" >/dev/null 2>&1; then
+        echo "[ERROR] Failed to set Azure subscription." >&2
+        return 1
+    fi
+
+    echo "[INFO] Azure service principal authenticated and subscription set."
 }

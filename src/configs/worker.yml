@@ -5,8 +5,12 @@ config:
   variables:
     DOCKER_IMAGE_NAME: "udx-worker"
   secrets:
-    NEW_RELIC_API_KEY: "new_relic_api_key"
+    NEW_RELIC_API_KEY: "azure/kv-udx-worker/udx-worker-secret-one"
+    # for testing
+    OCTOPUS_API_KEY: "bitwarden/octetopus_api_key"
   actors:
-    - type: gcp-service-account
-      email: ${GCP_SERVICE_ACCOUNT_EMAIL}
-      keyfile: ""
+    - type: azure
+      creds: "${AZURE_CREDS}"
+    # for testing
+    - type: gcp
+      creds: "${GCP_CREDS}"

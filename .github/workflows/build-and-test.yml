@@ -21,5 +21,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Run Development Pipeline
-        run: make dev-pipeline DEBUG=false
+        run: make dev-pipeline
         working-directory: .
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+
+      - name: Trivy Scanning
+        run: |
+          trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | grep -v 'INFO'
