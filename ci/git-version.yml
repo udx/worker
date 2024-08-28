@@ -1,0 +1,6 @@
+mode: ContinuousDeployment
+branches:
+  release:
+    regex: ^latest$
+  develop:
+    regex: ^((?!latest).)*$

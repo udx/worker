@@ -1,0 +1,16 @@
+---
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  variables:
+    DOCKER_IMAGE_NAME: "udx-worker"
+  secrets:
+    NEW_RELIC_API_KEY: "azure/kv-udx-worker/udx-worker-secret-one"
+    # for testing
+    OCTOPUS_API_KEY: "bitwarden/octetopus_api_key"
+  actors:
+    - type: azure
+      creds: "${AZURE_CREDS}"
+    # for testing
+    - type: gcp
+      creds: "${GCP_CREDS}"

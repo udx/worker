@@ -1,0 +1,53 @@
+name: "CodeQL and Linter Analysis"
+
+on:
+  push:
+
+jobs:
+
+  analyze-shell:
+    name: Analyze Shell Scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          find . -name '*.sh' -print0 | xargs -0 shellcheck
+
+  analyze-dockerfile:
+    name: Analyze Dockerfiles
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install hadolint
+        run: |
+          wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint
+
+      - name: Run hadolint
+        run: |
+          find . -name 'Dockerfile' -print0 | xargs -0 /usr/local/bin/hadolint
+
+  analyze-yaml:
+    name: Analyze YAML Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: |
+          pip install yamllint
+
+      - name: Run yamllint
+        run: |
+          find ./src/configs -name '*.yml' -print0 | xargs -0 yamllint
