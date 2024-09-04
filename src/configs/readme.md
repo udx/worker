@@ -17,22 +17,14 @@ To use these configuration files, ensure that the `worker.yml` file is correctly
 **worker.yml**
 
 ```yaml
-kind: workerConfig
-version: udx.io/worker-v1/config
 config:
-  env:
-    AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
-    AZURE_TENANT_ID: ${AZURE_TENANT_ID}
-    AZURE_APPLICATION_ID: ${AZURE_APPLICATION_ID}
-    DOCKER_IMAGE_NAME: udx-worker
-  workerSecrets:
-    AZURE_SECRET: "https://kv-udx-worker-secrets.vault.azure.net/secrets/udx-worker-secret-one"
-  workerActors:
-    - type: azure-service-principal
-      subscription: ${AZURE_SUBSCRIPTION_ID}
-      tenant: ${AZURE_TENANT_ID}
-      application: ${AZURE_APPLICATION_ID}
-      password: ${AZURE_APPLICATION_PASSWORD}
+  variables:
+    DOCKER_IMAGE_NAME: "udx-worker"
+  secrets:
+    NEW_RELIC_API_KEY: "azure/kv-udx-worker/udx-worker-secret-one"
+  actors:
+    - type: azure
+      creds: "${AZURE_CREDS}"
 ```
 
 ## Local Environment Configuration
