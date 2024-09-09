@@ -50,7 +50,7 @@ log:
 
 # Delete the running container
 clean:
-	@echo "Deleting Docker container..."
+	@echo "Deleting Docker container if exists..."
 	@docker rm -f $(CONTAINER_NAME) || true
 
 # Run the validation tests

@@ -27,12 +27,9 @@ Note the appId, password, and tenant.
 Update your `worker.yml` configuration file to include the Azure Service Principal credentials:
 
 ```yaml
-workerActors:
-  - type: azure-service-principal
-    subscription: "YOUR_SUBSCRIPTION_ID"
-    tenant: "YOUR_TENANT_ID"
-    application: "YOUR_APP_ID"
-    password: "YOUR_CLIENT_SECRET"
+actors:
+  - type: azure
+    creds: "${AZURE_CREDS}"    
 ```
 
 ### AWS IAM Role (TBD)
@@ -40,6 +37,10 @@ workerActors:
 Instructions for setting up AWS IAM Role will be provided here.
 
 ### GCP Service Account (TBD)
+
+Instructions for setting up GCP Service Account will be provided here.
+
+### Bitwarden Service Account (TBD)
 
 Instructions for setting up GCP Service Account will be provided here.
 
