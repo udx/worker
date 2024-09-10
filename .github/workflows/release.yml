@@ -20,11 +20,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
 
-      - name: Run Development Pipeline
-        run: make dev-pipeline
+      # - name: Run Development Pipeline
+      #   run: make dev-pipeline
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
@@ -109,8 +109,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            udx-worker:${{ needs.test-pipeline.outputs.semVer }}
-            udx-worker:latest
+            usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
+            usabilitydynamics/udx-worker:latest
           build-args: |
             GIT_VERSION=${{ needs.test-pipeline.outputs.semVer }}
 
