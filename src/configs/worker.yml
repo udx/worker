@@ -7,20 +7,28 @@ config:
   secrets:
     NEW_RELIC_API_KEY: "gcp/udx-worker-project/new_relic_api_key"
 
-    # Examples:
+    # Supported:
     #
     # NEW_RELIC_API_KEY: "azure/kv-udx-worker/new_relic_api_key"
+    #
+
+    # To be supported:
+    #
     # NEW_RELIC_API_KEY: "aws/secrets-manager/new_relic_api_key"
     # NEW_RELIC_API_KEY: "bitwarden/collection/new_relic_api_key"
     #
+
   actors:
     - type: gcp
       creds: "${GCP_CREDS}"
 
-    # Examples:
+    # Supported:
     #
     # - type: azure
     #   creds: "${AZURE_CREDS}"
+    #
+
+    # To be supported:
     #
     # - type: aws
     #   creds: "${AWS_CREDS}"
