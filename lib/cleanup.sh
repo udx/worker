@@ -53,9 +53,8 @@ cleanup_actors() {
 
     # Process each actor type
     echo "$actors_json" | jq -c '.[]' | while IFS= read -r actor; do
-        local type creds
+        local type
         type=$(echo "$actor" | jq -r '.type')
-        creds=$(echo "$actor" | jq -r '.creds')
 
         case "$type" in
             azure)
