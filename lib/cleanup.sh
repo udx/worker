@@ -6,71 +6,34 @@ source /usr/local/lib/utils.sh
 # shellcheck source=/dev/null
 source /usr/local/lib/worker_config.sh
 
-# Function to clean up Azure authentication
-cleanup_azure() {
-    log_info "Cleaning up Azure authentication"
-    if command -v az > /dev/null; then
-        if az account show > /dev/null 2>&1; then
-            if ! az logout; then
-                log_error "Failed to log out of Azure"
-            fi
-        else
-            log_info "No active Azure accounts found."
-        fi
-    else
-        log_warn "Azure CLI not found. Skipping Azure cleanup."
+# Generic function to clean up authentication for any provider
+cleanup_provider() {
+    local provider=$1
+    local logout_cmd=$2
+    local list_cmd=$3
+    local name=$4
+    
+    log_info "Cleaning up $name authentication"
+    
+    if ! command -v "$provider" > /dev/null; then
+        log_warn "$name CLI not found. Skipping $name cleanup."
+        return 0
     fi
+
+    if ! eval "$list_cmd" > /dev/null 2>&1; then
+        log_info "No active $name accounts or sessions found."
+        return 0
+    fi
+
+    if ! eval "$logout_cmd"; then
+        log_error "Failed to log out of $name"
+        return 1
+    fi
+
+    log_info "$name authentication cleaned up successfully."
 }
 
-# Function to clean up GCP authentication
-cleanup_gcp() {
-    log_info "Cleaning up GCP authentication"
-    if command -v gcloud > /dev/null; then
-        if gcloud auth list --format="value(account)" > /dev/null 2>&1; then
-            if ! gcloud auth revoke --all; then
-                log_error "Failed to revoke GCP authentication"
-            fi
-        else
-            log_info "No active GCP accounts found."
-        fi
-    else
-        log_warn "GCP CLI not found. Skipping GCP cleanup."
-    fi
-}
-
-# Function to clean up AWS authentication
-cleanup_aws() {
-    log_info "Cleaning up AWS authentication"
-    if command -v aws > /dev/null; then
-        if aws sso list-accounts > /dev/null 2>&1; then
-            if ! aws sso logout; then
-                log_warn "AWS SSO logout not configured or failed"
-            fi
-        else
-            log_info "No active AWS SSO sessions found."
-        fi
-    else
-        log_warn "AWS CLI not found. Skipping AWS cleanup."
-    fi
-}
-
-# Function to clean up Bitwarden authentication
-cleanup_bitwarden() {
-    log_info "Cleaning up Bitwarden authentication"
-    if command -v bw > /dev/null; then
-        if bw status > /dev/null 2>&1; then
-            if ! bw logout --force; then
-                log_error "Failed to log out of Bitwarden"
-            fi
-        else
-            log_info "No active Bitwarden sessions found."
-        fi
-    else
-        log_warn "Bitwarden CLI not found. Skipping Bitwarden cleanup."
-    fi
-}
-
-# Function to clean up actors
+# Function to clean up actors based on the worker configuration
 cleanup_actors() {
     log_info "Starting cleanup of actors"
     
@@ -88,51 +51,48 @@ cleanup_actors() {
         return 0
     fi
 
-    # Process each actor in the configuration
+    # Process each actor type
     echo "$actors_json" | jq -c '.[]' | while IFS= read -r actor; do
-        local type
+        local type creds
         type=$(echo "$actor" | jq -r '.type')
-        
-        local cleanup_function="cleanup_${type//[-]/_}"
-        if declare -F "$cleanup_function" > /dev/null; then
-            $cleanup_function
-        else
-            log_warn "Unsupported or unavailable actor type for cleanup: $type"
-        fi
+        creds=$(echo "$actor" | jq -r '.creds')
+
+        case "$type" in
+            azure)
+                cleanup_provider "az" "az logout" "az account show" "Azure"
+                ;;
+            gcp)
+                cleanup_provider "gcloud" "gcloud auth revoke --all" "gcloud auth list" "GCP"
+                ;;
+            aws)
+                cleanup_provider "aws" "aws sso logout" "aws sso list-accounts" "AWS"
+                ;;
+            bitwarden)
+                cleanup_provider "bw" "bw logout --force" "bw status" "Bitwarden"
+                ;;
+            *)
+                log_warn "Unsupported or unavailable actor type for cleanup: $type"
+                ;;
+        esac
     done
 }
 
-# Function to clean up sensitive environment variables
+# Function to clean up sensitive environment variables based on a pattern
 cleanup_sensitive_env_vars() {
     log_info "Cleaning up sensitive environment variables"
     
-    local env_config
-    if ! env_config=$(get_worker_config_path); then
-        log_error "Failed to retrieve configuration path."
-        return 1
-    fi
+    # Define a pattern for sensitive environment variables (e.g., AZURE_CREDS, GCP_CREDS, etc.)
+    local pattern="_CREDS"
 
-    # Extract environment variable names defined in worker.yml (both variables and secrets)
-    local defined_vars
-    defined_vars=$(yq e -o=json '.config.variables, .config.secrets' "$env_config" 2>/dev/null | jq -r 'to_entries[].key')
-
-    if [[ -z "$defined_vars" ]]; then
-        log_info "No sensitive environment variables found."
-        return 0
-    fi
-
-    # Unset the defined environment variables
-    for var in $defined_vars; do
-        unset "$var" || log_warn "Failed to unset environment variable: $var"
+    # Loop through environment variables that match the pattern
+    for var in $(env | grep "${pattern}" | cut -d'=' -f1); do
+        unset "$var"
+        log_info "Unset sensitive environment variable: $var"
     done
 
     log_info "Sensitive environment variables cleaned up successfully."
 }
 
-# Example usage:
-# cleanup_azure
-# cleanup_gcp
-# cleanup_aws
-# cleanup_bitwarden
+# Example usage
 # cleanup_actors
 # cleanup_sensitive_env_vars
