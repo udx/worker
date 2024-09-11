@@ -5,7 +5,7 @@ config:
   variables:
     DOCKER_IMAGE_NAME: "udx-worker"
   secrets:
-    NEW_RELIC_API_KEY: "gcp/rabbit-ci-tooling/new_relic_api_key"
+    NEW_RELIC_API_KEY: "gcp/udx-worker-project/new_relic_api_key"
 
     # Examples:
     #
