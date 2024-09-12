@@ -31,10 +31,9 @@ jobs:
       - name: Trivy Scanning
         run: |
           trivy image --severity HIGH,CRITICAL --exit-code 0 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
-
-          if grep -q "Total: 0 (HIGH: 0, CRITICAL: 0)" trivy.log; then
-            echo "No HIGH or CRITICAL vulnerabilities found."
-          else
+          if grep -E "Total: [1-9]" trivy.log; then
             echo "HIGH or CRITICAL vulnerabilities detected!"
             exit 1
+          else
+            echo "No HIGH or CRITICAL vulnerabilities found."
           fi
