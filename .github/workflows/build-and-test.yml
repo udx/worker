@@ -30,4 +30,4 @@ jobs:
 
       - name: Trivy Scanning
         run: |
-          trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | grep -v 'INFO'
+          trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | grep -v 'INFO' || exit 1
