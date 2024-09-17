@@ -25,8 +25,9 @@ az keyvault secret set --vault-name "your-vault-name" --name "your-secret-name" 
 Update your worker.yml configuration file to include the Azure Key Vault secrets:
 
 ```yaml
-workerSecrets:
-  MY_SECRET: "https://your-vault-name.vault.azure.net/secrets/your-secret-name"
+secrets:
+  NEW_RELIC_API_KEY: "azure/kv-udx-worker/new-relic-api-key"
+  HEALTHCHECK_IO_API_KEY: "azure/kv-udx-worker/healthcheck-io-api-key"
 ```
 
 ### AWS IAM Role (TBD)
@@ -34,6 +35,10 @@ workerSecrets:
 Instructions for setting up AWS IAM Role will be provided here.
 
 ### GCP Service Account (TBD)
+
+Instructions for setting up GCP Service Account will be provided here.
+
+### Bitwarden Service Account (TBD)
 
 Instructions for setting up GCP Service Account will be provided here.
 

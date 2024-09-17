@@ -20,38 +20,59 @@ source_provider_module() {
 
 # Fetch secrets and set them as environment variables
 fetch_secrets() {
-    local secrets_json="$1"  # The .config.secrets section is passed as an argument
-
+    local secrets_json="$1"
+    
     log_info "Fetching secrets and setting them as environment variables."
 
+    if [[ -z "$secrets_json" || "$secrets_json" == "null" ]]; then
+        log_info "No worker secrets found in the configuration."
+        return 0
+    fi
+
+    # Create a temporary file to store environment variables
     local secrets_env_file
     secrets_env_file=$(mktemp /tmp/secret_vars.XXXXXX)
     echo "# Secrets environment variables" > "$secrets_env_file"
 
-    if [[ -z "$secrets_json" || "$secrets_json" == "null" ]]; then
-        log_info "No worker secrets found in the configuration."
-        clean_up_files "$secrets_env_file"
-        return 0
-    fi
-
+    # Process each secret in the JSON object
     echo "$secrets_json" | jq -c 'to_entries[]' | while IFS= read -r secret; do
-        local name url value provider key_vault_name secret_name
+        local name url value provider secret_name key_vault_name
         name=$(echo "$secret" | jq -r '.key')
         url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
 
-        # Extract provider, key_vault_name, and secret_name from the URL
+        # Extract provider from the URL (first part before '/')
         provider=$(echo "$url" | cut -d '/' -f 1)
-        key_vault_name=$(echo "$url" | cut -d '/' -f 2)
-        secret_name=$(echo "$url" | cut -d '/' -f 3)
 
-        # Ensure provider, key_vault_name, and secret_name are all set
-        if [[ -z "$provider" || -z "$key_vault_name" || -z "$secret_name" ]]; then
-            log_error "Invalid secret format: $url"
-            continue
-        fi
+        # Handle secrets based on the provider
+        case "$provider" in
+            gcp)
+                # Extract secret name and pass to GCP resolver
+                key_vault_name=$(echo "$url" | cut -d '/' -f 2)
+                secret_name=$(echo "$url" | cut -d '/' -f 3)
+                if [[ -z "$secret_name" ]]; then
+                    log_error "Invalid GCP secret name: $url"
+                    continue
+                fi
+                ;;
+            azure|bitwarden)
+                # Extract key vault and secret name
+                key_vault_name=$(echo "$url" | cut -d '/' -f 2)
+                secret_name=$(echo "$url" | cut -d '/' -f 3)
+                if [[ -z "$key_vault_name" || -z "$secret_name" ]]; then
+                    log_error "Invalid secret format for $provider: $url"
+                    continue
+                fi
+                ;;
+            *)
+                log_warn "Unsupported provider: $provider"
+                continue
+                ;;
+        esac
 
+        # Source the provider module dynamically
         source_provider_module "$provider"
 
+        # Determine the resolve function for the provider
         local resolve_function="resolve_${provider}_secret"
         if command -v "$resolve_function" > /dev/null; then
             value=$("$resolve_function" "$key_vault_name" "$secret_name")
@@ -60,6 +81,7 @@ fetch_secrets() {
             continue
         fi
 
+        # Export the secret as an environment variable
         if [[ -n "$value" ]]; then
             echo "export $name=\"$value\"" >> "$secrets_env_file"
             log_info "Resolved secret for $name from $provider."
@@ -68,14 +90,15 @@ fetch_secrets() {
         fi
     done
 
-    if [[ -f "$secrets_env_file" ]]; then
+    # Source the environment file if it exists
+    if [[ -s "$secrets_env_file" ]]; then
         set -a
-        # shellcheck source=/tmp/secret_vars.XXXXXX disable=SC1091
+        # shellcheck disable=SC1090
         source "$secrets_env_file"
         set +a
         log_info "Secrets environment variables sourced successfully."
     else
-        log_error "Secrets environment file not found: $secrets_env_file"
+        log_error "No secrets were written to the environment file."
         return 1
     fi
 
@@ -93,3 +116,6 @@ clean_up_files() {
         fi
     done
 }
+
+# Example usage:
+# fetch_secrets '{"TEST": "gcp/new_relic_api_key"}'
