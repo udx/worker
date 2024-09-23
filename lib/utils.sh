@@ -11,19 +11,19 @@ if [ -z "${UTILS_SH_INCLUDED+x}" ]; then
     
     # Simple logging functions
     log_info() {
-        echo "[INFO] $1"
+        echo "[INFO] $1" >&2  # Send to stderr
     }
     
     log_error() {
-        echo "[ERROR] $1"
+        echo "[ERROR] $1" >&2  # Send to stderr
     }
     
     log_warn() {
-        echo "[WARN] $1"
+        echo "[WARN] $1" >&2  # Send to stderr
     }
-
+    
     log_debug() {
-        echo "[DEBUG] $1"
+        echo "[DEBUG] $1" >&2  # Send to stderr
     }
     
     # Function to resolve placeholders with environment variables

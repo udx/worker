@@ -5,14 +5,34 @@ config:
   variables:
     DOCKER_IMAGE_NAME: "udx-worker"
   secrets:
-    # supported
-    NEW_RELIC_API_KEY: "azure/kv-udx-worker/udx-worker-secret-one"
-    # for testing
-    OCTOPUS_API_KEY: "bitwarden/octetopus_api_key"
+    NEW_RELIC_API_KEY: "gcp/udx-worker-project/new_relic_api_key"
+
+    # Supported:
+    #
+    # NEW_RELIC_API_KEY: "azure/kv-udx-worker/new_relic_api_key"
+    #
+
+    # To be supported:
+    #
+    # NEW_RELIC_API_KEY: "aws/secrets-manager/new_relic_api_key"
+    # NEW_RELIC_API_KEY: "bitwarden/collection/new_relic_api_key"
+    #
+
   actors:
-    # supported
-    - type: azure
-      creds: "${AZURE_CREDS}"
-    # for testing
     - type: gcp
       creds: "${GCP_CREDS}"
+
+    # Supported:
+    #
+    # - type: azure
+    #   creds: "${AZURE_CREDS}"
+    #
+
+    # To be supported:
+    #
+    # - type: aws
+    #   creds: "${AWS_CREDS}"
+    #
+    # - type: bitwarden
+    #   creds: "${BITWARDEN_CREDS}"
+    #
