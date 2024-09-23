@@ -36,37 +36,36 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-          - name: Trivy Scanning with Retry
-          run: |
-            # Enable exit on error
-            set -e
+      - name: Trivy Scanning with Retry
+        run: |
+          # Enable exit on error
+          set -e
+          
+          # Retry logic for Trivy
+          max_retries=3
+          attempt=1
+          success=false
+      
+          while [ $attempt -le $max_retries ]; do
+            echo "Running Trivy scan, attempt $attempt..."
+            trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
             
-            # Retry logic for Trivy
-            max_retries=3
-            attempt=1
-            success=false
-        
-            while [ $attempt -le $max_retries ]; do
-              echo "Running Trivy scan, attempt $attempt..."
-              trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
-              
-              if grep -E "Total: [1-9]" trivy.log; then
-                echo "HIGH or CRITICAL vulnerabilities detected!"
-                exit 1
-              else
-                echo "No HIGH or CRITICAL vulnerabilities found."
-                success=true
-                break
-              fi
-        
-              # If the attempt fails, wait for 30 seconds before retrying
-              echo "Trivy scan failed, retrying in 30 seconds..."
-              sleep 30
-              attempt=$((attempt+1))
-            done
-        
-            if [ "$success" = false ]; then
-              echo "Failed to complete Trivy scan after $max_retries attempts."
+            if grep -E "Total: [1-9]" trivy.log; then
+              echo "HIGH or CRITICAL vulnerabilities detected!"
               exit 1
+            else
+              echo "No HIGH or CRITICAL vulnerabilities found."
+              success=true
+              break
             fi
-        
+      
+            # If the attempt fails, wait for 30 seconds before retrying
+            echo "Trivy scan failed, retrying in 30 seconds..."
+            sleep 30
+            attempt=$((attempt+1))
+          done
+      
+          if [ "$success" = false ]; then
+            echo "Failed to complete Trivy scan after $max_retries attempts."
+            exit 1
+          fi
