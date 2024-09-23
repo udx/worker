@@ -21,7 +21,8 @@ config:
   variables:
     DOCKER_IMAGE_NAME: "udx-worker"
   secrets:
-    NEW_RELIC_API_KEY: "azure/kv-udx-worker/udx-worker-secret-one"
+    NEW_RELIC_API_KEY: "azure/kv-udx-worker/new-relic-api-key"
+    HEALTHCHECK_IO_API_KEY: "azure/kv-udx-worker/healthcheck-io-api-key"
   actors:
     - type: azure
       creds: "${AZURE_CREDS}"
