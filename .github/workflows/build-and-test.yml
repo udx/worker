@@ -24,13 +24,21 @@ jobs:
         run: make dev-pipeline
         working-directory: .
 
+      - name: Cache Trivy DB
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/trivy
+          key: ${{ runner.os }}-trivy-db
+          restore-keys: |
+            ${{ runner.os }}-trivy-db
+
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Trivy Scanning
         run: |
-          trivy image --severity HIGH,CRITICAL --exit-code 0 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
+          trivy image --severity HIGH,CRITICAL --exit-code 0 --quiet --retry 3 udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
           if grep -E "Total: [1-9]" trivy.log; then
             echo "HIGH or CRITICAL vulnerabilities detected!"
             exit 1
