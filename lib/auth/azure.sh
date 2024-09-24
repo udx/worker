@@ -4,16 +4,6 @@
 #
 # Example usage of the function
 # azure_authenticate "/path/to/your/azure_creds.json"
-#
-# Example Azure credentials JSON file:
-#
-# {
-#     "clientId": "your-client-id",
-#     "clientSecret": "your-client-secret",
-#     "subscriptionId": "your-subscription-id",
-#     "tenantId": "your-tenant-id"
-# }
-#
 
 # Function to authenticate Azure accounts
 azure_authenticate() {
