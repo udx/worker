@@ -38,6 +38,8 @@ jobs:
 
       - name: Trivy Scanning
         run: |
+          export TRIVY_DISABLE_VEX_NOTICE=true
+          
           # Disable exit on error for the retry logic
           set +e
           
