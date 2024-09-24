@@ -28,9 +28,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/trivy
-          key: ${{ runner.os }}-trivy-db
+          key: ${{ runner.os }}-trivy-db-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-trivy-db
+            ${{ runner.os }}-trivy-db-
 
       - name: Install Trivy
         run: |
