@@ -27,7 +27,7 @@ yarn.lock
 dist/
 
 # Ignore the Azure credentials file
-azure_creds.json
+*_creds.json
 
 # Ignore the .env file
 .env
