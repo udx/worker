@@ -36,10 +36,10 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-      - name: Trivy Scanning with Retry
+      - name: Trivy Scanning
         run: |
-          # Enable exit on error
-          set -e
+          # Disable exit on error for the retry logic
+          set +e
           
           # Retry logic for Trivy
           max_retries=5
@@ -48,24 +48,31 @@ jobs:
       
           while [ $attempt -le $max_retries ]; do
             echo "Running Trivy scan, attempt $attempt..."
-            trivy image --severity CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
             
+            # Run the Trivy scan and capture the exit status
+            trivy image --severity CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
+            scan_exit_code=$?
+            
+            # Check for CRITICAL vulnerabilities
             if grep -E "Total: [1-9]" trivy.log; then
               echo "CRITICAL vulnerabilities detected!"
               exit 1
-            else
+            fi
+            
+            # Check if Trivy exited with an error
+            if [ $scan_exit_code -eq 0 ]; then
               echo "No CRITICAL vulnerabilities found."
               success=true
               break
+            else
+              echo "Trivy scan failed, retrying in 2 minutes..."
+              sleep 120
+              attempt=$((attempt+1))
             fi
-      
-            # If the attempt fails, wait for 2 minutes before retrying
-            echo "Trivy scan failed, retrying in 2 minutes..."
-            sleep 120
-            attempt=$((attempt+1))
           done
       
+          # If all retries fail, exit with an error
           if [ "$success" = false ]; then
             echo "Failed to complete Trivy scan after $max_retries attempts."
             exit 1
-          fi     
+          fi  
