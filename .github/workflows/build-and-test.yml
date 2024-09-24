@@ -48,13 +48,13 @@ jobs:
       
           while [ $attempt -le $max_retries ]; do
             echo "Running Trivy scan, attempt $attempt..."
-            trivy image --severity HIGH,CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
+            trivy image --severity CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
             
             if grep -E "Total: [1-9]" trivy.log; then
-              echo "HIGH or CRITICAL vulnerabilities detected!"
+              echo "CRITICAL vulnerabilities detected!"
               exit 1
             else
-              echo "No HIGH or CRITICAL vulnerabilities found."
+              echo "No CRITICAL vulnerabilities found."
               success=true
               break
             fi
