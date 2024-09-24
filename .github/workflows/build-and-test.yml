@@ -42,7 +42,7 @@ jobs:
           set -e
           
           # Retry logic for Trivy
-          max_retries=3
+          max_retries=5
           attempt=1
           success=false
       
@@ -59,13 +59,13 @@ jobs:
               break
             fi
       
-            # If the attempt fails, wait for 30 seconds before retrying
-            echo "Trivy scan failed, retrying in 30 seconds..."
-            sleep 30
+            # If the attempt fails, wait for 2 minutes before retrying
+            echo "Trivy scan failed, retrying in 2 minutes..."
+            sleep 120
             attempt=$((attempt+1))
           done
       
           if [ "$success" = false ]; then
             echo "Failed to complete Trivy scan after $max_retries attempts."
             exit 1
-          fi
+          fi     
