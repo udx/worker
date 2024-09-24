@@ -8,21 +8,8 @@ source /usr/local/lib/secrets.sh
 source /usr/local/lib/cleanup.sh
 source /usr/local/lib/worker_config.sh
 
-# Load environment variables from .env file if it exists
-load_env_file() {
-    if [ -f .env ]; then
-        log_info "Loading environment variables from .env file."
-        # Quote the command substitution to prevent word splitting
-        export "$(grep -v '^#' .env | xargs -r)"
-    else
-        log_info "No .env file found. Proceeding with environment variables from the host."
-    fi
-}
-
 # Main function to coordinate environment setup
 configure_environment() {
-    # Load environment variables from .env file if it exists
-    load_env_file
 
     # Load and resolve the worker configuration
     local resolved_config
