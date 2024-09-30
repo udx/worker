@@ -25,7 +25,7 @@ jobs:
         working-directory: .
 
       - name: Cache Trivy DB
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
           key: ${{ runner.os }}-trivy-db-${{ github.sha }}
