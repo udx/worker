@@ -43,21 +43,20 @@ jobs:
           useConfigFile: true
           configFilePath: ci/git-version.yml
 
-      - name: Build Docker image and export cache
+      - name: Build Docker image
         uses: docker/build-push-action@v6
-        id: build-image
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
+          push: false
           load: true
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
-            usabilitydynamics/udx-worker:latest
           build-args: |
-            GIT_VERSION=${{ steps.gitversion.outputs.semVer }}
+            GIT_VERSION=${{ steps.gitversion.outputs.semVer }}        
 
       - name: Generate changelog
         id: changelog
@@ -104,7 +103,7 @@ jobs:
 
   docker-release:
     runs-on: ubuntu-latest
-    needs: [test-pipeline, github-release]
+    needs: [github-release]
     permissions:
       contents: write
     steps:
@@ -119,7 +118,7 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Push Docker image (cached)
+      - name: Build and push Docker image (release)
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -127,6 +126,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
             usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
