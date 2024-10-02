@@ -24,7 +24,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Run Development Pipeline
-        run: make dev-pipeline
+        run: make dev-pipeline MULTIPLATFORM=true
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
