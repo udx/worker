@@ -2,8 +2,8 @@ name: Release UDX Worker
 
 on:
   push:
-    # branches:
-    #   - latest
+    branches:
+      - latest
 
 jobs:
   test-pipeline:
@@ -43,7 +43,7 @@ jobs:
           useConfigFile: true
           configFilePath: ci/git-version.yml
 
-      - name: Build Docker image
+      - name: Multi-arch build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -117,7 +117,7 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push Docker image (release)
+      - name: Release the image
         uses: docker/build-push-action@v6
         with:
           context: .
