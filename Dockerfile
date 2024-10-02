@@ -35,9 +35,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install yq
-RUN curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64.tar.gz | tar xz && \
-    mv yq_linux_amd64 /usr/bin/yq && \
+# Install yq (architecture-aware)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_${ARCH}.tar.gz | tar xz && \
+    mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK
@@ -51,15 +53,16 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install AWS CLI
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+# Install AWS CLI (architecture-aware)
+RUN ARCH=$(uname -m) && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
 
-# Install Azure CLI
-RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
+# Install Azure CLI (architecture-aware)
+RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends azure-cli=2.63.0-1~noble && \
     apt-get clean && \
