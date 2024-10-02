@@ -27,7 +27,7 @@ build:
 	@echo "Building Docker image..."
 	@if [ "$(MULTIPLATFORM)" = "true" ]; then \
 		echo "Building Docker image for multiple platforms..."; \
-		docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE) --push .; \
+		docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE) .; \
 	else \
 		echo "Building Docker image for the local platform..."; \
 		docker build -t $(DOCKER_IMAGE) .; \

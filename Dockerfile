@@ -60,8 +60,12 @@ RUN ARCH=$(uname -m) && \
     ./aws/install && \
     rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
 
-# Install Azure CLI (architecture-aware)
-RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg && \
+# Install Azure CLI with manual GPG key retrieval as root
+ENV GNUPGHOME=/root/.gnupg
+RUN mkdir -p $GNUPGHOME && \
+    chmod 700 $GNUPGHOME && \
+    gpg --keyserver keyserver.ubuntu.com --recv-keys EB3E94ADBE1229CF && \
+    gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends azure-cli=2.63.0-1~noble && \
@@ -80,8 +84,10 @@ RUN groupadd -g ${GID} ${USER} && \
 # Switch to the user directory
 WORKDIR /home/${USER}
 
-# Create necessary directories and set permissions
-RUN mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs && \
+# Create necessary directories and set permissions for GPG and other files
+RUN mkdir -p /home/${USER}/.gnupg && \
+    chmod 700 /home/${USER}/.gnupg && \
+    mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs && \
     chown -R ${USER}:${USER} /home/${USER}
 
 # Copy the bin, etc, and lib directories
