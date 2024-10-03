@@ -50,12 +50,12 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=inline
+          cache-to: type=inline
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
           build-args: |
-            GIT_VERSION=${{ steps.gitversion.outputs.semVer }}        
+            GIT_VERSION=${{ steps.gitversion.outputs.semVer }}    
 
       - name: Generate changelog
         id: changelog
@@ -124,11 +124,11 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=inline
+          cache-to: type=inline
           tags: |
             usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
-            usabilitydynamics/udx-worker:latest
+            usabilitydynamics/udx-worker:latest  
 
       - name: Log out from Docker Hub
         run: docker logout
