@@ -84,7 +84,7 @@ jobs:
 
       - name: Create GitHub Tag
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git tag ${{ needs.test-pipeline.outputs.semVer }}
           git push origin ${{ needs.test-pipeline.outputs.semVer }}
@@ -98,7 +98,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   docker-release:
     runs-on: ubuntu-latest
