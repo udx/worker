@@ -2,8 +2,8 @@ name: Release UDX Worker
 
 on:
   push:
-    # branches:
-    #   - latest
+    branches:
+      - latest
 
 jobs:
   test-pipeline:
