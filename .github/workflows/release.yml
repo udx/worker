@@ -22,9 +22,16 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
-      - name: Run Development Pipeline
-        run: make dev-pipeline
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
@@ -37,6 +44,20 @@ jobs:
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
+
+      - name: Multi-arch build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=inline
+          cache-to: type=inline
+          tags: |
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+          build-args: |
+            GIT_VERSION=${{ steps.gitversion.outputs.semVer }}
 
       - name: Generate changelog
         id: changelog
@@ -65,7 +86,7 @@ jobs:
 
       - name: Create GitHub Tag
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git tag ${{ needs.test-pipeline.outputs.semVer }}
           git push origin ${{ needs.test-pipeline.outputs.semVer }}
@@ -79,7 +100,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   docker-release:
     runs-on: ubuntu-latest
@@ -94,6 +115,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -101,17 +124,18 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Release the image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
+          cache-from: type=inline
+          cache-to: type=inline
           tags: |
             usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
-          build-args: |
-            GIT_VERSION=${{ needs.test-pipeline.outputs.semVer }}
 
       - name: Log out from Docker Hub
         run: docker logout
