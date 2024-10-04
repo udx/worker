@@ -4,8 +4,6 @@ Thank you for using and contributing to our product. At [UDX](https://udx.io), w
 
 ## Reporting a Security Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
-
 If you find a security vulnerability, please [submit a vulnerability report](https://github.com/udx/worker/security/advisories/new). Provide detailed information about the vulnerability to help us understand and address the issue promptly. We kindly request that you avoid public disclosure until we've had the opportunity to analyze and resolve the reported issue.
 
 ## Responsible Disclosure
