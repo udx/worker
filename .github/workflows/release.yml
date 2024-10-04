@@ -25,13 +25,16 @@ jobs:
         with:
           driver: docker-container
 
+      - name: Prepare Docker cache directory
+        run: mkdir -p /tmp/.buildx-cache  
+
       - name: Cache Docker layers
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
           restore-keys: |
-            ${{ runner.os }}-buildx-
+            ${{ runner.os }}-buildx-  
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v2
