@@ -2,7 +2,9 @@ mode: ContinuousDeployment
 branches:
   release:
     regex: ^latest$
-    tag: ''
+    tag: ""
+    increment: Minor
   develop:
-    regex: ^((?!latest).)*$
-    tag: 'beta'
+    regex: ^(?!latest).*$
+    tag: "beta"
+    increment: Minor
