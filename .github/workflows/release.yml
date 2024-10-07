@@ -107,7 +107,7 @@ jobs:
 
   docker-release:
     runs-on: ubuntu-latest
-    needs: [test-pipeline, github-release]
+    needs: [test-pipeline]
     permissions:
       contents: write
     steps:
