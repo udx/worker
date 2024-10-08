@@ -30,6 +30,7 @@ RUN apt-get update && \
     ca-certificates=20240203 \
     lsb-release=12.0-2 \
     jq=1.7.1-3build1 \
+    zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
     vim=2:9.1.0016-1ubuntu7.3 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
