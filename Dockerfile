@@ -24,12 +24,14 @@ RUN apt-get update && \
     tzdata=2024a-3ubuntu1.1 \
     curl=8.5.0-2ubuntu10.4 \
     bash=5.2.21-2ubuntu4 \
+    apt-utils=2.7.14build2 \
     gettext=0.21-14ubuntu2 \
     gnupg=2.4.4-2ubuntu17 \
     ca-certificates=20240203 \
     lsb-release=12.0-2 \
     jq=1.7.1-3build1 \
-    unzip=6.0-28ubuntu4 && \
+    unzip=6.0-28ubuntu4 \
+    vim=2:9.1.0016-1ubuntu7.3 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
