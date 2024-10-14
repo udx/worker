@@ -32,7 +32,7 @@ RUN apt-get update && \
     jq=1.7.1-3build1 \
     zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
-    nano \
+    nano=7.2-2build1 \
     vim=2:9.1.0016-1ubuntu7.3 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
