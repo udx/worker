@@ -1,0 +1,41 @@
+# Ignore credentials and sensitive data
+azure_creds.json
+aws_creds.json
+gcp_creds.json
+bitwarden_creds.json
+
+# Ignore Git and version control related files
+.git
+.gitignore
+.gitattributes
+
+# Ignore CI/CD and GitHub-related files
+ci/*
+.github/*
+
+# Ignore documentation files
+docs/*
+README.md
+SECURITY.md
+
+# Ignore local development scripts and helper files
+Makefile
+Makefile.help
+Makefile.variables
+
+# Ignore build artifacts and temporary files
+*.log
+*.tmp
+*.swp
+*.bak
+*.old
+
+# Ignore unnecessary configuration or text files
+etc/home/logo.txt
+
+# Ignore readme files in the secrets and auth directories
+lib/auth/readme.md
+lib/secrets/readme.md
+
+# Ignore unnecessary configuration documentation
+src/configs/readme.md
