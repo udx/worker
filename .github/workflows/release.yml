@@ -49,6 +49,7 @@ jobs:
           configFilePath: ci/git-version.yml
 
       - name: Multi-arch build
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -56,11 +57,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           cache-from: type=inline
-          cache-to: type=inline
+          cache-to: type=inline,mode=max
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
-          build-args: |
-            GIT_VERSION=${{ steps.gitversion.outputs.semVer }}
 
       - name: Generate changelog
         id: changelog
@@ -127,15 +126,14 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Release the image
+      - name: Push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          cache-from: type=inline
-          cache-to: type=inline
+          cache-from: type=inline,mode=max
           tags: |
             usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
