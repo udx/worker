@@ -1,0 +1,42 @@
+name: Release Test Workflow
+
+on:
+  push:
+    branches-ignore:
+      - latest
+
+jobs:
+  test-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v3.0.0
+        with:
+          versionSpec: "6.0.0"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v3.0.0
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
+          CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
