@@ -57,5 +57,3 @@ jobs:
           echo "changelog<<EOF" >> $GITHUB_ENV
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-  
-  

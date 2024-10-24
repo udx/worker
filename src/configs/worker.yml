@@ -3,10 +3,10 @@ kind: workerConfig
 version: udx.io/worker-v1/config
 config:
   variables:
-    DOCKER_IMAGE_NAME: "udx-worker"
+    DOCKER_IMAGE_NAME: 'udx-worker'
 
   secrets:
-    NEW_RELIC_API_KEY: "gcp/udx-worker-project/new_relic_api_key"
+    NEW_RELIC_API_KEY: 'gcp/udx-worker-project/new_relic_api_key'
 
     # Supported:
     # NEW_RELIC_API_KEY: "azure/kv-udx-worker/new_relic_api_key"
@@ -17,7 +17,7 @@ config:
 
   actors:
     - type: gcp
-      creds: "${GCP_CREDS}"
+      creds: '${GCP_CREDS}'
 
     # Supported:
     # - type: azure

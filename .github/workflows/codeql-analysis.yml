@@ -5,7 +5,6 @@ on:
   push:
 
 jobs:
-
   analyze-shell:
     name: Analyze Shell Scripts
     runs-on: ubuntu-latest
@@ -56,5 +55,3 @@ jobs:
         run: |
           find . -name '*.yml' -print0 -o -name '*.yaml' -print0 | \
           xargs -0 yamllint
-  
-  

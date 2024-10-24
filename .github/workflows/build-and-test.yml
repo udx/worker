@@ -3,8 +3,7 @@ name: Build and Test Docker Image
 
 on:
   push:
-    branches-ignore:
-      - "latest"
+    branches-ignore: latest
 
 jobs:
   build:
@@ -54,8 +53,8 @@ jobs:
             echo "Running Trivy scan, attempt $attempt..."
 
             # Run the Trivy scan and capture the exit status
-            trivy image --severity CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | \
-              tee trivy.log | grep -v 'INFO'
+            trivy image --severity CRITICAL --exit-code 1 --quiet \
+              udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
             scan_exit_code=$?
 
             # Check for CRITICAL vulnerabilities
@@ -81,5 +80,3 @@ jobs:
             echo "Failed to complete Trivy scan after $max_retries attempts."
             exit 1
           fi
-  
-  

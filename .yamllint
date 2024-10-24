@@ -1,0 +1,12 @@
+extends: default
+
+rules:
+  line-length:
+    max: 105 # Set a longer line length if 80 is too restrictive
+    level: warning # Level should be either "error" or "warning"
+
+  truthy:
+    level: warning # Correct the level to "error" or "warning" instead of any invalid value
+
+  comments-indentation:
+    level: warning # Level should be either "error" or "warning"

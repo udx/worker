@@ -4,7 +4,7 @@ mode: ContinuousDeployment
 branches:
   latest:
     regex: ^latest$
-    tag: "release"
+    tag: 'release'
     increment: Minor
     source-branches:
       - __BRANCH_NAME__
