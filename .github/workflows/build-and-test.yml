@@ -1,9 +1,10 @@
+---
 name: Build and Test Docker Image
 
 on:
   push:
     branches-ignore:
-      - latest
+      - "latest"
 
 jobs:
   build:
@@ -34,33 +35,35 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
+            sudo sh -s -- -b /usr/local/bin
 
       - name: Trivy Scanning
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
-          
+
           # Disable exit on error for the retry logic
           set +e
-          
+
           # Retry logic for Trivy
           max_retries=5
           attempt=1
           success=false
-      
+
           while [ $attempt -le $max_retries ]; do
             echo "Running Trivy scan, attempt $attempt..."
-            
+
             # Run the Trivy scan and capture the exit status
-            trivy image --severity CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
+            trivy image --severity CRITICAL --exit-code 1 --quiet udx-worker/udx-worker:latest | \
+              tee trivy.log | grep -v 'INFO'
             scan_exit_code=$?
-            
+
             # Check for CRITICAL vulnerabilities
             if grep -E "Total: [1-9]" trivy.log; then
               echo "CRITICAL vulnerabilities detected!"
               exit 1
             fi
-            
+
             # Check if Trivy exited with an error
             if [ $scan_exit_code -eq 0 ]; then
               echo "No CRITICAL vulnerabilities found."
@@ -72,9 +75,11 @@ jobs:
               attempt=$((attempt+1))
             fi
           done
-      
+
           # If all retries fail, exit with an error
           if [ "$success" = false ]; then
             echo "Failed to complete Trivy scan after $max_retries attempts."
             exit 1
-          fi  
+          fi
+  
+  
