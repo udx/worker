@@ -20,17 +20,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify GitVersion Configuration
+        run: ls -al ci/git-version.yml
+
+      - name: Display Git History
+        run: git log --oneline -5
+
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.0.0
         with:
-          versionSpec: "6.0.0"
+          versionSpec: "5.10.3"  # Using an older version as a test
 
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3.0.0
+        env:
+          GITVERSION_VERBOSITY: diagnostic
         with:
           useConfigFile: true
-          configFilePath: ci/git-version.yml
+          configFilePath: ci/git-version.yml        
 
       - name: Generate changelog
         id: changelog
