@@ -56,8 +56,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          cache-from: type=inline
-          cache-to: type=inline,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
 
@@ -125,6 +125,12 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Load Docker cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
+
       - name: Push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -132,7 +138,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          cache-from: type=inline,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache
           tags: |
             usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             usabilitydynamics/udx-worker:latest

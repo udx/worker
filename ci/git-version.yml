@@ -1,9 +1,9 @@
 mode: ContinuousDeployment
 
 branches:
-  release:
+  latest:
     regex: ^latest$
-    tag: ""
+    tag: "release"
     increment: Minor
   
   develop:
@@ -12,4 +12,4 @@ branches:
     increment: Patch
 
 assembly-versioning-scheme: MajorMinorPatch
-continuous-delivery-fallback-tag: ci
+continuous-deployment-fallback-tag: beta
