@@ -4,13 +4,6 @@ mode: ContinuousDeployment
 branches:
   latest:
     regex: ^latest$
-    tag: 'release'
-    increment: Minor
-    source-branches: []
-
-  UAT-52:
-    regex: UAT-52
-    tag: 'release'
     increment: Minor
     source-branches: []
 
