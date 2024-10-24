@@ -23,10 +23,14 @@ jobs:
         id: get_branch
         run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
 
-      # Update GitVersion config in-place
+      # Update GitVersion config to emulate "latest" branch release
       - name: Update GitVersion Config In-Place
         run: |
           sed -i "s/__BRANCH_NAME__/$BRANCH_NAME/g" ci/git-version.yml
+
+      # Debug GitVersion Config - Print updated configuration
+      - name: Debug GitVersion Config
+        run: cat ci/git-version.yml
 
       # Install GitVersion
       - name: Install GitVersion
