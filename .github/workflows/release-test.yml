@@ -11,35 +11,38 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    outputs:
-      semVer: ${{ steps.gitversion.outputs.semVer }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
+      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Verify GitVersion Configuration
-        run: ls -al ci/git-version.yml
+      # Get branch name
+      - name: Get branch name
+        id: get_branch
+        run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
 
-      - name: Display Git History
-        run: git log --oneline -5
+      # Update GitVersion config in-place
+      - name: Update GitVersion Config In-Place
+        run: |
+          sed -i "s/__BRANCH_NAME__/$BRANCH_NAME/g" ci/git-version.yml
 
+      # Install GitVersion
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.0.0
         with:
-          versionSpec: "5.10.3"  # Using an older version as a test
+          versionSpec: "6.0.0"
 
+      # Determine Version using GitVersion
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3.0.0
-        env:
-          GITVERSION_VERBOSITY: diagnostic
         with:
           useConfigFile: true
-          configFilePath: ci/git-version.yml        
+          configFilePath: ci/git-version.yml
 
+      # Generate changelog
       - name: Generate changelog
         id: changelog
         run: |
