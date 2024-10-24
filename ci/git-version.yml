@@ -12,4 +12,3 @@ branches:
     increment: Patch
 
 assembly-versioning-scheme: MajorMinorPatch
-continuous-deployment-fallback-tag: beta
