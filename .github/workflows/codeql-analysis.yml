@@ -1,10 +1,10 @@
+---
 name: "CodeQL and Linter Analysis"
 
 on:
   push:
 
 jobs:
-
   analyze-shell:
     name: Analyze Shell Scripts
     runs-on: ubuntu-latest
@@ -30,11 +30,14 @@ jobs:
 
       - name: Install hadolint
         run: |
-          wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && chmod +x /usr/local/bin/hadolint
+          wget -O /usr/local/bin/hadolint \
+            https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
+            chmod +x /usr/local/bin/hadolint
 
       - name: Run hadolint
         run: |
-          find . -name 'Dockerfile' -print0 | xargs -0 /usr/local/bin/hadolint
+          find . -name 'Dockerfile' -print0 | \
+          xargs -0 /usr/local/bin/hadolint
 
   analyze-yaml:
     name: Analyze YAML Files
@@ -48,6 +51,7 @@ jobs:
         run: |
           pip install yamllint
 
-      - name: Run yamllint
+      - name: Run yamllint on all YAML files
         run: |
-          find ./src/configs -name '*.yml' -print0 | xargs -0 yamllint
+          find . -name '*.yml' -print0 -o -name '*.yaml' -print0 | \
+          xargs -0 yamllint

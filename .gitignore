@@ -1,33 +1,34 @@
-# .gitignore
-
-# Ignore macOS system files
+# macOS system files
 .DS_Store
 
-# Ignore node modules
+# Node modules
 node_modules/
 
-# Ignore log files
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Ignore the npm package lock files
+# Package lock files
 package-lock.json
 yarn.lock
 
-# Ignore IDE specific files
+# IDE specific files
 .idea/
 .vscode/
 *.iml
 
-# Ignore environment secrets
+# Environment secrets
 .udx
 
-# Ignore build output
+# Build output
 dist/
 
-# Ignore the Azure credentials file
+# Azure credentials file
 *_creds.json
 
-# Ignore the .env file
+# Environment variables file
 .env
+
+# Ignore Prettier configuration overrides for development
+.prettierignore
