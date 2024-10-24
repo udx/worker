@@ -48,6 +48,6 @@ jobs:
         run: |
           pip install yamllint
 
-      - name: Run yamllint
+      - name: Run yamllint on all YAML files
         run: |
-          find ./src/configs -name '*.yml' -print0 | xargs -0 yamllint
+          find . -name '*.yml' -print0 -o -name '*.yaml' -print0 | xargs -0 yamllint
