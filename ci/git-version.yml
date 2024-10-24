@@ -5,10 +5,7 @@ branches:
     regex: ^latest$
     tag: "release"
     increment: Minor
-  
-  develop:
-    regex: ^(?!latest).*  # All non-latest branches
-    tag: beta
-    increment: Patch
+    source-branches:
+      - __BRANCH_NAME__
 
 assembly-versioning-scheme: MajorMinorPatch
