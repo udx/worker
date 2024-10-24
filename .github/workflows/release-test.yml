@@ -19,20 +19,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Get branch name
-      - name: Get branch name
-        id: get_branch
-        run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-
-      # Update GitVersion config to emulate "latest" branch release
-      - name: Update GitVersion Config In-Place
-        run: |
-          sed -i "s/__BRANCH_NAME__/$BRANCH_NAME/g" ci/git-version.yml
-
-      # Debug GitVersion Config - Print updated configuration
-      - name: Debug GitVersion Config
-        run: cat ci/git-version.yml
-
       # Install GitVersion
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.0.0
@@ -46,14 +32,3 @@ jobs:
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
-
-      # Generate changelog
-      - name: Generate changelog
-        id: changelog
-        run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- . \
-            --pretty=format:"- %s" > changelog.txt
-          CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
-          echo "changelog<<EOF" >> $GITHUB_ENV
-          echo "$CHANGELOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV

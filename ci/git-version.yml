@@ -6,7 +6,10 @@ branches:
     regex: ^latest$
     tag: 'release'
     increment: Minor
-    source-branches:
-      - __BRANCH_NAME__
+
+  UAT-52:
+    regex: UAT-52
+    tag: 'release'
+    increment: Minor
 
 assembly-versioning-scheme: MajorMinorPatch
