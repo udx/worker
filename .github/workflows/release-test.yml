@@ -1,3 +1,4 @@
+---
 name: Release Test Workflow
 
 on:
@@ -50,8 +51,10 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
+          git log $(git describe --tags --abbrev=0)..HEAD -- . \
+            --pretty=format:"- %s" > changelog.txt
           CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
           echo "changelog<<EOF" >> $GITHUB_ENV
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+  
