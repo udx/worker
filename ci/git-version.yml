@@ -1,15 +1,10 @@
+---
 mode: ContinuousDeployment
 
 branches:
   latest:
     regex: ^latest$
-    tag: "release"
     increment: Minor
-  
-  develop:
-    regex: ^(?!latest).*  # All non-latest branches
-    tag: beta
-    increment: Patch
+    source-branches: []
 
 assembly-versioning-scheme: MajorMinorPatch
-continuous-deployment-fallback-tag: beta
