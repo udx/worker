@@ -37,6 +37,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
+      - name: Clear GitVersion Cache
+        run: rm -rf .git/gitversion_cache
+
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.0.0
         with:
