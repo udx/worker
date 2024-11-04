@@ -1,8 +1,9 @@
+---
 name: Release Test Workflow
 
 on:
-    push:
-      branches-ignore: latest
+  push:
+    branches-ignore: latest
 
 jobs:
   release-test:
@@ -18,6 +19,9 @@ jobs:
       - name: Clear GitVersion Cache
         run: rm -rf .git/gitversion_cache
 
+      - name: Fetch All Tags
+        run: git fetch --tags --force
+
       - name: Set up GitVersion
         uses: gittools/actions/gitversion/setup@v3.0.0
         with:
@@ -25,12 +29,18 @@ jobs:
 
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v3.0.0
-        with:
-          useConfigFile: true
-          configFilePath: ci/git-version.yml
+        run: |
+          $GITVERSION_PATH/dotnet-gitversion /output json /output buildserver /config ci/git-version.yml /verbosity diag
         env:
           GITVERSION_PATH: /opt/hostedtoolcache/GitVersion.Tool/5.12.0
+
+      - name: Display GitVersion Output
+        run: |
+          echo "Full GitVersion output:"
+          echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+          echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+          echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          echo "InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
 
       - name: Debug GitVersion Cache Directory
         run: ls -la .git/gitversion_cache/
