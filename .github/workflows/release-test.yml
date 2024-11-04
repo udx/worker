@@ -1,0 +1,36 @@
+name: Release Test Workflow
+
+on:
+    push:
+      branches-ignore: latest
+
+jobs:
+  release-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clear GitVersion Cache
+        run: rm -rf .git/gitversion_cache
+
+      - name: Set up GitVersion
+        uses: gittools/actions/gitversion/setup@v3.0.0
+        with:
+          versionSpec: "5.12.0"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v3.0.0
+        with:
+          useConfigFile: true
+          configFilePath: ci/git-version.yml
+        env:
+          GITVERSION_PATH: /opt/hostedtoolcache/GitVersion.Tool/5.12.0
+
+      - name: Debug GitVersion Cache Directory
+        run: ls -la .git/gitversion_cache/
