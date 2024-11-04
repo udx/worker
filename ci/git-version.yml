@@ -1,9 +1,10 @@
 ---
-mode: ContinuousDeployment
+mode: Mainline
 
 branches:
   latest:
     regex: ^latest$
+    tag: ''
     increment: Minor
     source-branches: []
 

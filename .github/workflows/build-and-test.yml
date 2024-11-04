@@ -37,7 +37,7 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
             sudo sh -s -- -b /usr/local/bin
 
-      - name: Trivy Scanning
+      - name: Trivy Vulnerability Scanning
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
 
@@ -80,3 +80,22 @@ jobs:
             echo "Failed to complete Trivy scan after $max_retries attempts."
             exit 1
           fi
+
+      - name: Trivy SBOM Generation
+        run: |
+          # Suppress verbose notices and informational messages
+          export TRIVY_DISABLE_VEX_NOTICE=true
+          trivy image --format spdx-json --output sbom.json udx-worker/udx-worker:latest 2>/dev/null
+
+          echo "SBOM Top Packages Summary:"
+          echo "| Package Name      | Version   |"
+          echo "|-------------------|-----------|"
+
+          # Use jq to extract name and versionInfo, excluding packages with null versions, and pipe to column for formatting
+          jq -r '.packages[] | select(.versionInfo != null) | "\(.name) | \(.versionInfo)"' sbom.json | sort | uniq | head -n 20 | column -t -s '|'
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
