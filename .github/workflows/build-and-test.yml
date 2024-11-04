@@ -83,11 +83,17 @@ jobs:
 
       - name: Trivy SBOM Generation
         run: |
-          trivy image --format spdx-json --output sbom.json udx-worker/udx-worker:latest
+          # Suppress verbose notices and informational messages
+          export TRIVY_DISABLE_VEX_NOTICE=true
+          trivy image --format spdx-json --output sbom.json udx-worker/udx-worker:latest 2>/dev/null
+          
           echo "SBOM Top Packages Summary:"
           echo "| Package Name      | Version   |"
           echo "|-------------------|-----------|"
-          jq -r '.packages[] | "\(.name) | \(.version)"' sbom.json | sort | uniq | head -n 20
+      
+          # Use jq to extract name and versionInfo, excluding packages with no versionInfo
+          jq -r '.packages[] | select(.versionInfo != null) | "\(.name) | \(.versionInfo)"' sbom.json | sort | uniq | head -n 20
+        
 
       - name: Upload SBOM Artifact
         uses: actions/upload-artifact@v4
