@@ -81,6 +81,12 @@ jobs:
             exit 1
           fi
 
+      # Diagnostic step to check if the Docker image exists before SBOM generation
+      - name: Verify Docker Image
+        run: |
+          echo "Listing Docker images to confirm udx-worker/udx-worker:latest exists..."
+          docker images
+
       - name: Trivy SBOM Generation
         run: |
           trivy sbom --output sbom.json udx-worker/udx-worker:latest
