@@ -81,22 +81,16 @@ jobs:
             exit 1
           fi
 
-      # Diagnostic step to check if the Docker image exists before SBOM generation
-      - name: Verify Docker Image
-        run: |
-          echo "Listing Docker images to confirm udx-worker/udx-worker:latest exists..."
-          docker images
-
       - name: Trivy SBOM Generation
         run: |
-          trivy sbom --output sbom.json udx-worker/udx-worker:latest
+          trivy image --format spdx-json --output sbom.json udx-worker/udx-worker:latest
           echo "SBOM Top Packages Summary:"
           echo "| Package Name      | Version   |"
           echo "|-------------------|-----------|"
-          jq -r '.Artifacts[] | "\(.Name) | \(.Version)"' sbom.json | sort | uniq | head -n 20
+          jq -r '.packages[] | "\(.name) | \(.version)"' sbom.json | sort | uniq | head -n 20
 
       - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
