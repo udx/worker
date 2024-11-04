@@ -83,14 +83,15 @@ jobs:
 
       - name: Trivy SBOM Generation
         run: |
-          trivy image --scanners sbom -f json -o sbom.json udx-worker/udx-worker:latest
+          trivy sbom --output sbom.json udx-worker/udx-worker:latest
           echo "SBOM Top Packages Summary:"
           echo "| Package Name      | Version   |"
           echo "|-------------------|-----------|"
-          jq -r '.Results[].Packages[] | "\(.Name) | \(.Version)"' sbom.json | sort | uniq | head -n 20
+          jq -r '.Artifacts[] | "\(.Name) | \(.Version)"' sbom.json | sort | uniq | head -n 20
 
       - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: sbom
           path: sbom.json
+  
