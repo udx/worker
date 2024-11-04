@@ -62,6 +62,19 @@ jobs:
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
 
+      - name: Generate SBOM
+        run: |
+          export TRIVY_DISABLE_VEX_NOTICE=true
+          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>/dev/null
+        # Save SBOM for later upload
+        id: generate-sbom
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+
       - name: Generate changelog
         id: changelog
         run: |
@@ -95,6 +108,11 @@ jobs:
           git tag ${{ needs.test-pipeline.outputs.semVer }}
           git push origin ${{ needs.test-pipeline.outputs.semVer }}
 
+      - name: Download SBOM Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -102,6 +120,7 @@ jobs:
           body: ${{ needs.test-pipeline.outputs.changelog }}
           draft: false
           prerelease: false
+          files: sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -144,6 +163,24 @@ jobs:
           tags: |
             usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
+
+      - name: Download SBOM Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Sign SBOM with Cosign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          cosign attest \
+            --key env://COSIGN_PRIVATE_KEY \
+            --type sbom \
+            --predicate sbom.json \
+            usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
 
       - name: Log out from Docker Hub
         run: docker logout
