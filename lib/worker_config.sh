@@ -56,15 +56,13 @@ get_worker_section() {
         return 1
     fi
 
+    # Attempt to extract the section and handle missing/null cases
     local extracted_section
-    if ! extracted_section=$(echo "$config_json" | jq -r ".${section}"); then
-        log_error "Failed to extract section '$section' from JSON."
-        return 1
-    fi
+    extracted_section=$(echo "$config_json" | jq -r ".${section} // empty")
 
+    # Return success if the section is empty or null
     if [[ -z "$extracted_section" || "$extracted_section" == "null" ]]; then
-        log_error "Section '$section' is empty or null."
-        return 1
+        return 0  # No error, section simply doesn't exist
     fi
 
     echo "$extracted_section"

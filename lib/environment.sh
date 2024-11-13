@@ -10,11 +10,9 @@ source /usr/local/lib/worker_config.sh
 
 # Main function to coordinate environment setup
 configure_environment() {
-
     # Load and resolve the worker configuration
     local resolved_config
     resolved_config=$(load_and_resolve_worker_config)
-    # Directly check the command success, not using $?
     if [ -z "$resolved_config" ]; then
         log_error "Failed to resolve worker configuration."
         return 1
@@ -29,34 +27,28 @@ configure_environment() {
     fi
     log_info "Config file found: $config_path"
 
-    # Extract actors section from the resolved configuration
+    # Extract actors section and authenticate
     local actors
     actors=$(get_worker_section "$resolved_config" "config.actors")
-    # log_debug "Extracted actors: $actors"
-    if [ -z "$actors" ]; then
-        log_error "No actors found in the configuration."
-        return 1
+    if [[ $? -eq 0 && -n "$actors" ]]; then
+        if ! authenticate_actors "$actors"; then
+            log_error "Failed to authenticate actors."
+            return 1
+        fi
+    else
+        log_info "No actors defined or required for authentication."
     fi
 
-    # Authenticate actors using the extracted actors section
-    if ! authenticate_actors "$actors"; then
-        log_error "Failed to authenticate actors."
-        return 1
-    fi
-
-    # Extract secrets section from the resolved configuration
+    # Extract secrets section and fetch secrets if available
     local secrets
     secrets=$(get_worker_section "$resolved_config" "config.secrets")
-    # log_debug "Extracted secrets: $secrets"
-    if [ -z "$secrets" ]; then
-        log_error "No secrets found in the configuration."
-        return 1
-    fi
-
-    # Fetch secrets using the resolved configuration
-    if ! fetch_secrets "$secrets"; then
-        log_error "Failed to fetch secrets."
-        return 1
+    if [[ $? -eq 0 && -n "$secrets" ]]; then
+        if ! fetch_secrets "$secrets"; then
+            log_error "Failed to fetch secrets."
+            return 1
+        fi
+    else
+        log_info "No secrets found or required in the configuration."
     fi
 
     # Clean up actors and sensitive environment variables

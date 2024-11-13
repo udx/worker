@@ -21,12 +21,19 @@ source_provider_module() {
 # Fetch secrets and set them as environment variables
 fetch_secrets() {
     local secrets_json="$1"
-    
+
     log_info "Fetching secrets and setting them as environment variables."
 
+    # Exit early if secrets_json is empty, null, or invalid JSON
     if [[ -z "$secrets_json" || "$secrets_json" == "null" ]]; then
         log_info "No worker secrets found in the configuration."
         return 0
+    fi
+
+    # Confirm secrets_json is valid JSON before processing
+    if ! echo "$secrets_json" | jq empty > /dev/null 2>&1; then
+        log_error "Invalid JSON format for secrets configuration."
+        return 1
     fi
 
     # Create a temporary file to store environment variables
@@ -40,22 +47,26 @@ fetch_secrets() {
         name=$(echo "$secret" | jq -r '.key')
         url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
 
+        # Check if the secret has a valid name and URL
+        if [[ -z "$name" || -z "$url" ]]; then
+            log_error "Secret name or URL is missing or empty."
+            continue
+        fi
+
         # Extract provider from the URL (first part before '/')
         provider=$(echo "$url" | cut -d '/' -f 1)
 
         # Handle secrets based on the provider
         case "$provider" in
             gcp)
-                # Extract secret name and pass to GCP resolver
                 key_vault_name=$(echo "$url" | cut -d '/' -f 2)
                 secret_name=$(echo "$url" | cut -d '/' -f 3)
                 if [[ -z "$secret_name" ]]; then
-                    log_error "Invalid GCP secret name: $url"
+                    log_error "Invalid GCP secret name format: $url"
                     continue
                 fi
                 ;;
             azure|bitwarden)
-                # Extract key vault and secret name
                 key_vault_name=$(echo "$url" | cut -d '/' -f 2)
                 secret_name=$(echo "$url" | cut -d '/' -f 3)
                 if [[ -z "$key_vault_name" || -z "$secret_name" ]]; then
