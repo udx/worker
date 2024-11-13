@@ -2,7 +2,7 @@ extends: default
 
 rules:
   line-length:
-    max: 105 # Set a longer line length if 80 is too restrictive
+    max: 150 # Set a longer line length if 80 is too restrictive
     level: warning # Level should be either "error" or "warning"
 
   truthy:

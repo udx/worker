@@ -15,8 +15,17 @@ authenticate_actors() {
         return 0
     fi
     
-    # Process each actor in the configuration
-    echo "$actors_json" | jq -c '.[]' | while IFS= read -r actor; do
+    # Use a temporary file to avoid a subshell
+    local actors_file
+    actors_file=$(mktemp)
+    echo "$actors_json" | jq -c '.[]' > "$actors_file"
+
+    # Read all lines into an array, then delete the file
+    mapfile -t actors_array < "$actors_file"
+    rm -f "$actors_file"
+
+    # Process each actor in the array
+    for actor in "${actors_array[@]}"; do
         local type provider creds auth_script auth_function
 
         # Extract the type and provider from the actor data
@@ -91,40 +100,6 @@ authenticate_provider() {
     trap - EXIT
 
     return 0
-}
-
-# Function to clean up actors based on the providers configured during authentication
-cleanup_actors() {
-    log_info "Starting cleanup of actors"
-    
-    # Track if any actual cleanup was performed
-    local any_cleanup=false
-
-    # Loop through each configured provider only
-    for provider in "${configured_providers[@]}"; do
-        case "$provider" in
-            azure)
-                cleanup_provider "az" "az logout" "az account show" "Azure" && any_cleanup=true
-                ;;
-            gcp)
-                cleanup_provider "gcloud" "gcloud auth revoke --all" "gcloud auth list" "GCP" && any_cleanup=true
-                ;;
-            aws)
-                cleanup_provider "aws" "aws sso logout" "aws sso list-accounts" "AWS" && any_cleanup=true
-                ;;
-            bitwarden)
-                cleanup_provider "bw" "bw logout --force" "bw status" "Bitwarden" && any_cleanup=true
-                ;;
-            *)
-                log_warn "Unsupported or unavailable actor type for cleanup: $provider"
-                ;;
-        esac
-    done
-
-    # Log a summary if no cleanup actions were needed
-    if [[ "$any_cleanup" == false ]]; then
-        log_info "No active sessions found for any configured providers."
-    fi
 }
 
 # Generic function to clean up authentication for any provider
