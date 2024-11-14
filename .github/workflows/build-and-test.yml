@@ -24,14 +24,6 @@ jobs:
         run: make dev-pipeline
         working-directory: .
 
-      - name: Cache Trivy DB
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/trivy
-          key: ${{ runner.os }}-trivy-db-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-trivy-db-
-
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
@@ -57,25 +49,25 @@ jobs:
               udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
             scan_exit_code=$?
 
-            # Check for CRITICAL vulnerabilities
+            # Check if CRITICAL vulnerabilities were detected
             if grep -E "Total: [1-9]" trivy.log; then
-              echo "CRITICAL vulnerabilities detected!"
+              echo "CRITICAL vulnerabilities detected! Exiting."
               exit 1
             fi
 
-            # Check if Trivy exited with an error
+            # Handle a successful scan (no critical vulnerabilities found)
             if [ $scan_exit_code -eq 0 ]; then
               echo "No CRITICAL vulnerabilities found."
               success=true
               break
             else
-              echo "Trivy scan failed, retrying in 2 minutes..."
+              echo "Trivy scan encountered an error, retrying in 2 minutes..."
               sleep 120
               attempt=$((attempt+1))
             fi
           done
 
-          # If all retries fail, exit with an error
+          # Exit if all retries fail without a successful scan
           if [ "$success" = false ]; then
             echo "Failed to complete Trivy scan after $max_retries attempts."
             exit 1
@@ -83,7 +75,6 @@ jobs:
 
       - name: Trivy SBOM Generation
         run: |
-          # Suppress verbose notices and informational messages
           export TRIVY_DISABLE_VEX_NOTICE=true
           trivy image --format spdx-json --output sbom.json udx-worker/udx-worker:latest 2>/dev/null
 
@@ -91,7 +82,6 @@ jobs:
           echo "| Package Name      | Version   |"
           echo "|-------------------|-----------|"
 
-          # Use jq to extract name and versionInfo, excluding packages with null versions, and pipe to column for formatting
           jq -r '.packages[] | select(.versionInfo != null) | "\(.name) | \(.versionInfo)"' sbom.json | sort | uniq | head -n 20 | column -t -s '|'
 
       - name: Upload SBOM Artifact
