@@ -66,6 +66,11 @@ jobs:
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
 
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
+            sudo sh -s -- -b /usr/local/bin
+
       - name: Generate SBOM
         id: generate-sbom
         run: |
