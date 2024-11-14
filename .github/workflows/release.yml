@@ -33,6 +33,9 @@ jobs:
         with:
           versionSpec: "5.12.0"
 
+      - name: Clear GitVersion Cache
+        run: rm -rf .git/gitversion_cache  
+
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3.0.0
