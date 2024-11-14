@@ -66,6 +66,18 @@ jobs:
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
 
+      - name: Retrieve Image Digest
+        id: digest
+        run: |
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }})
+          echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
+          echo "::set-output name=IMAGE_DIGEST::$IMAGE_DIGEST"
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
+            sudo sh -s -- -b /usr/local/bin
+
       - name: Generate SBOM
         id: generate-sbom
         run: |
@@ -85,19 +97,19 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign sign \
+          cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            "${{ steps.digest.outputs.IMAGE_DIGEST }}"
 
       - name: Sign SBOM with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign attest \
+          cosign attest -y \
             --key env://COSIGN_PRIVATE_KEY \
             --type sbom \
             --predicate sbom.json \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            "${{ steps.digest.outputs.IMAGE_DIGEST }}"
 
       - name: Log out from Docker Hub
         run: docker logout
