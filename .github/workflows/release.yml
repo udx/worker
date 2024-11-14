@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - "latest"
+    # branches:
+    #   - "latest"
 
 jobs:
   docker-release:
