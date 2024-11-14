@@ -11,9 +11,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    outputs:
-      semVer: ${{ steps.gitversion.outputs.semVer }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,13 +23,10 @@ jobs:
         with:
           driver: docker-container
 
-      - name: Clear GitVersion Cache
-        run: rm -rf .git/gitversion_cache
-
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.0.0
         with:
-          versionSpec: "5.12.0"
+          versionSpec: "5.x"
 
       - name: Clear GitVersion Cache
         run: rm -rf .git/gitversion_cache  
@@ -106,6 +101,10 @@ jobs:
 
       - name: Log out from Docker Hub
         run: docker logout
+
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
 
   github-release:
     runs-on: ubuntu-latest
