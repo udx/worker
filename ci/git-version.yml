@@ -1,20 +1,17 @@
 ---
-mode: Mainline
+mode: ContinuousDeployment
 
 branches:
   latest:
     regex: ^latest$
-    tag: ''
     increment: Minor
     source-branches: []
 
   other:
     regex: ^(?!latest).*$
-    tag: 'beta'
     increment: Patch
     source-branches: []
     tracks-release-branches: false
     is-release-branch: false
-    prevent-increment-of-merged-branch-version: false
 
 assembly-versioning-scheme: MajorMinorPatch
