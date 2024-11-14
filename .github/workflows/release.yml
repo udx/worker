@@ -74,12 +74,22 @@ jobs:
       - name: Pull Docker Image for SBOM Generation
         run: |
           docker pull usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+          docker images  # List images to verify the image is present locally
+
+      - name: Verify Image Availability
+        run: |
+          if docker image inspect usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} > /dev/null 2>&1; then
+            echo "Image is available locally for SBOM generation."
+          else
+            echo "Image is not available locally. Exiting."
+            exit 1
+          fi
 
       - name: Generate SBOM
         id: generate-sbom
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
-          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>/dev/null
+          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} || exit 1
 
       - name: Upload SBOM Artifact
         uses: actions/upload-artifact@v4
