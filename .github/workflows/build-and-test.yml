@@ -1,9 +1,16 @@
----
 name: Build and Test Docker Image
 
 on:
   push:
     branches-ignore: latest
+    paths:
+      - 'Dockerfile'
+      - 'bin/**'
+      - 'lib/**'
+      - 'src/**'
+      - 'etc/**'
+      - 'Makefile'
+      - 'Makefile.variables'
 
 jobs:
   build:
