@@ -1,5 +1,4 @@
----
-name: Release UDX Worker
+name: Release
 
 on:
   push:
@@ -7,11 +6,11 @@ on:
       - "latest"
 
 jobs:
-  test-pipeline:
+  docker-release:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
     outputs:
       semVer: ${{ steps.gitversion.outputs.semVer }}
       changelog: ${{ steps.changelog.outputs.changelog }}
@@ -25,17 +24,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
-
-      - name: Prepare Docker cache directory
-        run: mkdir -p /tmp/.buildx-cache
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Clear GitVersion Cache
         run: rm -rf .git/gitversion_cache
@@ -52,32 +40,6 @@ jobs:
           useConfigFile: true
           configFilePath: ci/git-version.yml
 
-      - name: Multi-arch build
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: false
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-          tags: |
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
-
-      - name: Generate SBOM
-        run: |
-          export TRIVY_DISABLE_VEX_NOTICE=true
-          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>/dev/null
-        # Save SBOM for later upload
-        id: generate-sbom
-
-      - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.json
-
       - name: Generate changelog
         id: changelog
         run: |
@@ -88,9 +50,63 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Multi-arch build and push to Docker Hub
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            usabilitydynamics/udx-worker:latest
+
+      - name: Generate SBOM
+        id: generate-sbom
+        run: |
+          export TRIVY_DISABLE_VEX_NOTICE=true
+          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>/dev/null
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Sign Docker image with Cosign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          cosign sign \
+            --key env://COSIGN_PRIVATE_KEY \
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+
+      - name: Sign SBOM with Cosign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          cosign attest \
+            --key env://COSIGN_PRIVATE_KEY \
+            --type sbom \
+            --predicate sbom.json \
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+
+      - name: Log out from Docker Hub
+        run: docker logout
+
   github-release:
     runs-on: ubuntu-latest
-    needs: [test-pipeline]
+    needs: docker-release
     permissions:
       contents: write
     steps:
@@ -108,8 +124,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          git tag ${{ needs.test-pipeline.outputs.semVer }}
-          git push origin ${{ needs.test-pipeline.outputs.semVer }}
+          git tag ${{ needs.docker-release.outputs.semVer }}
+          git push origin ${{ needs.docker-release.outputs.semVer }}
 
       - name: Download SBOM Artifact
         uses: actions/download-artifact@v4
@@ -119,71 +135,13 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.test-pipeline.outputs.semVer }}
-          body: ${{ needs.test-pipeline.outputs.changelog }}
+          tag_name: ${{ needs.docker-release.outputs.semVer }}
+          body: |
+            Release version ${{ needs.docker-release.outputs.semVer }}.
+            [View on Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker/tags?page=1&ordering=last_updated).
+            ${{ needs.docker-release.outputs.changelog }}
           draft: false
           prerelease: false
           files: sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-  docker-release:
-    runs-on: ubuntu-latest
-    needs: [test-pipeline]
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Load Docker cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
-
-      - name: Push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          tags: |
-            usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
-            usabilitydynamics/udx-worker:latest
-
-      - name: Download SBOM Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: sbom
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0
-
-      - name: Sign SBOM with Cosign
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-        run: |
-          cosign attest \
-            --key env://COSIGN_PRIVATE_KEY \
-            --type sbom \
-            --predicate sbom.json \
-            usabilitydynamics/udx-worker:${{ needs.test-pipeline.outputs.semVer }}
-
-      - name: Log out from Docker Hub
-        run: docker logout
