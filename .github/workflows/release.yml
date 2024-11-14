@@ -71,6 +71,10 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
             sudo sh -s -- -b /usr/local/bin
 
+      - name: Pull Docker Image for SBOM Generation
+        run: |
+          docker pull usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+
       - name: Generate SBOM
         id: generate-sbom
         run: |
