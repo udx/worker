@@ -77,24 +77,23 @@ jobs:
           docker pull usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
           docker images  # List images to verify the image is present locally
 
-      - name: Generate SBOM
+      - name: Generate SBOM with Retry Logic
         id: generate-sbom
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
 
-          # Disable exit on error for the retry logic
-          set +e
+          set +e  # Disable exit on error for the retry logic
 
           # Retry logic for Trivy SBOM generation
-          max_retries=5
+          max_retries=10
           attempt=1
           success=false
 
           while [ $attempt -le $max_retries ]; do
             echo "Generating SBOM, attempt $attempt..."
 
-            # Run Trivy SBOM generation and capture the exit status
-            trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>/dev/null
+            # Run Trivy SBOM generation and capture the output and exit status
+            output=$(trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>&1)
             sbom_exit_code=$?
 
             # Check if SBOM generation was successful
@@ -103,8 +102,18 @@ jobs:
               success=true
               break
             else
-              echo "SBOM generation encountered an error, retrying in 2 minutes..."
-              sleep 120
+              echo "SBOM generation encountered an error."
+
+              # Extract and remove decimals from retry-after value
+              retry_after=$(echo "$output" | grep -oP 'retry-after: \K[0-9]+')
+
+              # Default sleep time if retry-after is not found
+              if [ -z "$retry_after" ]; then
+                retry_after=120  # Default to 2 minutes if retry-after is missing
+              fi
+
+              echo "Retrying in ${retry_after} seconds..."
+              sleep "$retry_after"
               attempt=$((attempt+1))
             fi
           done
@@ -140,7 +149,7 @@ jobs:
             --key env://COSIGN_PRIVATE_KEY \
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}    
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
 
       - name: Log out from Docker Hub
         run: docker logout
