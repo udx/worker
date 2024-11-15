@@ -73,9 +73,17 @@ jobs:
             sudo sh -s -- -b /usr/local/bin
 
       - name: Pull Docker Image for SBOM Generation
+        id: pull-image
         run: |
           docker pull usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
           docker images  # List images to verify the image is present locally
+
+      - name: Get Image Digest
+        id: get-digest
+        run: |
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }})
+          echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_ENV
+          echo "::set-output name=image_digest::${IMAGE_DIGEST}"
 
       - name: Generate SBOM with Retry Logic
         id: generate-sbom
@@ -139,7 +147,7 @@ jobs:
         run: |
           cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            "$IMAGE_DIGEST"
 
       - name: Sign SBOM with Cosign
         env:
@@ -149,7 +157,8 @@ jobs:
             --key env://COSIGN_PRIVATE_KEY \
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            "$IMAGE_DIGEST"
+
 
       - name: Log out from Docker Hub
         run: docker logout
