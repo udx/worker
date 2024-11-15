@@ -76,20 +76,43 @@ jobs:
           docker pull usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
           docker images  # List images to verify the image is present locally
 
-      - name: Verify Image Availability
-        run: |
-          if docker image inspect usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} > /dev/null 2>&1; then
-            echo "Image is available locally for SBOM generation."
-          else
-            echo "Image is not available locally. Exiting."
-            exit 1
-          fi
-
       - name: Generate SBOM
         id: generate-sbom
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
-          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} || exit 1
+
+          # Disable exit on error for the retry logic
+          set +e
+
+          # Retry logic for Trivy SBOM generation
+          max_retries=5
+          attempt=1
+          success=false
+
+          while [ $attempt -le $max_retries ]; do
+            echo "Generating SBOM, attempt $attempt..."
+
+            # Run Trivy SBOM generation and capture the exit status
+            trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>/dev/null
+            sbom_exit_code=$?
+
+            # Check if SBOM generation was successful
+            if [ $sbom_exit_code -eq 0 ]; then
+              echo "SBOM generation successful."
+              success=true
+              break
+            else
+              echo "SBOM generation encountered an error, retrying in 2 minutes..."
+              sleep 120
+              attempt=$((attempt+1))
+            fi
+          done
+
+          # Exit if all retries fail without a successful SBOM generation
+          if [ "$success" = false ]; then
+            echo "Failed to complete SBOM generation after $max_retries attempts."
+            exit 1
+          fi
 
       - name: Upload SBOM Artifact
         uses: actions/upload-artifact@v4
