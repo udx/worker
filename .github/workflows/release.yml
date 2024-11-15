@@ -54,17 +54,18 @@ jobs:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Multi-arch build and push to Docker Hub
-        id: build-push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
-            usabilitydynamics/udx-worker:latest
+      # Temporarily comment out the build and push step to save time during testing
+      # - name: Multi-arch build and push to Docker Hub
+      #   id: build-push
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     file: ./Dockerfile
+      #     platforms: linux/amd64,linux/arm64
+      #     push: true
+      #     tags: |
+      #       usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+      #       usabilitydynamics/udx-worker:latest
 
       - name: Install Trivy
         run: |
@@ -127,9 +128,9 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign sign \
+          cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker@${{ steps.build-push.outputs.digest }}
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
 
       - name: Sign SBOM with Cosign
         env:
@@ -137,56 +138,52 @@ jobs:
         run: |
           cosign attest \
             --key env://COSIGN_PRIVATE_KEY \
-            --type sbom \
             --predicate sbom.json \
-            usabilitydynamics/udx-worker@${{ steps.build-push.outputs.digest }}
+            --type https://spdx.dev/spdx-specification-2-2-pdf \
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}    
 
       - name: Log out from Docker Hub
         run: docker logout
 
-    outputs:
-      semVer: ${{ steps.gitversion.outputs.semVer }}
-      changelog: ${{ steps.changelog.outputs.changelog }}
-      digest: ${{ steps.build-push.outputs.digest }}
+  # Temporarily comment out GitHub release job to avoid duplicate releases
+  # github-release:
+  #   runs-on: ubuntu-latest
+  #   needs: docker-release
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-  github-release:
-    runs-on: ubuntu-latest
-    needs: docker-release
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  #     - name: Configure git for pushing
+  #       run: |
+  #         git config --global user.email "worker@udx.io"
+  #         git config --global user.name "UDX Worker"
 
-      - name: Configure git for pushing
-        run: |
-          git config --global user.email "worker@udx.io"
-          git config --global user.name "UDX Worker"
+  #     - name: Create GitHub Tag
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  #       run: |
+  #         git tag ${{ needs.docker-release.outputs.semVer }}
+  #         git push origin ${{ needs.docker-release.outputs.semVer }}
 
-      - name: Create GitHub Tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          git tag ${{ needs.docker-release.outputs.semVer }}
-          git push origin ${{ needs.docker-release.outputs.semVer }}
+  #     - name: Download SBOM Artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: sbom
 
-      - name: Download SBOM Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: sbom
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.docker-release.outputs.semVer }}
-          body: |
-            Release version ${{ needs.docker-release.outputs.semVer }}.
-            [View on Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker/tags?page=1&ordering=last_updated).
-            ${{ needs.docker-release.outputs.changelog }}
-          draft: false
-          prerelease: false
-          files: sbom.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  #     - name: Create GitHub release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         tag_name: ${{ needs.docker-release.outputs.semVer }}
+  #         body: |
+  #           Release version ${{ needs.docker-release.outputs.semVer }}.
+  #           [View on Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker/tags?page=1&ordering=last_updated).
+  #           ${{ needs.docker-release.outputs.changelog }}
+  #         draft: false
+  #         prerelease: false
+  #         files: sbom.json
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
