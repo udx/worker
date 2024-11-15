@@ -153,7 +153,7 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign attest \
+          cosign attest -y \
             --key env://COSIGN_PRIVATE_KEY \
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
