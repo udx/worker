@@ -41,13 +41,13 @@ jobs:
         run: rm -rf .git/gitversion_cache
 
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3.0.0
+        uses: gittools/actions/gitversion/setup@v3.0.2
         with:
           versionSpec: "5.12.0"
 
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v3.0.0
+        uses: gittools/actions/gitversion/execute@v3.0.2
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
