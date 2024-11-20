@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Include necessary modules
-# shellcheck source=/dev/null
 source /usr/local/lib/utils.sh
 source /usr/local/lib/auth.sh
 source /usr/local/lib/secrets.sh
@@ -10,48 +9,46 @@ source /usr/local/lib/worker_config.sh
 
 # Main function to coordinate environment setup
 configure_environment() {
+    log_info "Starting environment configuration..."
+
     # Load and resolve the worker configuration
     local resolved_config
-    resolved_config=$(load_and_resolve_worker_config)
-    if [ -z "$resolved_config" ]; then
-        log_error "Failed to resolve worker configuration."
+    resolved_config=$(load_and_parse_config)
+    if [[ -z "$resolved_config" ]]; then
+        log_error "Configuration loading failed. Exiting..."
         return 1
     fi
 
-    # Verify the config file exists at the expected path
-    local config_path
-    config_path=$(get_worker_config_path)
-    if [[ ! -f "$config_path" ]]; then
-        log_error "Configuration file not found at: $config_path"
-        return 1
-    fi
-    log_info "Config file found: $config_path"
+    log_info "Worker configuration loaded successfully."
 
-    # Extract actors section and authenticate
+    # Extract and authenticate actors
     local actors
-    actors=$(get_worker_section "$resolved_config" "config.actors")
+    actors=$(get_config_section "$resolved_config" "actors")
     if [[ $? -eq 0 && -n "$actors" ]]; then
+        log_info "Authenticating actors from configuration..."
         if ! authenticate_actors "$actors"; then
             log_error "Failed to authenticate actors."
             return 1
         fi
     else
-        log_info "No actors defined or required for authentication."
+        log_info "No actors defined in the configuration."
     fi
 
-    # Extract secrets section and fetch secrets if available
+    # Extract and fetch secrets
     local secrets
-    secrets=$(get_worker_section "$resolved_config" "config.secrets")
+    secrets=$(get_config_section "$resolved_config" "secrets")
     if [[ $? -eq 0 && -n "$secrets" ]]; then
+        log_info "Fetching secrets from configuration..."
         if ! fetch_secrets "$secrets"; then
             log_error "Failed to fetch secrets."
             return 1
         fi
     else
-        log_info "No secrets found or required in the configuration."
+        log_info "No secrets defined in the configuration."
     fi
 
-    # Clean up actors and sensitive environment variables
+    # Perform cleanup
+    log_info "Cleaning up sensitive data..."
     if ! cleanup_actors; then
         log_error "Failed to clean up actors."
         return 1

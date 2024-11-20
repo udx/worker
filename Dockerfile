@@ -22,7 +22,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2024a-3ubuntu1.1 \
-    curl=8.5.0-2ubuntu10.4 \
+    curl=8.5.0-2ubuntu10.5 \
     bash=5.2.21-2ubuntu4 \
     apt-utils=2.7.14build2 \
     gettext=0.21-14ubuntu2 \
@@ -94,16 +94,18 @@ RUN mkdir -p /home/${USER}/.gnupg && \
     mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs && \
     chown -R ${USER}:${USER} /home/${USER}
 
+# Copy built-in worker.yml to the container
+COPY ./src/configs/worker.yml /usr/src/app/src/configs/worker.yml
+
 # Copy the bin, etc, and lib directories
 COPY ./etc/home /home/${USER}/etc
-COPY ./src/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./bin/test.sh /usr/local/bin/test.sh
 
-# Set executable permissions and ownership for scripts
+# Set executable permissions and ownership for scripts and configs
 RUN chmod +x /usr/local/lib/* /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    chown -R ${USER}:${USER} /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs
+    chown -R ${USER}:${USER} /usr/local/lib /usr/src/app/src/configs /home/${USER}/etc /home/${USER}/.cd/configs
 
 # Switch to non-root user
 USER ${USER}
