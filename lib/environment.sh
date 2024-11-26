@@ -1,11 +1,31 @@
 #!/bin/bash
 
-# Include necessary modules
-source /usr/local/lib/utils.sh
-source /usr/local/lib/auth.sh
-source /usr/local/lib/secrets.sh
-source /usr/local/lib/cleanup.sh
-source /usr/local/lib/worker_config.sh
+# Get the directory of this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source a file if it exists
+source_if_exists() {
+    local file_path="$1"
+    if [[ -f "$file_path" ]]; then
+        # shellcheck disable=SC1090
+        source "$file_path"
+    else
+        echo "[ERROR] Missing file: $file_path" >&2
+        exit 1
+    fi
+}
+
+# Include necessary modules from the same directory
+# shellcheck source=./utils.sh
+source_if_exists "$SCRIPT_DIR/utils.sh"
+# shellcheck source=./auth.sh
+source_if_exists "$SCRIPT_DIR/auth.sh"
+# shellcheck source=./secrets.sh
+source_if_exists "$SCRIPT_DIR/secrets.sh"
+# shellcheck source=./cleanup.sh
+source_if_exists "$SCRIPT_DIR/cleanup.sh"
+# shellcheck source=./worker_config.sh
+source_if_exists "$SCRIPT_DIR/worker_config.sh"
 
 # Main function to coordinate environment setup
 configure_environment() {

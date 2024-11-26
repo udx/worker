@@ -1,7 +1,27 @@
+#!/bin/bash
+set -o nounset
+set -o errexit
+set -o pipefail
+
 # Paths for configurations
 BUILT_IN_CONFIG="/etc/worker/worker.yml"
 USER_CONFIG="/home/udx/.cd/configs/worker.yml"
 MERGED_CONFIG="/home/udx/.cd/configs/merged_worker.yml"
+
+# Utility functions for logging
+log_info() {
+    echo "[INFO] $1"
+}
+
+log_error() {
+    echo "[ERROR] $1" >&2
+}
+
+# Ensure `yq` is available
+if ! command -v yq >/dev/null 2>&1; then
+    log_error "yq is not installed. Please ensure it is available in the PATH."
+    exit 1
+fi
 
 # Ensure configuration file exists
 ensure_config_exists() {
@@ -56,3 +76,24 @@ load_and_parse_config() {
 
     echo "$json_output"
 }
+
+# Debugging helper: Validate JSON structure
+validate_json() {
+    local json="$1"
+    if ! echo "$json" | jq empty 2>/dev/null; then
+        log_error "Invalid JSON structure detected."
+        return 1
+    fi
+}
+
+# Example usage (when run as a standalone script)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    log_info "Loading and resolving worker configuration..."
+    config_json=$(load_and_parse_config) || exit 1
+    validate_json "$config_json" || exit 1
+    log_info "Worker configuration loaded successfully."
+
+    # Extract and process additional sections if needed
+    # actors=$(echo "$config_json" | jq -r ".actors // empty")
+    # secrets=$(echo "$config_json" | jq -r ".secrets // empty")
+fi
