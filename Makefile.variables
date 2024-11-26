@@ -1,5 +1,5 @@
 # Variables
-IMAGE_NAME ?= udx-worker/udx-worker
+IMAGE_NAME ?= usabilitydynamics/udx-worker
 TAG ?= latest
 DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
 CONTAINER_NAME ?= udx-worker-container

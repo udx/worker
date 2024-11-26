@@ -89,13 +89,11 @@ RUN groupadd -g ${GID} ${USER} && \
 WORKDIR /home/${USER}
 
 # Create necessary directories and set permissions for GPG and other files
-RUN mkdir -p /home/${USER}/.gnupg && \
-    chmod 700 /home/${USER}/.gnupg && \
-    mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs && \
-    chown -R ${USER}:${USER} /home/${USER}
+RUN mkdir -p /etc/worker /home/${USER}/.cd/configs && \
+    chown -R ${USER}:${USER} /home/${USER} /etc/worker
 
 # Copy built-in worker.yml to the container
-COPY ./src/configs/worker.yml /usr/src/app/src/configs/worker.yml
+COPY ./src/configs/worker.yml /etc/worker/worker.yml
 
 # Copy the bin, etc, and lib directories
 COPY ./etc/home /home/${USER}/etc
@@ -104,8 +102,8 @@ COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./bin/test.sh /usr/local/bin/test.sh
 
 # Set executable permissions and ownership for scripts and configs
-RUN chmod +x /usr/local/lib/* /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    chown -R ${USER}:${USER} /usr/local/lib /usr/src/app/src/configs /home/${USER}/etc /home/${USER}/.cd/configs
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
+    chown -R ${USER}:${USER} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd/configs
 
 # Switch to non-root user
 USER ${USER}
