@@ -4,6 +4,7 @@ on:
   push:
     branches-ignore: latest
     paths:
+      - '.github/workflows/build-and-test.yml'
       - 'Dockerfile'
       - 'bin/**'
       - 'lib/**'
@@ -53,7 +54,7 @@ jobs:
 
             # Run the Trivy scan and capture the exit status
             trivy image --severity CRITICAL --exit-code 1 --quiet \
-              udx-worker/udx-worker:latest | tee trivy.log | grep -v 'INFO'
+              usabilitydynamics/udx-worker:latest | tee trivy.log | grep -v 'INFO'
             scan_exit_code=$?
 
             # Check if CRITICAL vulnerabilities were detected
@@ -83,7 +84,7 @@ jobs:
       - name: Trivy SBOM Generation
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
-          trivy image --format spdx-json --output sbom.json udx-worker/udx-worker:latest 2>/dev/null
+          trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:latest 2>/dev/null
 
           echo "SBOM Top Packages Summary:"
           echo "| Package Name      | Version   |"
