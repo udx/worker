@@ -85,12 +85,12 @@ RUN curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&p
 RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
 
+# Prepare directories for the user and worker configuration
+RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
+    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd
+
 # Switch to the user directory
 WORKDIR /home/${USER}
-
-# Create necessary directories and set permissions for GPG and other files
-RUN mkdir -p /etc/worker /home/${USER}/.cd/configs && \
-    chown -R ${USER}:${USER} /home/${USER} /etc/worker
 
 # Copy built-in worker.yml to the container
 COPY ./src/configs/worker.yml /etc/worker/worker.yml
@@ -101,9 +101,9 @@ COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./bin/test.sh /usr/local/bin/test.sh
 
-# Set executable permissions and ownership for scripts and configs
+# Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    chown -R ${USER}:${USER} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd/configs
+    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd
 
 # Switch to non-root user
 USER ${USER}
