@@ -10,7 +10,3 @@ rules:
 
   comments-indentation:
     level: warning # Level should be either "error" or "warning"
-
-  quotes:
-    level: warning
-    prefer: double

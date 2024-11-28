@@ -83,10 +83,7 @@ get_config_section() {
     fi
 
     # Attempt to extract the section and handle missing/null cases
-    local extracted_section
-    extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null)
-
-    if [[ $? -ne 0 ]]; then
+    if ! extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null); then
         log_error "Failed to parse section '${section}' from configuration."
         return 1
     fi
