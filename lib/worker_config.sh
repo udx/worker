@@ -69,6 +69,30 @@ load_and_parse_config() {
     echo "$json_output"
 }
 
+# Export variables from the configuration
+export_variables_from_config() {
+    local config_json="$1"
+
+    log_info "Exporting variables from configuration..."
+
+    # Extract the `variables` section
+    local variables
+    variables=$(echo "$config_json" | jq -r '.config.variables // empty')
+    if [[ -z "$variables" || "$variables" == "null" ]]; then
+        log_info "No variables found in the configuration."
+        return 0
+    fi
+
+    # Export each variable
+    echo "$variables" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | while IFS= read -r line; do
+        # Use `eval` to safely split the key=value pair
+        local key="${line%%=*}"
+        local value="${line#*=}"
+        export "$key=$value"
+        log_info "Exported: $key=$value"
+    done
+}
+
 # Function to extract a specific section from the JSON configuration
 get_config_section() {
     local config_json="$1"

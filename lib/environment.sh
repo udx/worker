@@ -41,6 +41,13 @@ configure_environment() {
 
     log_info "Worker configuration loaded successfully."
 
+    # Export variables from the configuration
+    log_info "Exporting variables from configuration to environment..."
+    if ! export_variables_from_config "$resolved_config"; then
+        log_error "Failed to export variables."
+        return 1
+    fi
+
     # Extract and authenticate actors
     local actors
     actors=$(get_config_section "$resolved_config" "actors")
