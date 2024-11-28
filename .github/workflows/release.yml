@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - "latest"
+    # branches:
+    #   - "latest"
 
 jobs:
   docker-release:
@@ -57,7 +57,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          # platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
