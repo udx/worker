@@ -87,7 +87,9 @@ RUN groupadd -g ${GID} ${USER} && \
 
 # Prepare directories for the user and worker configuration
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
-    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd
+    touch /home/${USER}/.cd/configs/merged_worker.yml && \
+    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd && \
+    chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
 
 # Switch to the user directory
 WORKDIR /home/${USER}

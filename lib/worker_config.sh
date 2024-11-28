@@ -23,8 +23,8 @@ fi
 # Ensure configuration file exists
 ensure_config_exists() {
     local config_path="$1"
-    if [[ ! -f "$config_path" ]]; then
-        log_error "Configuration file not found: $config_path"
+    if [[ ! -s "$config_path" ]]; then
+        log_error "Configuration file not found or empty: $config_path"
         return 1
     fi
 }
@@ -36,38 +36,35 @@ merge_worker_configs() {
     # Ensure built-in config exists
     ensure_config_exists "$BUILT_IN_CONFIG" || return 1
 
-    # Ensure target directory exists
-    mkdir -p "$(dirname "$MERGED_CONFIG")"
-
+    # If a user-provided configuration exists, merge it
     if [[ -f "$USER_CONFIG" ]]; then
         log_info "User configuration detected. Merging with the built-in configuration."
 
-        # Merge configurations, prioritizing user-provided values
         if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
             log_error "Failed to merge configurations. yq returned an error."
             return 1
         fi
     else
         log_info "No user configuration provided. Using built-in configuration only."
-        cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"
-    fi
 
-    log_info "Merged configuration created successfully at $MERGED_CONFIG"
+        # Copy the built-in configuration to the merged configuration
+        if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
+            log_error "Failed to copy built-in configuration to merged configuration."
+            return 1
+        fi
+    fi
 }
 
 # Load and parse the merged configuration
 load_and_parse_config() {
     merge_worker_configs || return 1
 
-    # Suppress logs when parsing YAML into JSON
+    # Parse the merged configuration into JSON
     local json_output
     if ! json_output=$(yq eval -o=json "$MERGED_CONFIG" 2>/dev/null); then
         log_error "Failed to parse merged YAML from $MERGED_CONFIG. yq returned an error."
         return 1
     fi
-
-    # Ensure output is valid JSON
-    validate_json "$json_output" || return 1
 
     echo "$json_output"
 }
@@ -89,13 +86,4 @@ get_config_section() {
     fi
 
     echo "$extracted_section"
-}
-
-# Debugging helper: Validate JSON structure
-validate_json() {
-    local json="$1"
-    if ! echo "$json" | jq empty 2>/dev/null; then
-        log_error "Invalid JSON structure detected."
-        return 1
-    fi
 }
