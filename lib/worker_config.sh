@@ -77,7 +77,7 @@ export_variables_from_config() {
 
     # Extract the `variables` section
     local variables
-    variables=$(echo "$config_json" | jq -r '.config.variables // empty')
+    variables=$(echo "$config_json" | jq -r '.config.env // empty')
     if [[ -z "$variables" || "$variables" == "null" ]]; then
         log_info "No variables found in the configuration."
         return 0
