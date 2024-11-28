@@ -83,14 +83,10 @@ export_variables_from_config() {
         return 0
     fi
 
-    # Export each variable
-    echo "$variables" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | while IFS= read -r line; do
-        # Use `eval` to safely split the key=value pair
-        local key="${line%%=*}"
-        local value="${line#*=}"
-        export "$key=$value"
-        log_info "Exported: $key=$value"
-    done
+    # Iterate over variables and export them into the main shell
+    while IFS="=" read -r key value; do
+        eval "export $key=\"$value\""
+    done < <(echo "$variables" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
 }
 
 # Function to extract a specific section from the JSON configuration
@@ -104,7 +100,10 @@ get_config_section() {
     fi
 
     # Attempt to extract the section and handle missing/null cases
-    if ! extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null); then
+    local extracted_section
+    extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null)
+
+    if [[ $? -ne 0 ]]; then
         log_error "Failed to parse section '${section}' from configuration."
         return 1
     fi
