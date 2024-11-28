@@ -38,26 +38,50 @@ jobs:
           useConfigFile: true
           configFilePath: ci/git-version.yml
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          git log $(git describe --tags --abbrev=0)..HEAD -- . --pretty=format:"- %s" > changelog.txt
-          CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
-          echo "CHANGELOG=$CHANGELOG" >> $GITHUB_ENV
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Multi-arch build and push to Docker Hub
-        id: build-push
+      - name: Build Multi-Arch Docker Image
+        id: build-image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          # platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          push: false  # Do not push yet
+          load: true   # Ensure the built image is loaded into the local Docker environment
+          tags: |
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            usabilitydynamics/udx-worker:latest
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: "usabilitydynamics"
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Extract Image Digest
+        id: extract-digest
+        run: |
+          # Extract the digest of the built image
+          IMAGE_DIGEST=$(docker inspect usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} | grep -o 'sha256:[a-f0-9]\{64\}' | head -n 1)
+          echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Sign Docker Image with Cosign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          IMAGE_DIGEST: ${{ env.IMAGE_DIGEST }}
+        run: |
+          # Correctly format the reference with @sha256 for Cosign
+          cosign sign -y \
+            --key env://COSIGN_PRIVATE_KEY \
+            usabilitydynamics/udx-worker@${IMAGE_DIGEST}
+
+      - name: Push Signed Docker Images
+        uses: docker/build-push-action@v6
+        with:
+          context: .
           platforms: linux/amd64
           push: true
           tags: |
@@ -73,46 +97,25 @@ jobs:
         id: generate-sbom
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
-
-          set +e  # Disable exit on error for the retry logic
-
-          # Retry logic for Trivy SBOM generation
+          set +e
           max_retries=10
           attempt=1
           success=false
-
           while [ $attempt -le $max_retries ]; do
             echo "Generating SBOM, attempt $attempt..."
-
-            # Run Trivy SBOM generation and capture the output and exit status
             output=$(trivy image --format spdx-json --output sbom.json usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} 2>&1)
             sbom_exit_code=$?
-
-            # Check if SBOM generation was successful
             if [ $sbom_exit_code -eq 0 ]; then
               echo "SBOM generation successful."
               success=true
               break
             else
-              echo "SBOM generation encountered an error."
-
-              # Extract and remove decimals from retry-after value
-              retry_after=$(echo "$output" | grep -oP 'retry-after: \K[0-9]+')
-
-              # Default sleep time if retry-after is not found
-              if [ -z "$retry_after" ]; then
-                retry_after=120  # Default to 2 minutes if retry-after is missing
-              fi
-
-              echo "Retrying in ${retry_after} seconds..."
-              sleep "$retry_after"
+              echo "Retrying in 120 seconds..."
+              sleep 120
               attempt=$((attempt+1))
             fi
           done
-
-          # Exit if all retries fail without a successful SBOM generation
           if [ "$success" = false ]; then
-            echo "Failed to complete SBOM generation after $max_retries attempts."
             exit 1
           fi
 
@@ -121,20 +124,6 @@ jobs:
         with:
           name: sbom
           path: sbom.json
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0
-
-      - name: Sign Docker image with Cosign
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-        run: |
-          cosign sign -y \
-            --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
-          cosign sign -y \
-            --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker:latest
 
       - name: Sign SBOM with Cosign
         env:
