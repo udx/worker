@@ -1,7 +1,4 @@
 #!/bin/bash
-set -o nounset
-set -o errexit
-set -o pipefail
 
 # Paths for configurations
 BUILT_IN_CONFIG="/etc/worker/worker.yml"
@@ -10,7 +7,7 @@ MERGED_CONFIG="/home/udx/.cd/configs/merged_worker.yml"
 
 # Utility functions for logging
 log_info() {
-    echo "[INFO] $1"
+    echo "[INFO] $1" >&2
 }
 
 log_error() {
@@ -62,19 +59,39 @@ merge_worker_configs() {
 load_and_parse_config() {
     merge_worker_configs || return 1
 
-    # Convert merged YAML to JSON
+    # Suppress logs when parsing YAML into JSON
     local json_output
     if ! json_output=$(yq eval -o=json "$MERGED_CONFIG" 2>/dev/null); then
         log_error "Failed to parse merged YAML from $MERGED_CONFIG. yq returned an error."
         return 1
     fi
 
-    if [[ -z "$json_output" ]]; then
-        log_error "Merged YAML parsed to an empty JSON output."
+    # Ensure output is valid JSON
+    validate_json "$json_output" || return 1
+
+    echo "$json_output"
+}
+
+# Function to extract a specific section from the JSON configuration
+get_config_section() {
+    local config_json="$1"
+    local section="$2"
+
+    if [[ -z "$config_json" ]]; then
+        log_error "Empty configuration JSON provided."
         return 1
     fi
 
-    echo "$json_output"
+    # Attempt to extract the section and handle missing/null cases
+    local extracted_section
+    extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null)
+
+    if [[ $? -ne 0 ]]; then
+        log_error "Failed to parse section '${section}' from configuration."
+        return 1
+    fi
+
+    echo "$extracted_section"
 }
 
 # Debugging helper: Validate JSON structure
@@ -85,15 +102,3 @@ validate_json() {
         return 1
     fi
 }
-
-# Example usage (when run as a standalone script)
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    log_info "Loading and resolving worker configuration..."
-    config_json=$(load_and_parse_config) || exit 1
-    validate_json "$config_json" || exit 1
-    log_info "Worker configuration loaded successfully."
-
-    # Extract and process additional sections if needed
-    # actors=$(echo "$config_json" | jq -r ".actors // empty")
-    # secrets=$(echo "$config_json" | jq -r ".secrets // empty")
-fi

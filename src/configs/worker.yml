@@ -2,15 +2,15 @@
 kind: workerConfig
 version: udx.io/worker-v1/config
 config:
-  variables:
-    DOCKER_IMAGE_NAME: 'udx-worker'
+  env:
+    DOCKER_IMAGE_NAME: "udx-worker"
 
   actors:
     - type: gcp
-      creds: '${GCP_CREDS}'
+      creds: "${GCP_CREDS}"
     - type: azure
-      creds: '${AZURE_CREDS}'
+      creds: "${AZURE_CREDS}"
     - type: aws
-      creds: '${AWS_CREDS}'
+      creds: "${AWS_CREDS}"
     - type: bitwarden
-      creds: '${BITWARDEN_CREDS}'
+      creds: "${BITWARDEN_CREDS}"
