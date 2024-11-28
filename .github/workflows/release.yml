@@ -132,6 +132,9 @@ jobs:
           cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+          cosign sign -y \
+            --key env://COSIGN_PRIVATE_KEY \
+            usabilitydynamics/udx-worker:latest
 
       - name: Sign SBOM with Cosign
         env:
@@ -142,6 +145,11 @@ jobs:
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+          cosign attest -y \
+            --key env://COSIGN_PRIVATE_KEY \
+            --predicate sbom.json \
+            --type https://spdx.dev/spdx-specification-2-2-pdf \
+            usabilitydynamics/udx-worker:latest
 
       - name: Log out from Docker Hub
         run: docker logout
