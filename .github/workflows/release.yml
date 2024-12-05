@@ -55,46 +55,12 @@ jobs:
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
 
-      - name: Retrieve Image Digest from Docker Hub
-        id: retrieve_digest
-        env:
-          DOCKER_USERNAME: "usabilitydynamics"
-          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+      - name: Extract Full Image Reference
         run: |
-          echo "Fetching OAuth2 token for Docker Hub using token as password"
-
-          # Request an OAuth2 access token
-          TOKEN=$(curl -s -X GET "https://auth.docker.io/token?service=registry.docker.io&scope=repository:usabilitydynamics/udx-worker:pull" \
-            -u "${DOCKER_USERNAME}:${DOCKER_TOKEN}" | jq -r .token)
-
-          if [ -z "${TOKEN}" ]; then
-            echo "Failed to retrieve OAuth2 token. Check Docker credentials."
-            exit 1
-          fi
-
-          echo "OAuth2 token retrieved successfully."
-
-          # Fetch the digest using the token
-          echo "Fetching digest for tag: ${{ steps.gitversion.outputs.semVer }}"
-          RESPONSE_HEADERS=$(curl -sI -H "Authorization: Bearer ${TOKEN}" \
-            -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-            "https://registry-1.docker.io/v2/usabilitydynamics/udx-worker/manifests/${{ steps.gitversion.outputs.semVer }}")
-
-          # Debug headers
-          echo "Response headers:"
-          echo "${RESPONSE_HEADERS}"
-
-          # Extract the Docker-Content-Digest
-          DIGEST=$(echo "${RESPONSE_HEADERS}" | grep -i "Docker-Content-Digest" | awk '{print $2}' | tr -d '\r')
-
-          if [ -z "${DIGEST}" ]; then
-            echo "Failed to retrieve digest. Check if the tag exists or if authentication is correct."
-            exit 1
-          fi
-
-          echo "IMAGE_DIGEST=usabilitydynamics/udx-worker@${DIGEST}" >> $GITHUB_ENV
-          echo "Image Digest: ${DIGEST}"
-
+          IMAGE_DIGEST=${{ steps.docker_push.outputs.digest }}
+          FULL_REFERENCE="usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}@${IMAGE_DIGEST}"
+          echo "FULL_REFERENCE=${FULL_REFERENCE}" >> $GITHUB_ENV
+          echo "Full Image Reference: ${FULL_REFERENCE}"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.7.0
@@ -102,18 +68,19 @@ jobs:
       - name: Sign Docker Image with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
         run: |
-          cosign sign -y \
+          cosign sign \
             --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_DIGEST}"
+            "${FULL_REFERENCE}"
 
       - name: Verify Cosign Signature
         env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
         run: |
           cosign verify \
-            --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_DIGEST}"
+            --key ci/pub.keys/cosign.pub \
+            "${FULL_REFERENCE}"
 
       - name: Install Trivy
         run: |
@@ -155,12 +122,13 @@ jobs:
       - name: Sign SBOM with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
         run: |
           cosign attest \
             --key env://COSIGN_PRIVATE_KEY \
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
-            "${IMAGE_DIGEST}"
+            "${FULL_REFERENCE}"
 
       - name: Log out from Docker Hub
         run: docker logout
