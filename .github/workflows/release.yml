@@ -70,7 +70,8 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
         run: |
-          cosign sign -y \
+          cosign sign \
+            --force \
             --key env://COSIGN_PRIVATE_KEY \
             "${FULL_REFERENCE}"
 
