@@ -60,7 +60,7 @@ jobs:
           # Use the digest provided by docker/build-push-action
           DIGEST=${{ steps.docker_push.outputs.digest }}
           IMAGE_REFERENCE="usabilitydynamics/udx-worker@${DIGEST}"
-          
+
           # Export the simplified reference
           echo "IMAGE_REFERENCE=${IMAGE_REFERENCE}" >> $GITHUB_ENV
           echo "Image Reference for Signing: ${IMAGE_REFERENCE}"
@@ -71,19 +71,19 @@ jobs:
       - name: Sign Docker Image with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
+          IMAGE_REFERENCE: ${{ env.IMAGE_REFERENCE }}
         run: |
           cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            "${FULL_REFERENCE}"
+            "${IMAGE_REFERENCE}"
 
       - name: Verify Cosign Signature
         env:
-          FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
+          IMAGE_REFERENCE: ${{ env.IMAGE_REFERENCE }}
         run: |
           cosign verify \
             --key ci/pub.keys/cosign.pub \
-            "${FULL_REFERENCE}"
+            "${IMAGE_REFERENCE}"
 
       - name: Install Trivy
         run: |
@@ -125,13 +125,13 @@ jobs:
       - name: Sign SBOM with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
+          IMAGE_REFERENCE: ${{ env.IMAGE_REFERENCE }}
         run: |
           cosign attest -y \
             --key env://COSIGN_PRIVATE_KEY \
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
-            "${FULL_REFERENCE}"
+            "${IMAGE_REFERENCE}"
 
       - name: Log out from Docker Hub
         run: docker logout
