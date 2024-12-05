@@ -65,15 +65,20 @@ jobs:
       - name: Sign Docker Image with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          IMAGE_DIGEST: ${{ env.IMAGE_DIGEST }}
         run: |
+          # Ensure signing targets the digest, not the tag
           cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker@${IMAGE_DIGEST}
+            "usabilitydynamics/udx-worker@${IMAGE_DIGEST}"
 
       - name: Verify Cosign Signature
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign verify \
-            usabilitydynamics/udx-worker@${IMAGE_DIGEST}
+          cosign verify -y \
+            --key env://COSIGN_PRIVATE_KEY \
+            "usabilitydynamics/udx-worker@${IMAGE_DIGEST}"
 
       - name: Install Trivy
         run: |
