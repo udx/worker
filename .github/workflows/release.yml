@@ -59,13 +59,25 @@ jobs:
         id: retrieve_digest
         env:
           DOCKER_USERNAME: "usabilitydynamics"
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_TOKEN }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
         run: |
-          echo "Fetching digest for tag: ${{ steps.gitversion.outputs.semVer }}"
+          echo "Fetching OAuth2 token for Docker Hub using token as password"
 
-          # Query the Docker Registry API
-          RESPONSE_HEADERS=$(curl -sI -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-            -u "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" \
+          # Request an OAuth2 access token
+          TOKEN=$(curl -s -X GET "https://auth.docker.io/token?service=registry.docker.io&scope=repository:usabilitydynamics/udx-worker:pull" \
+            -u "${DOCKER_USERNAME}:${DOCKER_TOKEN}" | jq -r .token)
+
+          if [ -z "${TOKEN}" ]; then
+            echo "Failed to retrieve OAuth2 token. Check Docker credentials."
+            exit 1
+          fi
+
+          echo "OAuth2 token retrieved successfully."
+
+          # Fetch the digest using the token
+          echo "Fetching digest for tag: ${{ steps.gitversion.outputs.semVer }}"
+          RESPONSE_HEADERS=$(curl -sI -H "Authorization: Bearer ${TOKEN}" \
+            -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
             "https://registry-1.docker.io/v2/usabilitydynamics/udx-worker/manifests/${{ steps.gitversion.outputs.semVer }}")
 
           # Debug headers
@@ -82,6 +94,7 @@ jobs:
 
           echo "IMAGE_DIGEST=usabilitydynamics/udx-worker@${DIGEST}" >> $GITHUB_ENV
           echo "Image Digest: ${DIGEST}"
+
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.7.0
