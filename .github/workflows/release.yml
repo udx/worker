@@ -44,20 +44,29 @@ jobs:
           username: "usabilitydynamics"
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build Docker Image
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --tag usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} \
-            --tag usabilitydynamics/udx-worker:latest \
-            --push \
-            .
+      - name: Build and Push Docker Image
+        id: docker_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
+            usabilitydynamics/udx-worker:latest
 
       - name: Retrieve Image Digest from Docker Hub
         id: retrieve_digest
+        env:
+          DOCKER_USERNAME: "usabilitydynamics"
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_TOKEN }}
         run: |
-          DIGEST=$(docker manifest inspect usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }} | jq -r '.config.digest')
+          DIGEST=$(curl -sSL -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+            -u "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" \
+            "https://registry-1.docker.io/v2/usabilitydynamics/udx-worker/manifests/${{ steps.gitversion.outputs.semVer }}" \
+            -I | grep -i "Docker-Content-Digest" | awk '{print $2}' | tr -d '\r')
           echo "IMAGE_DIGEST=usabilitydynamics/udx-worker@${DIGEST}" >> $GITHUB_ENV
+          echo "Image Digest: ${DIGEST}"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.7.0
@@ -65,20 +74,18 @@ jobs:
       - name: Sign Docker Image with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          IMAGE_DIGEST: ${{ env.IMAGE_DIGEST }}
         run: |
-          # Ensure signing targets the digest, not the tag
           cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            "usabilitydynamics/udx-worker@${IMAGE_DIGEST}"
+            "${IMAGE_DIGEST}"
 
       - name: Verify Cosign Signature
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign verify -y \
+          cosign verify \
             --key env://COSIGN_PRIVATE_KEY \
-            "usabilitydynamics/udx-worker@${IMAGE_DIGEST}"
+            "${IMAGE_DIGEST}"
 
       - name: Install Trivy
         run: |
@@ -121,16 +128,11 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
-          cosign attest -y \
+          cosign attest \
             --key env://COSIGN_PRIVATE_KEY \
             --predicate sbom.json \
             --type https://spdx.dev/spdx-specification-2-2-pdf \
-            usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
-          cosign attest -y \
-            --key env://COSIGN_PRIVATE_KEY \
-            --predicate sbom.json \
-            --type https://spdx.dev/spdx-specification-2-2-pdf \
-            usabilitydynamics/udx-worker:latest
+            "${IMAGE_DIGEST}"
 
       - name: Log out from Docker Hub
         run: docker logout
