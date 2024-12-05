@@ -44,7 +44,8 @@ jobs:
           username: "usabilitydynamics"
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Push Signed Docker Images
+      - name: Push Docker Image
+        id: docker_push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -54,18 +55,22 @@ jobs:
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
 
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0            
+      - name: Extract Docker Hub Image Digest
+        run: |
+          echo "IMAGE_DIGEST=${{ steps.docker_push.outputs.digest }}" >> $GITHUB_ENV
 
       - name: Sign Docker Image with Cosign
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          IMAGE_DIGEST: ${{ env.IMAGE_DIGEST }}
         run: |
-          # Correctly format the reference with @sha256 for Cosign
           cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
-            usabilitydynamics/udx-worker            
+            usabilitydynamics/udx-worker@${IMAGE_DIGEST}
+
+      - name: Verify Cosign Signature
+        run: |
+          cosign verify \
+            usabilitydynamics/udx-worker@${IMAGE_DIGEST}  
 
       - name: Install Trivy
         run: |
