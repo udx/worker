@@ -61,10 +61,25 @@ jobs:
           DOCKER_USERNAME: "usabilitydynamics"
           DOCKER_PASSWORD: ${{ secrets.DOCKER_TOKEN }}
         run: |
-          DIGEST=$(curl -sSL -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+          echo "Fetching digest for tag: ${{ steps.gitversion.outputs.semVer }}"
+
+          # Query the Docker Registry API
+          RESPONSE_HEADERS=$(curl -sI -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
             -u "${DOCKER_USERNAME}:${DOCKER_PASSWORD}" \
-            "https://registry-1.docker.io/v2/usabilitydynamics/udx-worker/manifests/${{ steps.gitversion.outputs.semVer }}" \
-            -I | grep -i "Docker-Content-Digest" | awk '{print $2}' | tr -d '\r')
+            "https://registry-1.docker.io/v2/usabilitydynamics/udx-worker/manifests/${{ steps.gitversion.outputs.semVer }}")
+
+          # Debug headers
+          echo "Response headers:"
+          echo "${RESPONSE_HEADERS}"
+
+          # Extract the Docker-Content-Digest
+          DIGEST=$(echo "${RESPONSE_HEADERS}" | grep -i "Docker-Content-Digest" | awk '{print $2}' | tr -d '\r')
+
+          if [ -z "${DIGEST}" ]; then
+            echo "Failed to retrieve digest. Check if the tag exists or if authentication is correct."
+            exit 1
+          fi
+
           echo "IMAGE_DIGEST=usabilitydynamics/udx-worker@${DIGEST}" >> $GITHUB_ENV
           echo "Image Digest: ${DIGEST}"
 
