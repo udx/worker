@@ -57,10 +57,13 @@ jobs:
 
       - name: Extract Full Image Reference
         run: |
-          IMAGE_DIGEST=${{ steps.docker_push.outputs.digest }}
-          FULL_REFERENCE="usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}@${IMAGE_DIGEST}"
-          echo "FULL_REFERENCE=${FULL_REFERENCE}" >> $GITHUB_ENV
-          echo "Full Image Reference: ${FULL_REFERENCE}"
+          # Use the digest provided by docker/build-push-action
+          DIGEST=${{ steps.docker_push.outputs.digest }}
+          IMAGE_REFERENCE="usabilitydynamics/udx-worker@${DIGEST}"
+          
+          # Export the simplified reference
+          echo "IMAGE_REFERENCE=${IMAGE_REFERENCE}" >> $GITHUB_ENV
+          echo "Image Reference for Signing: ${IMAGE_REFERENCE}"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.7.0
@@ -70,8 +73,7 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           FULL_REFERENCE: ${{ env.FULL_REFERENCE }}
         run: |
-          cosign sign \
-            --force \
+          cosign sign -y \
             --key env://COSIGN_PRIVATE_KEY \
             "${FULL_REFERENCE}"
 
