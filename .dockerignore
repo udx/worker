@@ -32,9 +32,6 @@ Makefile.variables
 *.bak
 *.old
 
-# Unnecessary configuration or text files
-etc/home/logo.txt
-
 # Readme files in the secrets and auth directories
 lib/auth/readme.md
 lib/secrets/readme.md

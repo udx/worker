@@ -22,7 +22,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2024a-3ubuntu1.1 \
-    curl=8.5.0-2ubuntu10.4 \
+    curl=8.5.0-2ubuntu10.5 \
     bash=5.2.21-2ubuntu4 \
     apt-utils=2.7.14build2 \
     gettext=0.21-14ubuntu2 \
@@ -33,7 +33,7 @@ RUN apt-get update && \
     zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
     nano=7.2-2build1 \
-    vim=2:9.1.0016-1ubuntu7.3 && \
+    vim=2:9.1.0016-1ubuntu7.5 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -85,25 +85,27 @@ RUN curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&p
 RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
 
+# Prepare directories for the user and worker configuration
+RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
+    touch /home/${USER}/.cd/configs/merged_worker.yml && \
+    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd && \
+    chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
+
 # Switch to the user directory
 WORKDIR /home/${USER}
 
-# Create necessary directories and set permissions for GPG and other files
-RUN mkdir -p /home/${USER}/.gnupg && \
-    chmod 700 /home/${USER}/.gnupg && \
-    mkdir -p /home/${USER}/etc /home/${USER}/.cd/configs && \
-    chown -R ${USER}:${USER} /home/${USER}
+# Copy built-in worker.yml to the container
+COPY ./src/configs/worker.yml /etc/worker/worker.yml
 
 # Copy the bin, etc, and lib directories
 COPY ./etc/home /home/${USER}/etc
-COPY ./src/configs /home/${USER}/.cd/configs
 COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY ./bin/test.sh /usr/local/bin/test.sh
 
-# Set executable permissions and ownership for scripts
-RUN chmod +x /usr/local/lib/* /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    chown -R ${USER}:${USER} /usr/local/lib /home/${USER}/etc /home/${USER}/.cd/configs
+# Set permissions during build
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
+    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd
 
 # Switch to non-root user
 USER ${USER}

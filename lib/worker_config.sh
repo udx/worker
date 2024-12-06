@@ -1,53 +1,96 @@
 #!/bin/bash
 
+# Paths for configurations
+BUILT_IN_CONFIG="/etc/worker/worker.yml"
+USER_CONFIG="/home/udx/.cd/configs/worker.yml"
+MERGED_CONFIG="/home/udx/.cd/configs/merged_worker.yml"
+
 # Utility functions for logging
 log_info() {
-    echo "[INFO] $1"
+    echo "[INFO] $1" >&2
 }
 
 log_error() {
-    echo "[ERROR] $1"
+    echo "[ERROR] $1" >&2
 }
 
-# Function to get the path to the worker.yml configuration file
-get_worker_config_path() {
-    local config_path="/home/${USER}/.cd/configs/worker.yml"
-    
-    if [[ ! -f "$config_path" ]]; then
-        log_error "Configuration file not found: $config_path"
+# Ensure `yq` is available
+if ! command -v yq >/dev/null 2>&1; then
+    log_error "yq is not installed. Please ensure it is available in the PATH."
+    exit 1
+fi
+
+# Ensure configuration file exists
+ensure_config_exists() {
+    local config_path="$1"
+    if [[ ! -s "$config_path" ]]; then
+        log_error "Configuration file not found or empty: $config_path"
         return 1
     fi
-    
-    echo "$config_path"
 }
 
-# Function to load the worker configuration from YAML and convert it to JSON
-load_and_resolve_worker_config() {
-    local config_path
-    config_path=$(get_worker_config_path)
+# Merge built-in and user-provided configurations
+merge_worker_configs() {
+    log_info "Merging worker configurations..."
 
-    # Check if the config_path retrieval was successful
-    if [[ -z "$config_path" ]]; then
-        return 1
+    # Ensure built-in config exists
+    ensure_config_exists "$BUILT_IN_CONFIG" || return 1
+
+    # If a user-provided configuration exists, merge it
+    if [[ -f "$USER_CONFIG" ]]; then
+        log_info "User configuration detected. Merging with the built-in configuration."
+
+        if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
+            log_error "Failed to merge configurations. yq returned an error."
+            return 1
+        fi
+    else
+        log_info "No user configuration provided. Using built-in configuration only."
+
+        # Copy the built-in configuration to the merged configuration
+        if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
+            log_error "Failed to copy built-in configuration to merged configuration."
+            return 1
+        fi
     fi
+}
 
-    # Convert the YAML configuration to JSON using yq
+# Load and parse the merged configuration
+load_and_parse_config() {
+    merge_worker_configs || return 1
+
+    # Parse the merged configuration into JSON
     local json_output
-    if ! json_output=$(yq eval -o=json "$config_path" 2>/dev/null); then
-        log_error "Failed to parse YAML from $config_path. yq returned an error."
-        return 1
-    fi
-
-    if [[ -z "$json_output" ]]; then
-        log_error "YAML parsed to an empty JSON output."
+    if ! json_output=$(yq eval -o=json "$MERGED_CONFIG" 2>/dev/null); then
+        log_error "Failed to parse merged YAML from $MERGED_CONFIG. yq returned an error."
         return 1
     fi
 
     echo "$json_output"
 }
 
+# Export variables from the configuration
+export_variables_from_config() {
+    local config_json="$1"
+
+    log_info "Exporting variables from configuration..."
+
+    # Extract the `variables` section
+    local variables
+    variables=$(echo "$config_json" | jq -r '.config.env // empty')
+    if [[ -z "$variables" || "$variables" == "null" ]]; then
+        log_info "No variables found in the configuration."
+        return 0
+    fi
+
+    # Iterate over variables and export them into the main shell
+    while IFS="=" read -r key value; do
+        eval "export $key=\"$value\""
+    done < <(echo "$variables" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+}
+
 # Function to extract a specific section from the JSON configuration
-get_worker_section() {
+get_config_section() {
     local config_json="$1"
     local section="$2"
 
@@ -56,22 +99,12 @@ get_worker_section() {
         return 1
     fi
 
+    # Attempt to extract the section and handle missing/null cases
     local extracted_section
-    if ! extracted_section=$(echo "$config_json" | jq -r ".${section}"); then
-        log_error "Failed to extract section '$section' from JSON."
-        return 1
-    fi
-
-    if [[ -z "$extracted_section" || "$extracted_section" == "null" ]]; then
-        log_error "Section '$section' is empty or null."
+    if ! extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null); then
+        log_error "Failed to parse section '${section}' from configuration."
         return 1
     fi
 
     echo "$extracted_section"
 }
-
-# Example usage of the above functions
-# You can comment this out if it’s just a library
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    configure_environment
-fi
