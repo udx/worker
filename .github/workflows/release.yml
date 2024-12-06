@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    # branches:
-    #   - "latest"
+    branches:
+      - "latest"
 
 jobs:
   docker-release:
@@ -11,6 +11,10 @@ jobs:
     permissions:
       id-token: write
       contents: write
+
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
 
     steps:
       - name: Checkout code
@@ -38,6 +42,18 @@ jobs:
           useConfigFile: true
           configFilePath: ci/git-version.yml
 
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          git log $(git describe --tags --abbrev=0)..HEAD -- . \
+            --pretty=format:"- %s" > changelog.txt
+          CHANGELOG=$(cat changelog.txt | jq -sRr @uri)
+          echo "changelog<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -52,20 +68,10 @@ jobs:
           platforms: linux/amd64
           push: true
           sbom: true
-          provenance: true          
+          provenance: true
           tags: |
             usabilitydynamics/udx-worker:${{ steps.gitversion.outputs.semVer }}
             usabilitydynamics/udx-worker:latest
-
-      - name: Extract Full Image Reference
-        run: |
-          # Use the digest provided by docker/build-push-action
-          DIGEST=${{ steps.docker_push.outputs.digest }}
-          IMAGE_REFERENCE="usabilitydynamics/udx-worker@${DIGEST}"
-
-          # Export the simplified reference
-          echo "IMAGE_REFERENCE=${IMAGE_REFERENCE}" >> $GITHUB_ENV
-          echo "Image Reference for Signing: ${IMAGE_REFERENCE}"
 
       - name: Install Trivy
         run: |
@@ -76,7 +82,6 @@ jobs:
         id: generate-sbom
         run: |
           export TRIVY_DISABLE_VEX_NOTICE=true
-          set +e
           max_retries=10
           attempt=1
           success=false
@@ -107,44 +112,38 @@ jobs:
       - name: Log out from Docker Hub
         run: docker logout
 
-  # github-release:
-  #   runs-on: ubuntu-latest
-  #   needs: docker-release
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
+  github-release:
+    runs-on: ubuntu-latest
+    needs: docker-release
+    permissions:
+      contents: write
 
-  #     - name: Configure git for pushing
-  #       run: |
-  #         git config --global user.email "worker@udx.io"
-  #         git config --global user.name "UDX Worker"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #     - name: Create GitHub Tag
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-  #       run: |
-  #         git tag ${{ needs.docker-release.outputs.semVer }}
-  #         git push origin ${{ needs.docker-release.outputs.semVer }}
+      - name: Configure Git for Pushing
+        run: |
+          git config --global user.email "worker@udx.io"
+          git config --global user.name "UDX Worker"
 
-  #     - name: Download SBOM Artifact
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: sbom
+      - name: Download SBOM Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
 
-  #     - name: Create GitHub release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         tag_name: ${{ needs.docker-release.outputs.semVer }}
-  #         body: |
-  #           Release version ${{ needs.docker-release.outputs.semVer }}.
-  #           [View on Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker/tags?page=1&ordering=last_updated).
-  #           ${{ needs.docker-release.outputs.changelog }}
-  #         draft: false
-  #         prerelease: false
-  #         files: sbom.json
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.docker-release.outputs.semVer }}
+          body: |
+            Release version ${{ needs.docker-release.outputs.semVer }}.
+            [View on Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker/tags?page=1&ordering=last_updated).
+            ${{ needs.docker-release.outputs.changelog }}
+          draft: false
+          prerelease: false
+          files: sbom.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
