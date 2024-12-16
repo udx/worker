@@ -1,6 +1,14 @@
-# Secrets Management Modules
+# Secrets Management
 
-This directory contains scripts for setting up and managing secrets for various cloud providers. These modules enable the UDX Worker to securely fetch and use secrets during its operations.
+## Overview
+
+Secrets management is a vital component for securely handling sensitive information required by applications and tasks within a containerized environment. The provided secrets management scripts support cloud providers like `Azure`, `AWS`, `GCP`, and `Bitwarden`. These scripts enable the worker container to securely retrieve secrets from different providers and make them available for application logic and task execution.
+
+The scripts ensure that secrets are fetched dynamically at runtime, reducing the risk of exposure and ensuring that applications always have access to the latest sensitive information. By integrating with secure storage solutions and following encryption best practices, these scripts help maintain the confidentiality and integrity of the data used by automated tasks.
+
+### Importance in DevSecOps
+
+In a DevSecOps environment, proper secrets management is crucial for maintaining the security and integrity of automated workflows. By adhering to best practices, such as using least privilege, regularly auditing access, and monitoring for leaks, organizations can significantly reduce the risk of sensitive information exposure.
 
 ## Prerequisites
 
@@ -8,39 +16,13 @@ This directory contains scripts for setting up and managing secrets for various 
 - AWS CLI: [Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 - GCP SDK: [Installation Guide](https://cloud.google.com/sdk/docs/install)
 
-## Setup
+## How to Use 
 
-### Azure Key Vault
+Please check [Secure Environment Configuration](src/configs/readme.md) for config details. 
 
-#### Configure
+## Secrets Configurations
 
-Ensure you have set up an Azure Key Vault and added your secrets. You can add secrets using the Azure CLI:
-
-```shell
-az keyvault secret set --vault-name "your-vault-name" --name "your-secret-name" --value "your-secret-value"
-```
-
-#### Use
-
-Update your worker.yml configuration file to include the Azure Key Vault secrets:
-
-```yaml
-secrets:
-  NEW_RELIC_API_KEY: "azure/kv-udx-worker/new-relic-api-key"
-  HEALTHCHECK_IO_API_KEY: "azure/kv-udx-worker/healthcheck-io-api-key"
-```
-
-### AWS IAM Role (TBD)
-
-Instructions for setting up AWS IAM Role will be provided here.
-
-### GCP Service Account (TBD)
-
-Instructions for setting up GCP Service Account will be provided here.
-
-### Bitwarden Service Account (TBD)
-
-Instructions for setting up GCP Service Account will be provided here.
+You can find details of secrets configurations for each supported service provider here - [Secrets Configurations](lib/secrets/secrets_configurations.md)
 
 ## Best Practices
 

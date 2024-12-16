@@ -90,6 +90,9 @@ You can extend UDX Worker to create custom images tailored to your applications 
 ```shell
 FROM usabilitydynamics/udx-worker:latest
 
+# Copy the worker
+COPY src/worker.yml /home/${USER}/.cd/configs/worker.yml
+
 # Add your dependencies or scripts
 COPY my-app /usr/src/app
 ```
