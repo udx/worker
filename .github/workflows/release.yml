@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - "latest"
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Dockerfile'
+      - 'bin/**'
+      - 'lib/**'
+      - 'src/**'
+      - 'etc/**'
+      - 'Makefile'
+      - LICENSE
 
 jobs:
   docker-release:
@@ -28,7 +37,7 @@ jobs:
           driver: docker-container
 
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3.0.0
+        uses: gittools/actions/gitversion/setup@v3.0.3
         with:
           versionSpec: "6.0.0"
 
@@ -37,7 +46,7 @@ jobs:
 
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v3.0.0
+        uses: gittools/actions/gitversion/execute@v3.0.3
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml

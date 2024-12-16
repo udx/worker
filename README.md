@@ -49,11 +49,11 @@ For more details on available commands
 make
 ```
 
-## Detailed Documentation
+## Detailed Modules Documentation
 
-- [Secure Environment](src/configs/readme.md)
-- [Auth Modules](lib/auth/readme.md)
-- [Configuration and Environment Management](lib/secrets/readme.md)
+- [Secure Environment Configuration](src/configs/readme.md)
+- [Authentication](lib/auth/readme.md)
+- [Secrets Management](lib/secrets/readme.md)
 
 ## Contributing
 

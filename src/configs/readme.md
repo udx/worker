@@ -1,6 +1,6 @@
 # Secure Environment Configuration
 
-This directory contains configuration files for setting up a secure UDX Worker environment.
+This directory contains configuration files for setting up a secure worker environment.
 
 The configurations are designed to ensure that the environment adheres to zero-trust principles and provides maximum security for handling secrets and running automation tasks.
 
@@ -8,56 +8,105 @@ The configurations are designed to ensure that the environment adheres to zero-t
 
 - `worker.yml`: Main configuration file for environment variables, secrets, and authentication.
 
+Your user configuration in `worker.yml` can extend or replace values from the built-in configuration. Below is an example of how you can specify your own environment variables and secrets.
+
+**Example `worker.yml`**
+
+```yaml
+---
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    AZURE_CLIENT_ID: "12345678-1234-1234-1234-1234567890ab"
+    AZURE_TENANT_ID: "abcdef12-3456-7890-abcd-ef1234567890"
+    AZURE_SUBSCRIPTION_ID: "1234abcd-5678-90ef-abcd-12345678abcd"
+    AZURE_RESOURCE_GROUP: "rg-example"
+    APIM_SERVICE_NAME: "example-apim"
+    ACR_REPO_NAME: "exampleacr"
+    STORAGE_ACCOUNT_NAME: "examplestorage"
+    KEY_VAULT_NAME: "examplekv"
+    MANAGED_IDENTITY_NAME: "exampleidentity"
+
+  secrets:
+    APP_CLIENT_SECRET: "azure/kv-example/clientSecret"
+```
+
 ## Usage
 
 To use these configuration files, ensure that the `worker.yml` file is correctly configured and placed in the appropriate directory (`/home/$USER/.cd/configs/`) within the container.
 
-### Example Configuration
+### Volume Mount
 
-**worker.yml**
+If you have a worker configuration outside of the worker image, you can mount it as a volume into the container:
 
-```yaml
-config:
-  variables:
-    DOCKER_IMAGE_NAME: "udx-worker"
-  secrets:
-    NEW_RELIC_API_KEY: "azure/kv-udx-worker/new-relic-api-key"
-    HEALTHCHECK_IO_API_KEY: "azure/kv-udx-worker/healthcheck-io-api-key"
-  actors:
-    - type: azure
-      creds: "${AZURE_CREDS}"
+```shell
+docker run -d --name udx-worker \
+  --env-file .env \
+  -v $(pwd)/my-tasks:/usr/src/app \
+  -v $(pwd)/.cd/configs/worker.yml:/home/udx/.cd/configs/worker.yml \
+  usabilitydynamics/udx-worker:latest
 ```
 
-## Local Environment Configuration
+### Github Action Integration
 
-The `.udx` file is used to store local environment variables required by the UDX Worker. This file should be placed in the root directory of your project.
+In a GitHub Actions workflow, you can mount a configuration file from outside the worker image as a volume into the container:
 
-### Purpose
+```yml
+name: Deploy with UDX Worker
 
-The `.udx` file contains sensitive environment variables that are referenced in the `worker.yml` configuration file. This allows you to keep secrets out of your configuration files and manage them securely.
+on:
+  workflow_dispatch:
 
-### Usage
+permissions:
+  contents: read
 
-1. Create a `.udx` file in the root directory of your project.
-2. Add the necessary environment variables to the `.udx` file.
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-### Example
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-**.udx**
+      - name: Deploy Using UDX Worker
+        env:
+          AZURE_CREDS: ${{ secrets.AZURE_CREDS }}
+        run: |
+          echo "Starting deployment with UDX Worker..."
+          docker run --rm \
+            -e AZURE_CREDS \
+            -v $(pwd)/src/configs/worker.yml:/home/udx/.cd/configs/worker.yml:ro \
+            -v $(pwd)/.cd/bin:/home/udx/.cd/bin:ro \
+            usabilitydynamics/udx-worker:latest \
+            sh -c "
+              echo 'Step 1: Show Deployment Variables';
+              /home/udx/.cd/bin/10_show_variables.sh;
 
-```txt
-AZURE_SUBSCRIPTION_ID="b83b62a9-286f-426c-be8a-fc71300f92d2"
-AZURE_TENANT_ID="2a8330a4-138c-4c93-977b-cee1faadb2dc"
-AZURE_APPLICATION_ID="44f11324-81a9-4573-8853-21c1f44f0ed0"
-AZURE_APPLICATION_PASSWORD="*************"
+              echo 'Step 2: Deploy Infrastructure';
+              /home/udx/.cd/bin/20_deploy_infra.sh;
+
+              echo 'Step 3: Deploy Application';
+              /home/udx/.cd/bin/30_deploy_service.sh;
+            "
 ```
 
-### How It's Working
+### Child Image Integration
 
-The `.udx` file is loaded by the UDX Worker to populate the environment variables referenced in `worker.yml`. This ensures that sensitive information is managed securely and not hard-coded in configuration files.
+To configure the child worker, you can integrate the configuration into a Docker image.
 
-### Best Practices
+If you want to include the worker configuration directly in your Docker image, you can use the `COPY` command in your Dockerfile. Assuming your configuration file is located at `src/configs/worker.yml` in your repository, you can add the following line to your Dockerfile:
 
-- **Do not hard-code secrets**: Use environment variables or a secrets management tool.
-- **Regularly rotate secrets**: Change your secrets periodically to reduce the risk of compromise.
-- **Limit access**: Ensure that only authorized personnel have access to the configuration files.
+```
+COPY src/worker.yml /home/${USER}/.cd/configs/worker.yml
+```
+
+## Configuration Loading and Merging
+
+The [lib/worker_config.sh](../../lib/worker_config.sh) script handles the loading and merging of the configurations. It combines the built-in configuration with user-provided configurations if they exist.
+
+### Process
+
+1. **Built-in Configuration**: The built-in configuration file is located at `/etc/worker/worker.yml`.
+2. **User Configuration**: If a user-provided configuration file exists at `/home/$USER/.cd/configs/worker.yml` in the container, it will be merged with the built-in configuration. User configurations can extend or replace values from the built-in configuration.
+3. **Merged Configuration**: The merged configuration is stored at `/home/$USER/.cd/configs/merged_worker.yml` and parsed by worker config module logic.
