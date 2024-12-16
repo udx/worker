@@ -40,7 +40,7 @@ make run
 ```
 
 ```shell
-make run-interactive
+make run-it
 ```
 
 For more details on available commands
@@ -54,6 +54,20 @@ make
 - [Secure Environment Configuration](src/configs/readme.md)
 - [Authentication](lib/auth/readme.md)
 - [Secrets Management](lib/secrets/readme.md)
+
+## Docker Hub
+
+Our project is available on Docker Hub. Pull the latest image with:
+
+```sh
+docker pull usabilitydynamics/udx-worker:latest
+```
+
+For more details, visit our [docker hub repository](https://hub.docker.com/r/usabilitydynamics/udx-worker).
+
+## Marketing Page
+
+For more details about our product, visit our [marketing page](https://udx.io/products/udx-worker).
 
 ## Contributing
 
