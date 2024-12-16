@@ -19,7 +19,7 @@ Ensuring proper authentication helps maintain the integrity and security of auto
 
 ## How to Use 
 
-Please check [Secure Environment Configuration](src/configs/readme.md) for config details. 
+Please check [Secure Environment Configuration](../../src/configs/readme.md) for config details. 
 
 ## Best Practices
 

@@ -12,17 +12,18 @@ In a DevSecOps environment, proper secrets management is crucial for maintaining
 
 ## Prerequisites
 
-- Azure CLI: [Installation Guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
-- AWS CLI: [Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
-- GCP SDK: [Installation Guide](https://cloud.google.com/sdk/docs/install)
+- **Azure CLI**: [Installation Guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+- **AWS CLI**: [Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+- **GCP SDK**: [Installation Guide](https://cloud.google.com/sdk/docs/install)
+- **Bitwarden CLI**: [Installation Guide](https://bitwarden.com/help/cli/)
 
 ## How to Use 
 
-Please check [Secure Environment Configuration](src/configs/readme.md) for config details. 
+Please check [Secure Environment Configuration](../../src/configs/readme.md) for config details. 
 
 ## Secrets Configurations
 
-You can find details of secrets configurations for each supported service provider here - [Secrets Configurations](lib/secrets/secrets_configurations.md)
+You can find details of secrets configurations for each supported service provider here - [Secrets Configurations](secrets_configurations.md)
 
 ## Best Practices
 
