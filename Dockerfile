@@ -46,16 +46,6 @@ RUN ARCH=$(uname -m) && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
-# Installation of Python 3.11 from Deadsnakes PPA
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends software-properties-common=0.99.49.1 && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends python3.11=3.11.11-1+noble1 python3.11-venv=3.11.11-1+noble1 python3.11-dev=3.11.11-1+noble1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*; 
-
 # Install Google Cloud SDK
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
