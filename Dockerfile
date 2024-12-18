@@ -55,7 +55,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get update && \
-    apt-get install -y --no-install-recommends google-cloud-cli=504.0.0 && \
+    apt-get install -y --no-install-recommends google-cloud-sdk && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
