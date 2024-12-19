@@ -33,7 +33,9 @@ RUN apt-get update && \
     zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
     nano=7.2-2build1 \
-    vim=2:9.1.0016-1ubuntu7.5 && \
+    vim=2:9.1.0016-1ubuntu7.5 \
+    python3.12=3.12.3-1ubuntu0.3 \
+    python3-pip=24.0+dfsg-1ubuntu1.1 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -56,6 +58,9 @@ RUN ARCH=$(uname -m) && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
     rm -rf google-cloud-sdk.tar.gz /tmp/* /var/tmp/*
+
+# Add Google Cloud SDK to PATH
+ENV PATH=$PATH:/google-cloud-sdk/bin
 
 # Install AWS CLI (architecture-aware)
 RUN ARCH=$(uname -m) && \
@@ -88,7 +93,8 @@ RUN groupadd -g ${GID} ${USER} && \
 # Prepare directories for the user and worker configuration
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
     touch /home/${USER}/.cd/configs/merged_worker.yml && \
-    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd && \
+    mkdir -p /home/${USER}/.config/gcloud && \
+    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd /home/${USER}/.config && \
     chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
 
 # Switch to the user directory
