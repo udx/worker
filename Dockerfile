@@ -46,18 +46,16 @@ RUN ARCH=$(uname -m) && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
-# Install Google Cloud SDK
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    apt-transport-https=2.7.14build2 && \
-    curl -sSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | tee /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends google-cloud-sdk && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Install Google Cloud SDK (architecture-aware)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    fi && \
+    tar -xzf google-cloud-sdk.tar.gz && \
+    ./google-cloud-sdk/install.sh -q && \
+    rm -rf google-cloud-sdk.tar.gz /tmp/* /var/tmp/*
 
 # Install AWS CLI (architecture-aware)
 RUN ARCH=$(uname -m) && \
