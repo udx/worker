@@ -77,7 +77,7 @@ RUN mkdir -p $GNUPGHOME && \
     gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.63.0-1~noble && \
+    apt-get install -y --no-install-recommends azure-cli=2.67.0-1~noble && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -94,7 +94,8 @@ RUN groupadd -g ${GID} ${USER} && \
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
     touch /home/${USER}/.cd/configs/merged_worker.yml && \
     mkdir -p /home/${USER}/.config/gcloud && \
-    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd /home/${USER}/.config && \
+    mkdir -p /home/${USER}/.azure && \
+    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd /home/${USER}/.config /home/${USER}/.azure && \
     chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
 
 # Switch to the user directory
