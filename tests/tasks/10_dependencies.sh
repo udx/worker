@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting validation tests..."
+echo "Starting validation of dependencies..."
 
 # Function to test if a command is available and show its version
 check_command() {
@@ -17,10 +17,12 @@ check_command() {
     fi
 }
 
-# Verify gcloud, aws, az, and bw commands are available
+# Verify gcloud, aws, az, bw, yq, and jq commands are available
 check_command gcloud
 check_command aws
 check_command az
 check_command bw
+check_command yq
+check_command jq
 
-echo "All validation tests passed successfully."
+echo "Dependencies tests passed successfully."
