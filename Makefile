@@ -59,11 +59,19 @@ log:
 # Delete the running container
 clean:
 	@echo "Deleting Docker container if exists..."
-	@docker rm -f $(CONTAINER_NAME) || true
+	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
 
 # Run the validation tests
-test: build run clean
+test: clean stringify-creds
+	@echo "Setting WORKER_CONFIG to tests/configs/worker.yml..."
+	@WORKER_CONFIG=tests/configs/worker.yml
+	@echo "Running Docker container to execute tests..."
+	@docker run --rm --name $(CONTAINER_NAME) \
+		-v $(WORKER_CONFIG):/home/udx/.cd/configs/worker.yml:ro \
+		$(foreach file,$(wildcard *.json),-e $(shell echo $(file) | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]')="$$(cat $(file) | jq -c .)") \
+		$(DOCKER_IMAGE) /usr/local/tests/main.sh
 	@echo "Validation tests completed."
+	@$(MAKE) clean
 
 # Development pipeline
 dev-pipeline: build test
