@@ -50,8 +50,7 @@ test_authenticate_actors() {
         creds=$(_jq '.creds')
 
         echo "Checking actor: $actor_type"
-        check_actor_authorization "$actor_type" "$creds"
-        if [[ $? -ne 0 ]]; then
+        if ! check_actor_authorization "$actor_type" "$creds"; then
             echo "Test failed: Authorization failed for actor $actor_type"
             return 1
         fi
