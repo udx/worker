@@ -1,0 +1,17 @@
+---
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    AZURE_CLIENT_ID: "12345678-1234-1234-1234-1234567890ab"
+    AZURE_TENANT_ID: "abcdef12-3456-7890-abcd-ef1234567890"
+    AZURE_SUBSCRIPTION_ID: "1234abcd-5678-90ef-abcd-12345678abcd"
+    AZURE_RESOURCE_GROUP: "rg-example"
+    APIM_SERVICE_NAME: "example-apim"
+    ACR_REPO_NAME: "exampleacr"
+    STORAGE_ACCOUNT_NAME: "examplestorage"
+    KEY_VAULT_NAME: "examplekv"
+    MANAGED_IDENTITY_NAME: "exampleidentity"
+
+  secrets:
+    APP_CLIENT_SECRET: "azure/kv-example/clientSecret"
