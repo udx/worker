@@ -115,11 +115,13 @@ COPY ./src/configs/worker.yml /etc/worker/worker.yml
 COPY ./etc/home /home/${USER}/etc
 COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY ./bin/test.sh /usr/local/bin/test.sh
+
+# Copy the tests directory
+COPY ./tests /usr/local/tests
 
 # Set permissions during build
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
+    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd /usr/local/tests
 
 # Switch to non-root user
 USER ${USER}
@@ -127,5 +129,5 @@ USER ${USER}
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Set the default command to execute bin/test.sh
-CMD ["/usr/local/bin/test.sh"]
+# Set the default command
+CMD ["sh"]
