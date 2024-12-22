@@ -17,9 +17,16 @@ test_configure_environment() {
 
     # Verify environment variables
     for key in $(echo "$env_vars" | yq eval 'keys' -); do
+        # Check if key is empty or not set
+        if [[ -z "$key" || "$key" == "null" || "$key" == "-" ]]; then
+            continue
+        fi
+
         value=$(echo "$env_vars" | yq eval ".${key}" -)
-        if [[ "${!key}" != "$value" ]]; then
-            echo "Test failed: $key is not set correctly. Expected: $value, Got: ${!key}"
+        actual_value="${!key}"
+
+        if [[ "$actual_value" != "$value" ]]; then
+            echo "Test failed: $key is not set correctly. Expected: $value, Got: $actual_value"
             return 1
         fi
     done
@@ -28,6 +35,9 @@ test_configure_environment() {
 }
 
 # Run the test
-test_configure_environment
-
-echo "Config tests passed successfully."
+if test_configure_environment; then
+    echo "Config tests passed successfully."
+else
+    echo "Config tests failed."
+    exit 1
+fi

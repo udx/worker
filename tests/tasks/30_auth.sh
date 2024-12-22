@@ -10,8 +10,10 @@ check_actor_authorization() {
     local actor_type="$1"
     local creds="$2"
     
-    # Dummy check for authorization (you can replace this with actual authorization logic)
-    # For example, you could call a script or command to verify that the credentials are valid
+    # Resolve the credentials environment variable
+    creds=$(eval echo "$creds")
+
+    # Check if the credentials are provided
     if [[ "$creds" == "null" || -z "$creds" ]]; then
         echo "Skipping authorization for $actor_type: No credentials provided."
         return 0
@@ -36,12 +38,12 @@ test_authenticate_actors() {
     merged_config=$(cat "$MERGED_CONFIG")
 
     # Extract actors from the merged configuration
-    actors=$(echo "$merged_config" | yq eval '.config.actors' -)
+    actors=$(echo "$merged_config" | yq eval -o=json '.config.actors' - | jq -c '.[]')
 
     # Verify actors and their credentials
-    for actor in $(echo "$actors" | yq eval '.[] | @base64' -); do
+    for actor in $actors; do
         _jq() {
-            echo "${actor}" | base64 --decode | jq -r "${1}"
+            echo "$actor" | jq -r "${1}"
         }
 
         actor_type=$(_jq '.type')
@@ -59,6 +61,9 @@ test_authenticate_actors() {
 }
 
 # Run the test
-test_authenticate_actors
-
-echo "Authorization tests passed successfully."
+if test_authenticate_actors; then
+    echo "Authorization tests passed successfully."
+else
+    echo "Authorization tests failed."
+    exit 1
+fi

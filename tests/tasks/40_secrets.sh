@@ -15,6 +15,12 @@ test_verify_secrets() {
     # Extract secrets from the merged configuration
     secrets=$(echo "$merged_config" | yq eval '.config.secrets' -)
 
+    # Check if secrets is empty or null
+    if [[ -z "$secrets" || "$secrets" == "null" ]]; then
+        echo "Info: No secrets found in the configuration."
+        return 0
+    fi
+
     # Verify secrets as environment variables
     for secret_key in $(echo "$secrets" | yq eval 'keys' -); do
         expected_value=$(echo "$secrets" | yq eval ".${secret_key}" -)
@@ -30,6 +36,9 @@ test_verify_secrets() {
 }
 
 # Run the test
-test_verify_secrets
-
-echo "Secrets fetching tests passed successfully."
+if test_verify_secrets; then
+    echo "Secrets fetching tests passed successfully."
+else
+    echo "Secrets fetching tests failed."
+    exit 1
+fi
