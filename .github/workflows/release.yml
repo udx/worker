@@ -1,3 +1,4 @@
+---
 name: Release
 
 on:
@@ -11,12 +12,13 @@ on:
       - 'lib/**'
       - 'src/**'
       - 'etc/**'
+      - 'tests/**'
       - 'Makefile'
       - LICENSE
 
 jobs:
   docker-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: write
@@ -122,7 +124,7 @@ jobs:
         run: docker logout
 
   github-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: docker-release
     permissions:
       contents: write

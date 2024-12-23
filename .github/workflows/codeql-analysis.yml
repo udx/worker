@@ -7,7 +7,7 @@ on:
 jobs:
   analyze-shell:
     name: Analyze Shell Scripts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -22,7 +22,7 @@ jobs:
 
   analyze-dockerfile:
     name: Analyze Dockerfiles
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -41,7 +41,7 @@ jobs:
 
   analyze-yaml:
     name: Analyze YAML Files
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository

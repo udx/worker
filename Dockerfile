@@ -33,7 +33,9 @@ RUN apt-get update && \
     zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
     nano=7.2-2build1 \
-    vim=2:9.1.0016-1ubuntu7.5 && \
+    vim=2:9.1.0016-1ubuntu7.5 \
+    python3.12=3.12.3-1ubuntu0.3 \
+    python3-pip=24.0+dfsg-1ubuntu1.1 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
@@ -46,16 +48,19 @@ RUN ARCH=$(uname -m) && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
-# Install Google Cloud SDK
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    apt-transport-https=2.7.14build2 && \
-    curl -sSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | tee /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends google-cloud-sdk=467.0.0-0 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Install Google Cloud SDK (architecture-aware)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    fi && \
+    tar -xzf google-cloud-sdk.tar.gz && \
+    ./google-cloud-sdk/install.sh -q && \
+    rm -rf google-cloud-sdk.tar.gz /tmp/* /var/tmp/*
+
+# Add Google Cloud SDK to PATH
+ENV PATH=$PATH:/google-cloud-sdk/bin
 
 # Install AWS CLI (architecture-aware)
 RUN ARCH=$(uname -m) && \
@@ -72,12 +77,19 @@ RUN mkdir -p $GNUPGHOME && \
     gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.63.0-1~noble && \
+    apt-get install -y --no-install-recommends azure-cli=2.67.0-1~noble && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install Bitwarden CLI
-RUN curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/?app=cli&platform=linux" && \
+# Install Bitwarden CLI (architecture-aware)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
     chmod +x /usr/local/bin/bw && \
     rm -rf /tmp/* /var/tmp/*
 
@@ -88,7 +100,9 @@ RUN groupadd -g ${GID} ${USER} && \
 # Prepare directories for the user and worker configuration
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
     touch /home/${USER}/.cd/configs/merged_worker.yml && \
-    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd && \
+    mkdir -p /home/${USER}/.config/gcloud && \
+    mkdir -p /home/${USER}/.azure && \
+    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd /home/${USER}/.config /home/${USER}/.azure && \
     chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
 
 # Switch to the user directory
@@ -101,11 +115,14 @@ COPY ./src/configs/worker.yml /etc/worker/worker.yml
 COPY ./etc/home /home/${USER}/etc
 COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY ./bin/test.sh /usr/local/bin/test.sh
+
+# Copy the tests directory
+COPY ./tests/main.sh /usr/local/tests/main.sh
+COPY ./tests/tasks /usr/local/tests/tasks
 
 # Set permissions during build
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/test.sh && \
-    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
+    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd /usr/local/tests
 
 # Switch to non-root user
 USER ${USER}
@@ -113,5 +130,5 @@ USER ${USER}
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Set the default command to execute bin/test.sh
-CMD ["/usr/local/bin/test.sh"]
+# Set the default command
+CMD ["sh"]

@@ -1,22 +1,18 @@
 # Help content for Makefile targets
 
 HELP_BUILD = "Build the Docker image:"
-HELP_RUN = "Run the Docker container:"
+HELP_RUN = "Run the Docker container (supports credential JSON files and environment variables):"
 HELP_RUN_IT = "Run the Docker container interactively:"
 HELP_EXEC = "Exec into the running container:"
 HELP_LOG = "View the container logs:"
 HELP_CLEAN = "Delete the running container:"
 HELP_TEST = "Run the validation tests:"
 HELP_DEV_PIPELINE = "Run the development pipeline:"
-HELP_STRINGIFY_CREDS = "Stringify JSON credential files and set them as environment variables:"
 
 # Help target
 help:
 	@echo ""
 	@echo "Usage:"
-	@echo ""
-	@echo "$(HELP_STRINGIFY_CREDS)"
-	@echo "make stringify-creds"
 	@echo ""
 	@echo "$(HELP_BUILD)"
 	@echo "make build"
@@ -46,7 +42,10 @@ help:
 	@echo "  IMAGE_NAME (default: $(IMAGE_NAME))"
 	@echo "  TAG (default: $(TAG))"
 	@echo "  CONTAINER_NAME (default: $(CONTAINER_NAME))"
-	@echo "  ENV_FILE (default: .udx)"
-	@echo "  DOCKER_IMAGE (default: $(DOCKER_IMAGE))"
-	@echo "  WORKER_CONFIG (default: $(WORKER_CONFIG))"
+	@echo "  TEST_WORKER_CONFIG (default: $(TEST_WORKER_CONFIG))"
+	@echo "  VOLUMES (default: $(VOLUMES))"
 	@echo "  DEBUG (default: $(DEBUG))"
+	@echo "  COMMAND (default: $(COMMAND))"
+	@echo "  MULTIPLATFORM (default: $(MULTIPLATFORM))"
+	@echo "  DOCKER_IMAGE (default: $(DOCKER_IMAGE))"
+	@echo "  FOLLOW_LOGS (default: $(FOLLOW_LOGS))"
