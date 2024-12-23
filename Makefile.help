@@ -1,7 +1,7 @@
 # Help content for Makefile targets
 
 HELP_BUILD = "Build the Docker image:"
-HELP_RUN = "Run the Docker container:"
+HELP_RUN = "Run the Docker container (supports credential JSON files and environment variables):"
 HELP_RUN_IT = "Run the Docker container interactively:"
 HELP_EXEC = "Exec into the running container:"
 HELP_LOG = "View the container logs:"

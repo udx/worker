@@ -5,22 +5,7 @@ include Makefile.help
 # Default target
 .DEFAULT_GOAL := help
 
-.PHONY: run run-it clean build stringify-creds exec log test dev-pipeline
-
-# Automatically detect JSON credentials file, stringify its content, and set it as an environment variable
-stringify-creds:
-	@echo "#!/bin/sh" > creds_env.sh
-	@for file in *.json; do \
-		if [ -f "$$file" ]; then \
-			CREDS_VAR_NAME=$$(echo "$$file" | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]'); \
-			CREDS_VAR_VALUE=$$(cat "$$file" | jq -c .); \
-			echo "export $$CREDS_VAR_NAME='$$CREDS_VAR_VALUE'" >> creds_env.sh; \
-			echo "Setting $$CREDS_VAR_NAME environment variable..."; \
-		else \
-			echo "No JSON credential files found. Skipping..."; \
-		fi; \
-	done
-	@chmod +x creds_env.sh
+.PHONY: run run-it clean build exec log test dev-pipeline
 
 # Build the Docker image
 MULTIPLATFORM ?= false
@@ -37,10 +22,17 @@ build:
 	@echo "Docker image build completed."
 
 # Run Docker container (supports interactive mode)
-run: clean stringify-creds
+run: clean
 	@echo "Running Docker container..."
-	@. ./creds_env.sh && docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
-		$(foreach var,$(shell . ./creds_env.sh && env | grep -E '^[A-Z_]+_CREDS=' | cut -d= -f1),-e $(var)=$$$(var)) \
+	@docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
+		$(foreach file,$(wildcard *.json),\
+			$(eval CREDS_VAR_NAME=$(shell echo "$(file)" | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]')) \
+			$(eval CREDS_VAR_VALUE=$(shell cat "$(file)" | jq -c .)) \
+			-e $(CREDS_VAR_NAME)='$(CREDS_VAR_VALUE)' \
+		) \
+		$(foreach env_var,$(filter %_CREDS,$(.VARIABLES)),\
+			-e $(env_var)=$($(env_var)) \
+		) \
 		$(foreach vol,$(VOLUMES),-v $(vol)) \
 		$(DOCKER_IMAGE) $(COMMAND)
 	$(if $(filter false,$(INTERACTIVE)),docker logs -f $(CONTAINER_NAME);)
