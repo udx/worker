@@ -33,18 +33,15 @@ run: clean
 			echo "-e $${CREDS_VAR_NAME}='$${CREDS_VAR_VALUE}'"; \
 		done \
 	))
-	@echo "JSON_CREDS_ENV: $(JSON_CREDS_ENV)"
 
 	@echo "Detecting host environment credentials..."
-	@echo "AZURE_CREDS: $(AZURE_CREDS)"
 	$(eval CREDS_ENV := $(shell bash -c '\
 		for env_var in $(filter %_CREDS,$(.VARIABLES)); do \
 			creds_value=$${!env_var}; \
-			creds_value_quoted=$$(echo "$${creds_value}" | jq -c .); \
-			echo "-e $${env_var}=$${creds_value_quoted}"; \
+			creds_value_escaped=$$(printf "%q" "$${creds_value}"); \
+			echo "-e $${env_var}=$${creds_value_escaped}"; \
 		done \
 	'))
-	@echo "CREDS_ENV: $(CREDS_ENV)"
 
 	@echo "Setting Docker volumes if any..."
 	$(eval DOCKER_VOLUMES := $(if $(VOLUMES),\
