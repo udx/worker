@@ -33,6 +33,8 @@ jobs:
       - name: Run Development Pipeline
         run: make dev-pipeline
         working-directory: .
+        env:
+          AZURE_CREDS: ${{ secrets.AZURE_CREDS }}
 
       - name: Install Trivy
         run: |
