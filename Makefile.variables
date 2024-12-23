@@ -3,5 +3,5 @@ IMAGE_NAME ?= usabilitydynamics/udx-worker
 TAG ?= latest
 DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
 CONTAINER_NAME ?= udx-worker-container
-WORKER_CONFIG ?= ./src/configs/worker.yml
+USER_WORKER_CONFIG ?= ./tests/configs/worker.yml
 DEBUG ?= false

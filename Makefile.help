@@ -48,5 +48,5 @@ help:
 	@echo "  CONTAINER_NAME (default: $(CONTAINER_NAME))"
 	@echo "  ENV_FILE (default: .udx)"
 	@echo "  DOCKER_IMAGE (default: $(DOCKER_IMAGE))"
-	@echo "  WORKER_CONFIG (default: $(WORKER_CONFIG))"
+	@echo "  USER_WORKER_CONFIG (default: $(USER_WORKER_CONFIG))"
 	@echo "  DEBUG (default: $(DEBUG))"
