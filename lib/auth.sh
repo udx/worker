@@ -99,6 +99,10 @@ authenticate_provider() {
     rm -f "$temp_config_file"
     trap - EXIT
 
+    # Set an environment variable to mark successful authorization
+    export "${provider^^}_AUTHORIZED=true"
+    log_info "Authorization successful for provider $provider."
+
     return 0
 }
 
