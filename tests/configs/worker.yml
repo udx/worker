@@ -14,4 +14,4 @@ config:
     MANAGED_IDENTITY_NAME: "exampleidentity"
 
   secrets:
-    APP_CLIENT_SECRET: "azure/kv-example/clientSecret"
+    TEST_SECRET: "azure/kv-udx-worker-tooling/test-secret"
