@@ -9,16 +9,18 @@ include Makefile.help
 
 # Automatically detect JSON credentials file, stringify its content, and set it as an environment variable
 stringify-creds:
+	@echo "#!/bin/sh" > creds_env.sh
 	@for file in *.json; do \
 		if [ -f "$$file" ]; then \
 			CREDS_VAR_NAME=$$(echo "$$file" | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]'); \
 			CREDS_VAR_VALUE=$$(cat "$$file" | jq -c .); \
+			echo "export $$CREDS_VAR_NAME='$$CREDS_VAR_VALUE'" >> creds_env.sh; \
 			echo "Setting $$CREDS_VAR_NAME environment variable..."; \
-			export $$CREDS_VAR_NAME="$$CREDS_VAR_VALUE"; \
 		else \
 			echo "No JSON credential files found. Skipping..."; \
-		fi \
+		fi; \
 	done
+	@chmod +x creds_env.sh
 
 # Build the Docker image
 MULTIPLATFORM ?= false
@@ -37,9 +39,10 @@ build:
 # Run Docker container (supports interactive mode)
 run: clean stringify-creds
 	@echo "Running Docker container..."
-	@docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
-		$(foreach file,$(wildcard *.json),-e $(shell echo $(file) | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]')="$$(cat $(file) | jq -c .)") \
-		$(DOCKER_IMAGE) $(if $(INTERACTIVE),sh)
+	@. ./creds_env.sh && docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
+		$(foreach var,$(shell . ./creds_env.sh && env | grep -E '^[A-Z_]+_CREDS=' | cut -d= -f1),-e $(var)=$$$(var)) \
+		$(foreach vol,$(VOLUMES),-v $(vol)) \
+		$(DOCKER_IMAGE) $(COMMAND)
 	$(if $(filter false,$(INTERACTIVE)),docker logs -f $(CONTAINER_NAME);)
 
 # Run Docker container in interactive mode
@@ -54,21 +57,23 @@ exec:
 # View the container logs
 log:
 	@echo "Viewing Docker container logs..."
-	@docker logs $(CONTAINER_NAME)
+	@if [ "$(FOLLOW_LOGS)" = "true" ]; then \
+		docker logs -f $(CONTAINER_NAME); \
+	else \
+		docker logs $(CONTAINER_NAME); \
+	fi
 
 # Delete the running container
 clean:
 	@echo "Deleting Docker container if exists..."
+	@docker stop $(CONTAINER_NAME) 2>/dev/null || true
 	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
 
-# Run the validation tests
-test: clean stringify-creds
-	@echo "Running Docker container to execute tests..."
-	@docker run --rm --name $(CONTAINER_NAME) \
-		-v $(USER_WORKER_CONFIG):/home/udx/.cd/configs/worker.yml:ro \
-		$(foreach file,$(wildcard *.json),-e $(shell echo $(file) | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]')="$$(cat $(file) | jq -c .)") \
-		$(DOCKER_IMAGE) /usr/local/tests/main.sh
-	@echo "Validation tests completed."
+# Test Docker container
+test: VOLUMES=$(TEST_WORKER_CONFIG):/home/udx/.cd/configs/worker.yml:ro
+test: COMMAND=/usr/local/tests/main.sh
+test: run
+	@$(MAKE) log FOLLOW_LOGS=true
 	@$(MAKE) clean
 
 # Development pipeline
