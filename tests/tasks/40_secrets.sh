@@ -23,9 +23,9 @@ test_verify_secrets() {
 
     # Verify secrets as environment variables
     for secret_key in $(echo "$secrets" | yq eval 'keys' -); do
+
         # Check if the key is valid
         if [[ -z "$secret_key" || "$secret_key" == "-" ]]; then
-            echo "Warning: Found an invalid or empty secret key."
             continue
         fi
 
@@ -36,6 +36,8 @@ test_verify_secrets() {
         if [[ -z "$actual_value" || "$actual_value" == "$expected_reference" ]]; then
             echo "Test failed: $secret_key is not replaced correctly. Got: $actual_value"
             return 1
+        else
+            echo "Test passed: $secret_key is resolved correctly."
         fi
     done
 

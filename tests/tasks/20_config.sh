@@ -28,6 +28,8 @@ test_configure_environment() {
         if [[ "$actual_value" != "$value" ]]; then
             echo "Test failed: $key is not set correctly. Expected: $value, Got: $actual_value"
             return 1
+        else
+            echo "Test passed: $key is set correctly."
         fi
     done
 
