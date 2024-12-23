@@ -31,8 +31,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Run Development Pipeline
-        # run: make dev-pipeline
-        run: MULTIPLATFORM=true make dev-pipeline
+        run: make dev-pipeline
         working-directory: .
         env:
           AZURE_CREDS: ${{ secrets.AZURE_CREDS }}
