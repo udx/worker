@@ -39,6 +39,9 @@ lib/secrets/readme.md
 # Unnecessary configuration documentation
 src/configs/readme.md
 
+# Ignore test configuration files
+tests/configs/*
+
 # Ignore IDE specific and Prettier configuration files
 .vscode/
 *.iml

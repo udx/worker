@@ -117,7 +117,8 @@ COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Copy the tests directory
-COPY ./tests /usr/local/tests
+COPY ./tests/main.sh /usr/local/tests/main.sh
+COPY ./tests/tasks /usr/local/tests/tasks
 
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
