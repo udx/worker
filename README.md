@@ -43,6 +43,10 @@ make run
 make run-it
 ```
 
+```shell
+make test
+```
+
 For more details on available commands
 
 ```shell
