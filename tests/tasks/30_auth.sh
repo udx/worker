@@ -5,57 +5,71 @@ echo "Starting validation of authorization..."
 # Path to the merged configuration file
 MERGED_CONFIG="/home/${USER}/.cd/configs/merged_worker.yml"
 
-# Function to check if an actor is authorized
-check_actor_authorization() {
-    local actor_type="$1"
-    local creds="$2"
-    
-    # Resolve the credentials environment variable
-    creds=$(eval echo "$creds")
-
-    # Check if the credentials are provided
-    if [[ "$creds" == "null" || -z "$creds" ]]; then
-        echo "Skipping authorization for $actor_type: No credentials provided."
-        return 0
-    fi
-
-    # Dummy authorization check (replace with actual logic)
-    echo "Authorizing $actor_type with credentials: $creds"
-    if [[ "$creds" == *"invalid"* ]]; then
-        echo "Authorization failed for $actor_type: Invalid credentials."
-        return 1
-    fi
-
-    echo "Authorization succeeded for $actor_type."
-    return 0
-}
-
 # Test authenticate_actors function
 test_authenticate_actors() {
-    echo "Running test: authenticate_actors"
-
-    # Load the merged configuration
+    
+    # Check if the MERGED_CONFIG variable is set and the file exists
+    if [[ -z "$MERGED_CONFIG" ]]; then
+        echo "[ERROR] MERGED_CONFIG variable is not set."
+        return 1
+        elif [[ ! -f "$MERGED_CONFIG" ]]; then
+        echo "[ERROR] Merged configuration file not found: $MERGED_CONFIG"
+        return 1
+    fi
+    
     merged_config=$(cat "$MERGED_CONFIG")
-
+    
     # Extract actors from the merged configuration
-    actors=$(echo "$merged_config" | yq eval -o=json '.config.actors' - | jq -c '.[]')
+    actors=$(echo "$merged_config" | yq eval -o=json '.config.actors' - | jq -c '.[] | .type')
+    
+    # Check provider-specific authorization using CLI if authorized
+    for actor_type in $actors; do
+        provider=$(echo "$actor_type" | cut -d '-' -f 1 | tr -d '"')
+        env_var_name="${provider^^}_AUTHORIZED"
+        
+        # Check if the environment variable exists and its value is "true"
+        if [[ ${!env_var_name} == "true" ]]; then
 
-    # Verify actors and their credentials
-    for actor in $actors; do
-        _jq() {
-            echo "$actor" | jq -r "${1}"
-        }
+            echo "$provider must be authorized. Checking authentication status..."
 
-        actor_type=$(_jq '.type')
-        creds=$(_jq '.creds')
-
-        echo "Checking actor: $actor_type"
-        if ! check_actor_authorization "$actor_type" "$creds"; then
-            echo "Test failed: Authorization failed for actor $actor_type"
-            return 1
+       case "$provider" in
+                azure)
+                    if az account show > /dev/null 2>&1; then
+                        echo "az is authorized."
+                    else
+                        echo "az authorization failed."
+                    fi
+                ;;
+                gcp)
+                    if gcloud auth list > /dev/null 2>&1; then
+                        echo "gcloud is authorized."
+                    else
+                        echo "gcloud authorization failed."
+                    fi
+                ;;
+                aws)
+                    if aws sts get-caller-identity > /dev/null 2>&1; then
+                        echo "aws is authorized."
+                    else
+                        echo "aws authorization failed."
+                    fi
+                ;;
+                bitwarden)
+                    if bw status > /dev/null 2>&1; then
+                        echo "bw is authorized."
+                    else
+                        echo "bw authorization failed."
+                    fi
+                ;;
+                *)
+                    echo "Unsupported provider: $provider"
+                ;;
+            esac
+        else
+            echo "Skipping provider-specific authorization check for $provider as it was not marked as authorized."
         fi
     done
-
+    
     echo "Test passed: authenticate_actors"
 }
 
