@@ -44,7 +44,7 @@ RUN apt-get update && \
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_${ARCH}.tar.gz | tar xz && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_${ARCH}.tar.gz | tar xz && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
