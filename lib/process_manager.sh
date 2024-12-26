@@ -12,9 +12,9 @@ should_enable_systemd() {
 # Function to parse service information from YAML configuration
 parse_service_info() {
     local service_yaml="$1"
-    name=$(echo "$service_yaml" | yq e '.name' -)
-    exec_start=$(echo "$service_yaml" | yq e '.exec_start' -)
-    after=$(echo "$service_yaml" | yq e '.after' -)
+    name=$(echo "$service_yaml" | jq -r '.name' -)
+    exec_start=$(echo "$service_yaml" | jq -r '.exec_start' -)
+    after=$(echo "$service_yaml" | jq -r '.after' -)
 }
 
 # Function to create a systemd service file from a template
@@ -35,7 +35,20 @@ generate_and_activate_services() {
     
     echo "services.yml found. Generating and managing systemd service files..."
     
-    yq e '.services[]' "$CONFIG_FILE" | while IFS= read -r service_yaml; do
+    local services_yaml
+    services_yaml=$(yq eval -o=json '.services[]' "$CONFIG_FILE" | jq -c .)
+
+    # Use a temporary file to avoid a subshell
+    local services_file
+    services_file=$(mktemp)
+    echo "$services_yaml" > "$services_file"
+
+    # Read all lines into an array, then delete the file
+    mapfile -t services_array < "$services_file"
+    rm -f "$services_file"
+
+    # Process each service in the array
+    for service_yaml in "${services_array[@]}"; do
         parse_service_info "$service_yaml"
         
         if [[ -n "$name" && -n "$exec_start" && -n "$after" ]]; then

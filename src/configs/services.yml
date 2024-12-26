@@ -2,6 +2,6 @@
 kind: workerService
 version: udx.io/worker-v1/service
 services:
-  - name: myservice1
-    exec_start: /usr/local/scripts/process_example.sh
-    after: network.target
+  - name: "myservice1"
+    exec_start: "/usr/local/scripts/process_example.sh"
+    after: "network.target"
