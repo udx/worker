@@ -18,7 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install necessary packages and clean up
+# Install necessary packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2024a-3ubuntu1.1 \
@@ -35,7 +35,8 @@ RUN apt-get update && \
     nano=7.2-2build1 \
     vim=2:9.1.0016-1ubuntu7.5 \
     python3.12=3.12.3-1ubuntu0.3 \
-    python3-pip=24.0+dfsg-1ubuntu1.1 && \
+    python3-pip=24.0+dfsg-1ubuntu1.1 \
+    systemd=255.4-1ubuntu8.4 && \
     ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && \
