@@ -28,7 +28,7 @@ dist/
 *_creds.json
 
 # Environment variables file
-*env*
+.env
 
 # Ignore Prettier configuration overrides for development
 .prettierignore

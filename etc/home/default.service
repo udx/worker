@@ -1,0 +1,10 @@
+[Unit]
+Description=${name}
+After=${after}
+
+[Service]
+ExecStart=${exec_start}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

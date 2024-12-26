@@ -52,9 +52,9 @@ RUN ARCH=$(uname -m) && \
 # Install Google Cloud SDK (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
@@ -85,14 +85,42 @@ RUN mkdir -p $GNUPGHOME && \
 # Install Bitwarden CLI (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
+    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
     elif [ "$ARCH" = "aarch64" ]; then \
-        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
+    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
     else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
+    echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
     chmod +x /usr/local/bin/bw && \
     rm -rf /tmp/* /var/tmp/*
+
+# Prepare the system for systemd usage
+RUN find /etc/systemd/system \
+    /lib/systemd/system \
+    -path '*.wants/*' \
+    -not -name '*journald*' \
+    -delete; \
+    systemctl set-default multi-user.target; \
+    systemctl mask \
+    tmp.mount \
+    etc-hostname.mount \
+    etc-hosts.mount \
+    etc-resolv.conf.mount \
+    -- -.mount \
+    swap.target \
+    getty.target \
+    getty-static.service \
+    dev-mqueue.mount \
+    cgproxy.service \
+    systemd-remount-fs.service \
+    sys-kernel-config.mount \
+    sys-kernel-debug.mount \
+    sys-fs-fuse-connections.mount \
+    systemd-logind.service \
+    systemd-random-seed.service \
+    systemd-tmpfiles-setup-dev.service \
+    systemd-tmpfiles-setup.service \
+    systemd-update-utmp.service 
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
@@ -110,7 +138,8 @@ RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
 WORKDIR /home/${USER}
 
 # Copy built-in worker.yml to the container
-COPY ./src/configs/worker.yml /etc/worker/worker.yml
+COPY ./src/configs /etc/worker
+COPY ./src/scripts /usr/local/scripts
 
 # Copy the bin, etc, and lib directories
 COPY ./etc/home /home/${USER}/etc

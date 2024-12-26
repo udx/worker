@@ -24,6 +24,8 @@ source_if_exists "$SCRIPT_DIR/auth.sh"
 source_if_exists "$SCRIPT_DIR/secrets.sh"
 # shellcheck source=./cleanup.sh
 source_if_exists "$SCRIPT_DIR/cleanup.sh"
+# shellcheck source=./process_manager.sh
+source_if_exists "$SCRIPT_DIR/process_manager.sh"
 # shellcheck source=./worker_config.sh
 source_if_exists "$SCRIPT_DIR/worker_config.sh"
 
@@ -83,6 +85,13 @@ configure_environment() {
 
     if ! cleanup_sensitive_env_vars; then
         log_error "Failed to clean up sensitive environment variables."
+        return 1
+    fi
+
+    # Perform process manager setup
+    log_info "Setting up process manager..."
+    if ! generate_and_activate_services; then
+        log_error "Failed to activate services."
         return 1
     fi
 
