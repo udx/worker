@@ -11,10 +11,10 @@ services:
     environment:
       - "KEY1=value1"
       - "KEY2=value2"
-  # - name: "another_service"
-  #   command: "python another_service.py"
-  #   autostart: "true"
-  #   autorestart: "true"
-  #   stderr_logfile: "/var/log/another_service.err.log"
-  #   stdout_logfile: "/var/log/another_service.out.log"
-  #   environment: [] # Even if empty, define it as an empty array
+  - name: "another_service"
+    command: "sh /usr/local/scripts/process_example.sh"
+    autostart: "true"
+    autorestart: "true"
+    stderr_logfile: "/var/log/supervisor/webapp2.err.log"
+    stdout_logfile: "/var/log/supervisor/webapp2.out.log"
+    environment: [] # Even if empty, define it as an empty array
