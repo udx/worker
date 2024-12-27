@@ -17,15 +17,16 @@ should_generate_config() {
 # Helper function to parse and process each service configuration
 parse_service_info() {
     local service_json="$1"
-    local name=$(echo "$service_json" | jq -r '.name')
-    local command=$(echo "$service_json" | jq -r '.command')
-    local autostart=$(echo "$service_json" | jq -r '.autostart // "false"')
-    local autorestart=$(echo "$service_json" | jq -r '.autorestart // "false"')
-    local stderr_logfile=$(echo "$service_json" | jq -r '.stderr_logfile // ""')
-    local stdout_logfile=$(echo "$service_json" | jq -r '.stdout_logfile // ""')
-    local environment=$(echo "$service_json" | jq -r '.environment // [] | join(",")')
+    local name command autostart autorestart stderr_logfile stdout_logfile environment
     
-    # For each service, replace placeholders and append to FINAL_CONFIG
+    name=$(echo "$service_json" | jq -r '.name')
+    command=$(echo "$service_json" | jq -r '.command')
+    autostart=$(echo "$service_json" | jq -r '.autostart // "false"')
+    autorestart=$(echo "$service_json" | jq -r '.autorestart // "false"')
+    stderr_logfile=$(echo "$service_json" | jq -r '.stderr_logfile // ""')
+    stdout_logfile=$(echo "$service_json" | jq -r '.stdout_logfile // ""')
+    environment=$(echo "$service_json" | jq -r '.environment // [] | join(",")')
+    
     sed "s|\${process_name}|$name|g; \
         s|\${command}|$command|g; \
         s|\${autostart}|$autostart|g; \
@@ -52,6 +53,7 @@ configure_and_execute_services() {
     cp "$TEMPLATE_FILE" "$FINAL_CONFIG"
     
     # Remove the template [program:x] section from FINAL_CONFIG
+    # shellcheck disable=SC2016
     sed -i '/\[program:\${process_name}\]/,/^$/d' "$FINAL_CONFIG"
     
     # Convert services to JSON and process each.
