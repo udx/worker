@@ -6,8 +6,6 @@ services:
     command: "sh /usr/local/scripts/process_example.sh"
     autostart: "true"
     autorestart: "false"
-    stderr_logfile: "/var/log/supervisor/webapp.err.log"
-    stdout_logfile: "/var/log/supervisor/webapp.out.log"
     environment:
       - "KEY1=value1"
       - "KEY2=value2"
@@ -15,6 +13,4 @@ services:
     command: "sh /usr/local/scripts/process_example.sh"
     autostart: "true"
     autorestart: "true"
-    stderr_logfile: "/var/log/supervisor/webapp2.err.log"
-    stdout_logfile: "/var/log/supervisor/webapp2.out.log"
     environment: [] # Even if empty, define it as an empty array
