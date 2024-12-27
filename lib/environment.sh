@@ -90,12 +90,14 @@ configure_environment() {
 
     # Perform process manager setup
     log_info "Setting up process manager..."
-    if ! generate_and_activate_services; then
-        log_error "Failed to activate services."
-        return 1
+    if should_generate_config; then
+        echo "Generating Supervisor configurations..."
+        configure_and_execute_services
+    else
+        echo "No services found in $CONFIG_FILE. Skipping Supervisor configuration."
     fi
 
-    log_info "Environment setup completed successfully."
+    log_info "Secure environment setup completed successfully."
 }
 
 # Call the main function

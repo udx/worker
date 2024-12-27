@@ -36,11 +36,15 @@ RUN apt-get update && \
     vim=2:9.1.0016-1ubuntu7.5 \
     python3.12=3.12.3-1ubuntu0.3 \
     python3-pip=24.0+dfsg-1ubuntu1.1 \
-    systemd=255.4-1ubuntu8.4 && \
-    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure --frontend noninteractive tzdata && \
+    supervisor=4.2.5-1ubuntu0.1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Configure the timezone
+RUN echo $TZ > /etc/timezone && \
+    rm /etc/localtime && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
@@ -94,37 +98,16 @@ RUN ARCH=$(uname -m) && \
     chmod +x /usr/local/bin/bw && \
     rm -rf /tmp/* /var/tmp/*
 
-# Prepare the system for systemd usage
-RUN find /etc/systemd/system \
-    /lib/systemd/system \
-    -path '*.wants/*' \
-    -not -name '*journald*' \
-    -delete; \
-    systemctl set-default multi-user.target; \
-    systemctl mask \
-    tmp.mount \
-    etc-hostname.mount \
-    etc-hosts.mount \
-    etc-resolv.conf.mount \
-    -- -.mount \
-    swap.target \
-    getty.target \
-    getty-static.service \
-    dev-mqueue.mount \
-    cgproxy.service \
-    systemd-remount-fs.service \
-    sys-kernel-config.mount \
-    sys-kernel-debug.mount \
-    sys-fs-fuse-connections.mount \
-    systemd-logind.service \
-    systemd-random-seed.service \
-    systemd-tmpfiles-setup-dev.service \
-    systemd-tmpfiles-setup.service \
-    systemd-update-utmp.service 
-
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
+
+# Create the Supervisor log directory and set permissions
+RUN mkdir -p /var/log/supervisor && \
+    chown -R ${USER}:${USER} /var/log/supervisor    
+
+# Create a directory for Supervisor runtime files
+RUN mkdir -p /var/run/supervisor && chown -R ${USER}:${USER} /var/run/supervisor
 
 # Prepare directories for the user and worker configuration
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \

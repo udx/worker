@@ -1,0 +1,26 @@
+[supervisord]
+logfile=/var/log/supervisor/supervisord.log  ; Logfile path
+logfile_maxbytes=50MB                        ; Maximum log file bytes before rotating
+logfile_backups=10                           ; Number of backups to keep
+loglevel=info                                ; Log level (info, debug, warn, trace)
+pidfile=/var/run/supervisor/supervisord.pid  ; Location of the PID file
+nodaemon=false                               ; Run in the foreground (Docker best practice)
+minfds=1024                                  ; Minimum number of file descriptors
+minprocs=200                                 ; Minimum number of processes
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor/supervisord.sock  ; Path to the UNIX socket for supervisorctl to connect to supervisord
+
+[unix_http_server]
+file=/var/run/supervisor/supervisord.sock  ; path to your socket file
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[program:${process_name}]
+command=${command}                           ; Command to start the process
+autostart=${autostart}                       ; Whether to start the process at supervisord start
+autorestart=${autorestart}                   ; Whether to restart the process on exit
+stderr_logfile=${stderr_logfile}             ; Path for stderr logfile
+stdout_logfile=${stdout_logfile}             ; Path for stdout logfile
+environment=${envs}                          ; Environment variables
