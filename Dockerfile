@@ -18,7 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install necessary packages and clean up
+# Install necessary packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2024a-3ubuntu1.1 \
@@ -35,25 +35,30 @@ RUN apt-get update && \
     nano=7.2-2build1 \
     vim=2:9.1.0016-1ubuntu7.5 \
     python3.12=3.12.3-1ubuntu0.3 \
-    python3-pip=24.0+dfsg-1ubuntu1.1 && \
-    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure --frontend noninteractive tzdata && \
+    python3-pip=24.0+dfsg-1ubuntu1.1 \
+    supervisor=4.2.5-1ubuntu0.1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Configure the timezone
+RUN echo $TZ > /etc/timezone && \
+    rm /etc/localtime && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_${ARCH}.tar.gz | tar xz && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_${ARCH}.tar.gz | tar xz && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-        curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
@@ -84,11 +89,11 @@ RUN mkdir -p $GNUPGHOME && \
 # Install Bitwarden CLI (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
+    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
     elif [ "$ARCH" = "aarch64" ]; then \
-        curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
+    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
     else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
+    echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
     chmod +x /usr/local/bin/bw && \
     rm -rf /tmp/* /var/tmp/*
@@ -96,6 +101,13 @@ RUN ARCH=$(uname -m) && \
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
+
+# Create the Supervisor log directory and set permissions
+RUN mkdir -p /var/log/supervisor && \
+    chown -R ${USER}:${USER} /var/log/supervisor    
+
+# Create a directory for Supervisor runtime files
+RUN mkdir -p /var/run/supervisor && chown -R ${USER}:${USER} /var/run/supervisor
 
 # Prepare directories for the user and worker configuration
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
@@ -109,7 +121,8 @@ RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
 WORKDIR /home/${USER}
 
 # Copy built-in worker.yml to the container
-COPY ./src/configs/worker.yml /etc/worker/worker.yml
+COPY ./src/configs /etc/worker
+COPY ./src/scripts /usr/local/scripts
 
 # Copy the bin, etc, and lib directories
 COPY ./etc/home /home/${USER}/etc

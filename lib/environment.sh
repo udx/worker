@@ -24,6 +24,8 @@ source_if_exists "$SCRIPT_DIR/auth.sh"
 source_if_exists "$SCRIPT_DIR/secrets.sh"
 # shellcheck source=./cleanup.sh
 source_if_exists "$SCRIPT_DIR/cleanup.sh"
+# shellcheck source=./process_manager.sh
+source_if_exists "$SCRIPT_DIR/process_manager.sh"
 # shellcheck source=./worker_config.sh
 source_if_exists "$SCRIPT_DIR/worker_config.sh"
 
@@ -86,7 +88,16 @@ configure_environment() {
         return 1
     fi
 
-    log_info "Environment setup completed successfully."
+    # Perform process manager setup
+    log_info "Setting up process manager..."
+    if should_generate_config; then
+        echo "Preparing Supervisor configurations..."
+        configure_and_execute_services
+    else
+        echo "No services found in $CONFIG_FILE. Skipping Supervisor configuration."
+    fi
+
+    log_info "Secure environment setup completed successfully."
 }
 
 # Call the main function

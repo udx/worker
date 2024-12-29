@@ -1,0 +1,63 @@
+# Test Suite for UDX Worker
+
+This directory contains a suite of tests designed to validate various functionalities of the UDX Worker environment. Below you'll find descriptions of each test script and how to run them.
+
+## Test Scripts
+
+### Dependency Validation
+- **File**: `tests/tasks/10_dependencies.sh`
+- **Description**: Verifies the availability of essential commands like `gcloud`, `aws`, `az`, `bw`, `yq`, `jq`.
+- **Run Command**: 
+```shell
+bash tests/tasks/10_dependencies.sh
+```
+
+### Configuration Validation
+- **File**: `tests/tasks/20_config.sh`
+- **Description**: Validates the environment configuration comparing to defined worker config. Could be tested with/without user config.
+- **Run Command**: 
+```shell
+bash tests/tasks/20_config.sh
+```
+
+### Authorization Validation
+- **File**: `tests/tasks/30_auth.sh`
+- **Description**: Validates the authorization of actors by provided creds to worker container.
+- **Run Command**: 
+```shell
+bash tests/tasks/30_auth.sh
+```
+
+### Secrets Fetching Validation
+- **File**: `tests/tasks/40_secrets.sh`
+- **Description**: Verifies the fetching and validation of secrets defined in user config.
+- **Run Command**: 
+```shell
+bash tests/tasks/40_secrets.sh
+```
+
+## Running All Tests
+To run all the tests sequentially, you can use the main test script:
+
+- **File**: `tests/main.sh`
+- **Description**: Finds and executes all test scripts in the `tests/tasks` directory.
+- **Run Command**: 
+```shell
+bash tests/main.sh
+```
+
+## Example Configuration File
+To test a user's worker config, configure and mount it into the running container at the path `/home/udx/.cd/configs/worker.yml`. Here is an example:
+
+```yaml
+---
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    AZURE_CLIENT_ID: "12345678-1234-1234-1234-1234567890ab"
+    AZURE_TENANT_ID: "abcdef12-3456-7890-abcd-ef1234567890"
+    AZURE_SUBSCRIPTION_ID: "1234abcd-5678-90ef-abcd-12345678abcd"
+  secrets:
+    TEST_SECRET: "azure/kv-udx-worker-tooling/test-secret"
+```
