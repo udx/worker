@@ -91,7 +91,7 @@ configure_environment() {
     # Perform process manager setup
     log_info "Setting up process manager..."
     if should_generate_config; then
-        echo "Generating Supervisor configurations..."
+        echo "Preparing Supervisor configurations..."
         configure_and_execute_services
     else
         echo "No services found in $CONFIG_FILE. Skipping Supervisor configuration."
