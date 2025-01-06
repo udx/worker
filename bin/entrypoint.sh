@@ -53,7 +53,7 @@ wait_for_services() {
 
 # Main execution path
 if [ "$#" -gt 0 ]; then
-    log_info "Executing command:" "$*"
+    log_info "Executing command: $*"
     "$@"  # Execute the provided command
     cmd_exit_status=$?
     handle_services $cmd_exit_status
