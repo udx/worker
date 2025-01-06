@@ -52,7 +52,7 @@ start_supervisor() {
 # Function to configure and start the Supervisor
 configure_and_execute_services() {
     if ! should_generate_config; then
-        echo "No services found in $CONFIG_FILE. Skipping Supervisor configuration."
+        echo "No services found in $CONFIG_FILE. No Supervisor configuration generated."
         return 1
     fi
     
