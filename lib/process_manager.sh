@@ -2,7 +2,8 @@
 
 # Define paths
 CONFIG_FILE="/etc/worker/services.yml"
-TEMPLATE_FILE="/home/${USER}/etc/supervisor.default"
+COMMON_TEMPLATE_FILE="/home/${USER}/etc/supervisor.common.conf"
+PROGRAM_TEMPLATE_FILE="/home/${USER}/etc/supervisor.program.conf"
 FINAL_CONFIG="/home/${USER}/etc/supervisord.conf"
 
 # Function to check for service configurations
@@ -32,11 +33,14 @@ parse_service_info() {
     autorestart=$(echo "$service_json" | jq -r '.autorestart // "false"')
     environment=$(echo "$service_json" | jq -r '.environment // [] | join(",")')
     
+    # Add an additional newline for better separation and readability
+    echo -e "\n" >> "$FINAL_CONFIG"  # Adds two newlines to the end of the file
+    
     sed "s|\${process_name}|$name|g; \
         s|\${command}|$command|g; \
         s|\${autostart}|$autostart|g; \
         s|\${autorestart}|$autorestart|g; \
-        s|\${envs}|$environment|g" "$TEMPLATE_FILE" >> "$FINAL_CONFIG"
+        s|\${envs}|$environment|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
 }
 
 # Function to start Supervisor with the generated configuration
@@ -48,20 +52,15 @@ start_supervisor() {
 # Function to configure and start the Supervisor
 configure_and_execute_services() {
     if ! should_generate_config; then
-        echo "No services found in $CONFIG_FILE. Skipping Supervisor configuration."
+        echo "No services found in $CONFIG_FILE. No Supervisor configuration generated."
         return 1
     fi
     
-    # Copy the base Supervisor configuration.
-    cp "$TEMPLATE_FILE" "$FINAL_CONFIG"
-    
-    # Remove the template [program:x] section from FINAL_CONFIG
-    # shellcheck disable=SC2016
-    sed -i '/\[program:\${process_name}\]/,/^$/d' "$FINAL_CONFIG"
+    # Copy the base Supervisor common configuration only once at the start.
+    cp "$COMMON_TEMPLATE_FILE" "$FINAL_CONFIG"
     
     # Convert enabled services to JSON and process each.
     local services_yaml
-    # Filter only services with enabled: true
     services_yaml=$(yq e -o=json '.services[] | select(.enabled == true)' "$CONFIG_FILE" | jq -c .)
     
     if [ -z "$services_yaml" ]; then
@@ -69,16 +68,7 @@ configure_and_execute_services() {
         return 1
     fi
     
-    # Use a temporary file to avoid subshell issues
-    local services_file
-    services_file=$(mktemp)
-    
-    echo "$services_yaml" > "$services_file"
-    mapfile -t services_array < "$services_file"
-    rm -f "$services_file"
-    
-    # Process each service in the array
-    for service_json in "${services_array[@]}"; do
+    echo "$services_yaml" | while read -r service_json; do
         parse_service_info "$service_json"
     done
     
