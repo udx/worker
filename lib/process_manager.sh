@@ -46,7 +46,7 @@ parse_service_info() {
 # Function to start Supervisor with the generated configuration
 start_supervisor() {
     echo "Starting Supervisor with the generated configuration..."
-    supervisord -c "$FINAL_CONFIG"
+    supervisord
 }
 
 # Function to configure and start the Supervisor
