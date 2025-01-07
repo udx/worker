@@ -42,6 +42,18 @@ parse_service_info() {
     if [[ "$ignore" == "true" ]]; then
         return
     fi
+    
+    # Check if 'name' is set, log error and return if not
+    if [ -z "$name" ]; then
+        echo "Error: 'name' not set for a service. Skipping..."
+        return
+    fi
+    
+    # Check if 'command' is set, log error and return if not
+    if [ -z "$command" ]; then
+        echo "Error: 'command' not set for service $name. Skipping..."
+        return
+    fi
 
     # Add an additional newline for better separation and readability
     echo -e "\n" >> "$FINAL_CONFIG"
