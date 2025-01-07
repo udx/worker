@@ -25,22 +25,32 @@ should_generate_config() {
 # Helper function to parse and process each service configuration
 parse_service_info() {
     local service_json="$1"
-    local name command autostart autorestart environment
+    local name command autostart autorestart envs
     
     name=$(echo "$service_json" | jq -r '.name')
     command=$(echo "$service_json" | jq -r '.command')
-    autostart=$(echo "$service_json" | jq -r '.autostart // "false"')
+    # Ensure 'ignore' is considered. If not present, default to "false"
+    ignore=$(echo "$service_json" | jq -r '.ignore // "false"')
+    # Use 'true' as default for 'autostart' if not specified
+    autostart=$(echo "$service_json" | jq -r '.autostart // "true"')
+    # Use 'false' as default for 'autorestart' if not specified
     autorestart=$(echo "$service_json" | jq -r '.autorestart // "false"')
-    environment=$(echo "$service_json" | jq -r '.environment // [] | join(",")')
+    # Ensure 'envs' defaults to an empty array if not specified
+    envs=$(echo "$service_json" | jq -r '.envs // [] | join(",")')
     
+    # Ignore the service if 'ignore' is set to "true"
+    if [[ "$ignore" == "true" ]]; then
+        return
+    fi
+
     # Add an additional newline for better separation and readability
-    echo -e "\n" >> "$FINAL_CONFIG"  # Adds two newlines to the end of the file
+    echo -e "\n" >> "$FINAL_CONFIG"
     
     sed "s|\${process_name}|$name|g; \
         s|\${command}|$command|g; \
         s|\${autostart}|$autostart|g; \
         s|\${autorestart}|$autorestart|g; \
-        s|\${envs}|$environment|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
+        s|\${envs}|$envs|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
 }
 
 # Function to start Supervisor with the generated configuration

@@ -7,7 +7,7 @@ services:
     command: "sh /usr/local/scripts/process_example.sh"
     autostart: "true"
     autorestart: "false"
-    environment:
+    envs:
       - "KEY1=value1"
       - "KEY2=value2"
   - name: "another_service"
@@ -15,4 +15,4 @@ services:
     command: "sh /usr/local/scripts/process_example.sh"
     autostart: "true"
     autorestart: "true"
-    environment: []
+    envs: []
