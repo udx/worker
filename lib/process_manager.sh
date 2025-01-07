@@ -9,8 +9,8 @@ FINAL_CONFIG="/home/${USER}/etc/supervisord.conf"
 # Function to check for service configurations
 should_generate_config() {
     local enabled_services_count
-    # Extract enabled services into JSON format
-    services_yaml=$(yq e -o=json '.services[] | select(.enabled == true)' "$CONFIG_FILE")
+    # Extract services into JSON format
+    services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE")
     # Count the number of items in the JSON array, trimming any newlines or spaces
     enabled_services_count=$(echo "$services_yaml" | jq -c '. | length' | tr -d '\n')
 
@@ -61,7 +61,7 @@ configure_and_execute_services() {
     
     # Convert enabled services to JSON and process each.
     local services_yaml
-    services_yaml=$(yq e -o=json '.services[] | select(.enabled == true)' "$CONFIG_FILE" | jq -c .)
+    services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE" | jq -c .)
     
     if [ -z "$services_yaml" ]; then
         echo "Failed to parse services from $CONFIG_FILE or no services defined."
