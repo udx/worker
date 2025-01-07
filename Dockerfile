@@ -103,11 +103,8 @@ RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
 
 # Create the Supervisor log directory and set permissions
-RUN mkdir -p /var/log/supervisor && \
-    chown -R ${USER}:${USER} /var/log/supervisor    
-
-# Create a directory for Supervisor runtime files
-RUN mkdir -p /var/run/supervisor && chown -R ${USER}:${USER} /var/run/supervisor
+RUN mkdir -p /var/log/supervisor /var/run/supervisor /home/${USER}/etc && \
+    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor /home/${USER}/etc
 
 # Prepare directories for the user and worker configuration
 RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
@@ -119,6 +116,11 @@ RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
 
 # Switch to the user directory
 WORKDIR /home/${USER}
+
+# Copy the CLI tool into the image
+COPY lib/cli.sh /usr/local/bin/udx_worker_mgmt
+RUN chmod +x /usr/local/bin/udx_worker_mgmt && \
+    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker
 
 # Copy built-in worker.yml to the container
 COPY ./src/configs /etc/worker
@@ -136,6 +138,9 @@ COPY ./tests/tasks /usr/local/tests/tasks
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
     chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd /usr/local/tests
+
+# Create a symbolic link for the supervisord configuration file
+RUN ln -sf /home/${USER}/etc/supervisord.conf /etc/supervisord.conf    
 
 # Switch to non-root user
 USER ${USER}

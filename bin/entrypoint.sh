@@ -18,9 +18,8 @@ handle_services() {
         log_info "Tailing Supervisor logs to keep the container alive."
         tail -f /var/log/supervisor/supervisord.log
     else
-        log_warn "No services are active. Exiting after a short delay."
-        sleep 10
-        exit "${cmd_exit_status:-0}"  # Use 0 if cmd_exit_status is unset
+        log_warn "No services are active."
+        tail -f /dev/null
     fi
 }
 
@@ -52,8 +51,12 @@ wait_for_services() {
 }
 
 # Main execution path
+# Main execution path
 if [ "$#" -gt 0 ]; then
-    log_info "Executing command:" "$*"
+    log_info "Executing command: $*"
+    if [ "$1" == "exit" ]; then
+        exit 0
+    fi
     "$@"  # Execute the provided command
     cmd_exit_status=$?
     handle_services $cmd_exit_status

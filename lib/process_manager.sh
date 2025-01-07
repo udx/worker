@@ -9,8 +9,8 @@ FINAL_CONFIG="/home/${USER}/etc/supervisord.conf"
 # Function to check for service configurations
 should_generate_config() {
     local enabled_services_count
-    # Extract enabled services into JSON format
-    services_yaml=$(yq e -o=json '.services[] | select(.enabled == true)' "$CONFIG_FILE")
+    # Extract services into JSON format
+    services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE")
     # Count the number of items in the JSON array, trimming any newlines or spaces
     enabled_services_count=$(echo "$services_yaml" | jq -c '. | length' | tr -d '\n')
 
@@ -25,28 +25,50 @@ should_generate_config() {
 # Helper function to parse and process each service configuration
 parse_service_info() {
     local service_json="$1"
-    local name command autostart autorestart environment
+    local name command autostart autorestart envs
     
     name=$(echo "$service_json" | jq -r '.name')
     command=$(echo "$service_json" | jq -r '.command')
-    autostart=$(echo "$service_json" | jq -r '.autostart // "false"')
+    # Ensure 'ignore' is considered. If not present, default to "false"
+    ignore=$(echo "$service_json" | jq -r '.ignore // "false"')
+    # Use 'true' as default for 'autostart' if not specified
+    autostart=$(echo "$service_json" | jq -r '.autostart // "true"')
+    # Use 'false' as default for 'autorestart' if not specified
     autorestart=$(echo "$service_json" | jq -r '.autorestart // "false"')
-    environment=$(echo "$service_json" | jq -r '.environment // [] | join(",")')
+    # Ensure 'envs' defaults to an empty array if not specified
+    envs=$(echo "$service_json" | jq -r '.envs // [] | join(",")')
     
+    # Ignore the service if 'ignore' is set to "true"
+    if [[ "$ignore" == "true" ]]; then
+        return
+    fi
+    
+    # Check if 'name' is set, log error and return if not
+    if [ -z "$name" ]; then
+        echo "Error: 'name' not set for a service. Skipping..."
+        return
+    fi
+    
+    # Check if 'command' is set, log error and return if not
+    if [ -z "$command" ]; then
+        echo "Error: 'command' not set for service $name. Skipping..."
+        return
+    fi
+
     # Add an additional newline for better separation and readability
-    echo -e "\n" >> "$FINAL_CONFIG"  # Adds two newlines to the end of the file
+    echo -e "\n" >> "$FINAL_CONFIG"
     
     sed "s|\${process_name}|$name|g; \
         s|\${command}|$command|g; \
         s|\${autostart}|$autostart|g; \
         s|\${autorestart}|$autorestart|g; \
-        s|\${envs}|$environment|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
+        s|\${envs}|$envs|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
 }
 
 # Function to start Supervisor with the generated configuration
 start_supervisor() {
     echo "Starting Supervisor with the generated configuration..."
-    supervisord -c "$FINAL_CONFIG"
+    supervisord
 }
 
 # Function to configure and start the Supervisor
@@ -61,7 +83,7 @@ configure_and_execute_services() {
     
     # Convert enabled services to JSON and process each.
     local services_yaml
-    services_yaml=$(yq e -o=json '.services[] | select(.enabled == true)' "$CONFIG_FILE" | jq -c .)
+    services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE" | jq -c .)
     
     if [ -z "$services_yaml" ]; then
         echo "Failed to parse services from $CONFIG_FILE or no services defined."

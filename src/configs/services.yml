@@ -3,16 +3,16 @@ kind: workerService
 version: udx.io/worker-v1/service
 services:
   - name: "app_service"
-    enabled: "false"
+    ignore: "true"
     command: "sh /usr/local/scripts/process_example.sh"
     autostart: "true"
     autorestart: "false"
-    environment:
+    envs:
       - "KEY1=value1"
       - "KEY2=value2"
   - name: "another_service"
-    enabled: "false"
+    ignore: "true"
     command: "sh /usr/local/scripts/process_example.sh"
     autostart: "true"
     autorestart: "true"
-    environment: []
+    envs: []
