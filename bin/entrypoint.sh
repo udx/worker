@@ -19,7 +19,7 @@ handle_services() {
         tail -f /var/log/supervisor/supervisord.log
     else
         log_warn "No services are active."
-        exit "${cmd_exit_status:-0}"  # Use 0 if cmd_exit_status is unset
+        tail -f /dev/null
     fi
 }
 
