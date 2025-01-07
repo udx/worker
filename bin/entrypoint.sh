@@ -54,12 +54,21 @@ wait_for_services() {
 # Main execution path
 if [ "$#" -gt 0 ]; then
     log_info "Executing command: $*"
-    if [ "$1" == "exit" ]; then
+    
+    if [[ "$1" =~ \.sh$ ]]; then
+        "$@"  # Execute the provided command
+        log_info "Shell script execution completed. Exiting."
         exit 0
+    else
+        "$@"  # Execute the provided command
+        cmd_exit_status=$?
+
+        if [ $cmd_exit_status -eq 0 ]; then
+            exit 0
+        else
+            handle_services $cmd_exit_status
+        fi
     fi
-    "$@"  # Execute the provided command
-    cmd_exit_status=$?
-    handle_services $cmd_exit_status
 else
     handle_services
 fi
