@@ -3,8 +3,8 @@
 * `worker service list` 
 Lists all available services.
 
-* `worker service status [service_name]`
-Displays the status of a specified service or all services if no name is provided.
+* `worker service status <service_name>`
+Displays the status of a specified service.
 
 * `worker service logs <service_name>`
 Tails the output logs for a specific service.
