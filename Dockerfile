@@ -117,6 +117,11 @@ RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
 # Switch to the user directory
 WORKDIR /home/${USER}
 
+# Copy the CLI tool into the image
+COPY lib/cli.sh /usr/local/bin/udx_worker_mgmt
+RUN chmod +x /usr/local/bin/udx_worker_mgmt && \
+    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker
+
 # Copy built-in worker.yml to the container
 COPY ./src/configs /etc/worker
 COPY ./src/scripts /usr/local/scripts
