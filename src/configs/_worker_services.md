@@ -29,3 +29,19 @@ services:
 * `autorestart`: Specifies whether the service should automatically restart if it stops. If "true", the service will restart according to the policy defined by the worker management system. The default value is "false", indicating the service will not restart automatically.
 
 * `envs`: An array of environment variables passed to the service in the format `KEY=value`. These variables are made available to the service at runtime.
+
+## Usage
+
+To use these configuration file, ensure that the `services.yml` file is correctly configured and placed in the appropriate directory (`/etc/worker`) within the container.
+
+### Volume Mount
+
+If you have a worker configuration outside of the worker image, you can mount it as a volume into the container:
+
+```shell
+docker run -d --name udx-worker \
+  --env-file .env \
+  -v $(pwd)/my-tasks:/usr/src/app \
+  -v $(pwd)/src/configs/services.yml:/etc/worker \
+  usabilitydynamics/udx-worker:latest
+```
