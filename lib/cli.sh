@@ -10,13 +10,13 @@ check_status() {
     if [ -z "$1" ]; then
         supervisorctl status
     else
-        supervisorctl status $1
+        supervisorctl status "$1"
     fi
 }
 
 # Function to follow logs for a specific service
 follow_logs() {
-    tail -f /var/log/supervisor/$1-*.log
+    tail -f /var/log/supervisor/"$1"-*.log
 }
 
 # Function to show supervisor configuration
@@ -26,7 +26,7 @@ show_config() {
 
 # Function to start, stop, or restart a service
 manage_service() {
-    supervisorctl $1 $2
+    supervisorctl "$1" "$2"
 }
 
 # CLI Interface
@@ -35,16 +35,16 @@ case $1 in
         list_services
         ;;
     status)
-        check_status $2
+        check_status "$2"
         ;;
     logs)
-        follow_logs $2
+        follow_logs "$2"
         ;;
     config)
         show_config
         ;;
     start|stop|restart)
-        manage_service $1 $2
+        manage_service "$1" "$2"
         ;;
     *)
         echo "Usage: $0 {list|status [service_name]|logs <service_name>|config|start <service_name>|stop <service_name>|restart <service_name>}"
