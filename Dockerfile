@@ -149,4 +149,4 @@ USER ${USER}
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Set the default command
-CMD ["sh"]
+CMD ["tail", "-f", "/dev/null"]
