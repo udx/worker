@@ -6,6 +6,6 @@ CONTAINER_NAME ?= udx-worker-container
 TEST_WORKER_CONFIG ?= ./tests/configs/worker.yml
 VOLUMES ?=
 DEBUG ?= false
-COMMAND ?=sh
+COMMAND ?= 
 MULTIPLATFORM ?= false
 FOLLOW_LOGS ?= false

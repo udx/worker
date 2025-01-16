@@ -57,12 +57,12 @@ run: clean
 
 # Run Docker container in interactive mode
 run-it:
-	@$(MAKE) run INTERACTIVE=true
+	@$(MAKE) run INTERACTIVE=true COMMAND=/bin/bash
 
 # Exec into the running container
 exec:
 	@echo "Executing into Docker container..."
-	@docker exec -it $(CONTAINER_NAME) /bin/sh
+	@docker exec -it $(CONTAINER_NAME) /bin/bash
 
 # View the container logs
 log:

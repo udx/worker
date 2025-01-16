@@ -23,7 +23,7 @@ gcp_authenticate() {
     local clientEmail privateKey projectId
     
     clientEmail=$(echo "$creds_content" | jq -r '.client_email')
-    privateKey=$(echo "$creds_content" | jq -r '.private_key')
+    privateKey=$(echo "$creds_content" | jq -r '.private_key' | sed 's/- /-\n/g' | sed 's/ -/\n-/g')
     projectId=$(echo "$creds_content" | jq -r '.project_id')
     
     if [[ -z "$clientEmail" || -z "$privateKey" || -z "$projectId" ]]; then
@@ -31,9 +31,15 @@ gcp_authenticate() {
         return 1
     fi
     
+    # Adjust privateKey formatting
+    # Replace "\\n" with actual new line, handle BEGIN and END markers
+    privateKey=$(echo "$privateKey" | sed 's/\\n/\n/g' | sed 's/- /\n-/g' | sed 's/ -/-\n/g')
+    
     # Create a temporary credentials file for gcloud authentication
     local temp_creds_file="/tmp/gcp_creds.json"
-    echo "$creds_content" > "$temp_creds_file"
+    # Use jq to create a valid JSON with the modified privateKey
+    jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
+    '{client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$temp_creds_file"
     
     echo "[INFO] Authenticating GCP service account..."
     if ! gcloud auth activate-service-account "$clientEmail" --key-file="$temp_creds_file" >/dev/null 2>&1; then

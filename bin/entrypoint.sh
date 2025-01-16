@@ -11,15 +11,12 @@ log_info "Welcome to UDX Worker Container. Initializing environment..."
 source /usr/local/lib/environment.sh
 
 handle_services() {
-    local cmd_exit_status=$1  # Pass command exit status if any
-
+    
     if check_active_services; then
         wait_for_services
-        log_info "Tailing Supervisor logs to keep the container alive."
-        tail -f /var/log/supervisor/supervisord.log
+        log_info "Services are fully running."
     else
         log_warn "No services are active."
-        tail -f /dev/null
     fi
 }
 
@@ -51,7 +48,6 @@ wait_for_services() {
 }
 
 # Main execution path
-# Main execution path
 if [ "$#" -gt 0 ]; then
     log_info "Executing command: $*"
     
@@ -60,14 +56,8 @@ if [ "$#" -gt 0 ]; then
         log_info "Shell script execution completed. Exiting."
         exit 0
     else
+        handle_services
         "$@"  # Execute the provided command
-        cmd_exit_status=$?
-
-        if [ $cmd_exit_status -eq 0 ]; then
-            exit 0
-        else
-            handle_services $cmd_exit_status
-        fi
     fi
 else
     handle_services
