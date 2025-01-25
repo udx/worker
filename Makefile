@@ -25,9 +25,16 @@ build:
 run: clean
 	@echo "Running Docker container..."
 
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "Creating environment file..."; \
+		touch $(ENV_FILE); \
+	else \
+		echo "Environment file exists..."; \
+	fi
+
 	@docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
 		--env-file $(ENV_FILE) \
-		-v $(VOLUMES) \
+		$(foreach vol,$(VOLUMES),-v $(vol)) \
 		$(DOCKER_IMAGE) $(COMMAND)
 	$(if $(filter false,$(INTERACTIVE)),docker logs -f $(CONTAINER_NAME);)
 
@@ -56,9 +63,9 @@ clean:
 	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
 
 # Test Docker container
-test: VOLUMES=$(TEST_WORKER_CONFIG):/home/udx/.cd/configs/worker.yml:ro
-test: COMMAND=/usr/local/tests/main.sh
-test: run
+test: clean
+	@echo "Setting up test environment..."
+	@$(MAKE) run VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh" COMMAND="/home/$(USER)/main.sh"
 	@$(MAKE) log FOLLOW_LOGS=true
 	@$(MAKE) clean
 

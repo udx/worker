@@ -3,7 +3,7 @@
 echo "Starting validation of secrets fetching..."
 
 # Path to the merged configuration file
-MERGED_CONFIG="/home/${USER}/.cd/configs/merged_worker.yml"
+MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 
 # Test verify_secrets function
 test_verify_secrets() {

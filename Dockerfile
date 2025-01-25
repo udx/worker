@@ -118,8 +118,7 @@ COPY lib /usr/local/lib
 COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Create a merged worker.yml file
-RUN touch /usr/local/configs/merged_worker.yml && \
-    chmod 600 /usr/local/configs/merged_worker.yml
+RUN touch /usr/local/configs/worker/merged_worker.yml
 
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh && \

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Paths for configurations
-BUILT_IN_CONFIG="/usr/local/configs/worker.yml"
+BUILT_IN_CONFIG="/usr/local/configs/worker/worker.yml"
 USER_CONFIG="/home/$USER/worker.yml"
-MERGED_CONFIG="/usr/local/configs/merged_worker.yml"
+MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 
 # Utility functions for logging
 log_info() {

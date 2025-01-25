@@ -34,10 +34,10 @@ authenticate_actors() {
         
         # Extract the credentials from the actor data
         creds=$(echo "$actor" | jq -r '.creds')
-        
+
         # Try to evaluate the credentials as an environment variable
         creds=$(resolve_env_vars "$creds")
-        
+
         # If the credentials are a file path, read the file and evaluate as JSON
         if [[ -f "$creds" ]]; then
             # Read the contents of the file and evaluate as JSON

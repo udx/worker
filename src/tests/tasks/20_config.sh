@@ -3,7 +3,7 @@
 echo "Starting validation of config..."
 
 # Path to the merged configuration file
-MERGED_CONFIG="/home/${USER}/.cd/configs/merged_worker.yml"
+MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 
 # Test configure_environment function
 test_configure_environment() {

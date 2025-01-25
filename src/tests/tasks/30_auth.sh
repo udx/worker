@@ -3,7 +3,7 @@
 echo "Starting validation of authorization..."
 
 # Path to the merged configuration file
-MERGED_CONFIG="/home/${USER}/.cd/configs/merged_worker.yml"
+MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 
 # Test authenticate_actors function
 test_authenticate_actors() {
