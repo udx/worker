@@ -25,33 +25,9 @@ build:
 run: clean
 	@echo "Running Docker container..."
 
-	@echo "Detecting JSON credentials files..."
-	$(eval JSON_CREDS_ENV := $(shell \
-		for file in $(wildcard *.json); do \
-			CREDS_VAR_NAME=$$(echo "$${file}" | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]'); \
-			CREDS_VAR_VALUE=$$(cat "$${file}" | jq -c .); \
-			echo "-e $${CREDS_VAR_NAME}='$${CREDS_VAR_VALUE}'"; \
-		done \
-	))
-
-	@echo "Detecting host environment credentials..."
-	$(eval CREDS_ENV := $(shell bash -c '\
-		for env_var in $(filter %_CREDS,$(.VARIABLES)); do \
-			creds_value=$${!env_var}; \
-			creds_value_escaped=$$(printf "%q" "$${creds_value}"); \
-			echo "-e $${env_var}=$${creds_value_escaped}"; \
-		done \
-	'))
-
-	@echo "Setting Docker volumes if any..."
-	$(eval DOCKER_VOLUMES := $(if $(VOLUMES),\
-		$(foreach vol,$(VOLUMES),-v $(vol)) \
-	))
-
 	@docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
-		$(JSON_CREDS_ENV) \
-		$(CREDS_ENV) \
-		$(DOCKER_VOLUMES) \
+		--env-file $(ENV_FILE) \
+		-v $(VOLUMES) \
 		$(DOCKER_IMAGE) $(COMMAND)
 	$(if $(filter false,$(INTERACTIVE)),docker logs -f $(CONTAINER_NAME);)
 
