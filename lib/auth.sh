@@ -9,7 +9,7 @@ declare -a configured_providers=()
 # Function to authenticate actors
 authenticate_actors() {
     local actors_json="$1"  # Expect the extracted actors JSON as a parameter
-
+    
     if [[ -z "$actors_json" || "$actors_json" == "null" ]]; then
         log_info "No worker actors found in the configuration."
         return 0
@@ -19,24 +19,35 @@ authenticate_actors() {
     local actors_file
     actors_file=$(mktemp)
     echo "$actors_json" | jq -c '.[]' > "$actors_file"
-
+    
     # Read all lines into an array, then delete the file
     mapfile -t actors_array < "$actors_file"
     rm -f "$actors_file"
-
+    
     # Process each actor in the array
     for actor in "${actors_array[@]}"; do
         local type provider creds auth_script auth_function
-
+        
         # Extract the type and provider from the actor data
         type=$(resolve_env_vars "$(echo "$actor" | jq -r '.type')")
         provider=$(echo "$type" | cut -d '-' -f 1)
         
         # Extract the credentials from the actor data
         creds=$(echo "$actor" | jq -r '.creds')
-
+        
         # Try to evaluate the credentials as an environment variable
         creds=$(resolve_env_vars "$creds")
+        
+        # If the credentials are a file path, read the file and evaluate as JSON
+        if [[ -f "$creds" ]]; then
+            # Read the contents of the file
+            creds=$(cat "$creds" | jq -c .)
+            
+            # Remove the file after reading
+            rm -f "$creds"
+        else
+            creds=$(resolve_env_vars "$creds")
+        fi
         
         if [[ -z "$creds" || "$creds" == "null" ]]; then
             log_info "Skipping $provider authentication as no credentials were provided."
@@ -71,7 +82,7 @@ authenticate_actors() {
             return 1
         fi
     done
-
+    
     return 0
 }
 
@@ -98,77 +109,14 @@ authenticate_provider() {
     # Clean up the temporary file
     rm -f "$temp_config_file"
     trap - EXIT
-
+    
     # Set an environment variable to mark successful authorization
     export "${provider^^}_AUTHORIZED=true"
     log_info "Authorization successful for provider $provider."
-
+    
     return 0
-}
-
-# Generic function to clean up authentication for any provider
-cleanup_provider() {
-    local provider=$1
-    local logout_cmd=$2
-    local list_cmd=$3
-    local name=$4
-    local cleaned_up=false
-
-    # Check if the provider's CLI is available
-    if ! command -v "$provider" > /dev/null; then
-        return 0  # Skip silently if CLI is not available
-    fi
-
-    # Check if there are active sessions/accounts to clean up
-    if ! eval "$list_cmd" > /dev/null 2>&1; then
-        return 0  # Skip silently if no active sessions are found
-    fi
-
-    log_info "Cleaning up $name authentication"
-    
-    # Run the logout command and capture any output or errors
-    local logout_output
-    logout_output=$(eval "$logout_cmd" 2>&1)
-    local logout_status=$?
-
-    # Check if the logout was successful or if an expected error message was returned
-    if [[ $logout_status -ne 0 ]]; then
-        if echo "$logout_output" | grep -q -E "No credentials available to revoke|No active sessions|No active accounts"; then
-            log_info "No active $name credentials to revoke."
-        else
-            log_error "Failed to log out of $name: $logout_output"
-            return 1
-        fi
-    else
-        log_info "$name authentication cleaned up successfully."
-        cleaned_up=true
-    fi
-
-    # Return the cleanup status for summary reporting
-    if [[ "$cleaned_up" == true ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Function to clean up sensitive environment variables based on a pattern
-cleanup_sensitive_env_vars() {
-    log_info "Cleaning up sensitive environment variables"
-    
-    # Define a pattern for sensitive environment variables (e.g., AZURE_CREDS, GCP_CREDS, etc.)
-    local pattern="_CREDS"
-
-    # Loop through environment variables that match the pattern
-    for var in $(env | grep "${pattern}" | cut -d'=' -f1); do
-        unset "$var"
-        log_info "Unset sensitive environment variable: $var"
-    done
-
-    log_info "Sensitive environment variables cleaned up successfully."
 }
 
 # Example usage:
 # authenticate_actors "$actors_json"
 # cleanup_actors
-# cleanup_sensitive_env_vars

@@ -89,22 +89,5 @@ cleanup_actors() {
     fi
 }
 
-# Function to clean up sensitive environment variables based on a pattern
-cleanup_sensitive_env_vars() {
-    log_info "Cleaning up sensitive environment variables"
-    
-    # Define a pattern for sensitive environment variables (e.g., AZURE_CREDS, GCP_CREDS, etc.)
-    local pattern="_CREDS"
-
-    # Loop through environment variables that match the pattern
-    for var in $(env | grep "${pattern}" | cut -d'=' -f1); do
-        unset "$var"
-        log_info "Unset sensitive environment variable: $var"
-    done
-
-    log_info "Sensitive environment variables cleaned up successfully."
-}
-
 # Example usage
 # cleanup_actors
-# cleanup_sensitive_env_vars

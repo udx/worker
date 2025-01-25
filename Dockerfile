@@ -33,8 +33,8 @@ RUN apt-get update && \
     zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
     nano=7.2-2build1 \
-    vim=2:9.1.0016-1ubuntu7.5 \
-    python3.12=3.12.3-1ubuntu0.3 \
+    vim=2:9.1.0016-1ubuntu7.6 \
+    python3.12=3.12.3-1ubuntu0.4 \
     python3-pip=24.0+dfsg-1ubuntu1.1 \
     supervisor=4.2.5-1ubuntu0.1 && \
     apt-get clean && \
@@ -103,31 +103,25 @@ RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
 
 # Create the Supervisor log directory and set permissions
-RUN mkdir -p /var/log/supervisor /var/run/supervisor /home/${USER}/etc && \
-    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor /home/${USER}/etc
-
-# Prepare directories for the user and worker configuration
-RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
-    touch /home/${USER}/.cd/configs/merged_worker.yml && \
-    mkdir -p /home/${USER}/.config/gcloud && \
-    mkdir -p /home/${USER}/.azure && \
-    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd /home/${USER}/.config /home/${USER}/.azure && \
-    chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
-
-# Switch to the user directory
-WORKDIR /home/${USER}
+RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
+    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor /usr/local/lib
 
 # Copy the CLI tool into the image
 COPY lib/cli.sh /usr/local/bin/udx_worker_mgmt
 RUN chmod +x /usr/local/bin/udx_worker_mgmt && \
-    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker
+    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker    
 
 # Copy built-in worker.yml to the container
-COPY ./src/configs /etc/worker
+COPY ./src/configs/*.yml /usr/local/configs/
 COPY ./src/scripts /usr/local/scripts
 
+# Create a merged worker.yml file
+RUN touch /usr/local/configs/merged_worker.yml && \
+chmod 600 /usr/local/configs/merged_worker.yml
+
 # Copy the bin, etc, and lib directories
-COPY ./etc/home /home/${USER}/etc
+COPY ./etc/home ./etc
+COPY ./etc/configs /usr/local/configs
 COPY ./lib /usr/local/lib
 COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
@@ -137,13 +131,17 @@ COPY ./tests/tasks /usr/local/tests/tasks
 
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
-    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd /usr/local/tests
+    chown -R ${UID}:${GID} /usr/local
 
-# Create a symbolic link for the supervisord configuration file
-RUN ln -sf /home/${USER}/etc/supervisord.conf /etc/supervisord.conf    
+# Prepare directories for the user and worker configuration
+RUN mkdir -p ${HOME} && \
+    chown -R ${USER}:${USER} ${HOME}
 
 # Switch to non-root user
 USER ${USER}
+
+# Switch to the user directory
+WORKDIR ${HOME}
 
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

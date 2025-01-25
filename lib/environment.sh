@@ -83,11 +83,6 @@ configure_environment() {
         return 1
     fi
 
-    if ! cleanup_sensitive_env_vars; then
-        log_error "Failed to clean up sensitive environment variables."
-        return 1
-    fi
-
     # Perform process manager setup
     log_info "Setting up process manager..."
     if should_generate_config; then

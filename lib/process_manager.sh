@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define paths
-CONFIG_FILE="/etc/worker/services.yml"
-COMMON_TEMPLATE_FILE="/home/${USER}/etc/supervisor.common.conf"
-PROGRAM_TEMPLATE_FILE="/home/${USER}/etc/supervisor.program.conf"
-FINAL_CONFIG="/home/${USER}/etc/supervisord.conf"
+CONFIG_FILE="/usr/local/configs/services.yml"
+COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor.common.conf"
+PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor.program.conf"
+FINAL_CONFIG="/usr/local/configs/supervisord.conf"
 
 # Function to check for service configurations
 should_generate_config() {
