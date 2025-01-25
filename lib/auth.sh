@@ -40,8 +40,8 @@ authenticate_actors() {
         
         # If the credentials are a file path, read the file and evaluate as JSON
         if [[ -f "$creds" ]]; then
-            # Read the contents of the file
-            creds=$(cat "$creds" | jq -c .)
+            # Read the contents of the file and evaluate as JSON
+            creds=$(jq -c . "$creds")
             
             # Remove the file after reading
             rm -f "$creds"

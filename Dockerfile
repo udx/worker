@@ -112,22 +112,22 @@ RUN chmod +x /usr/local/bin/udx_worker_mgmt && \
     ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker    
 
 # Copy built-in worker.yml to the container
-COPY ./src/configs/*.yml /usr/local/configs/
-COPY ./src/scripts /usr/local/scripts
+COPY src/configs/*.yml /usr/local/configs/
+COPY src/scripts /usr/local/scripts
 
 # Create a merged worker.yml file
 RUN touch /usr/local/configs/merged_worker.yml && \
 chmod 600 /usr/local/configs/merged_worker.yml
 
 # Copy the bin, etc, and lib directories
-COPY ./etc/home ./etc
-COPY ./etc/configs /usr/local/configs
-COPY ./lib /usr/local/lib
-COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY etc/home /etc
+COPY etc/configs /usr/local/configs
+COPY lib /usr/local/lib
+COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Copy the tests directory
-COPY ./tests/main.sh /usr/local/tests/main.sh
-COPY ./tests/tasks /usr/local/tests/tasks
+COPY tests/main.sh /usr/local/tests/main.sh
+COPY tests/tasks /usr/local/tests/tasks
 
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
