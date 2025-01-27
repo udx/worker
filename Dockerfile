@@ -54,6 +54,7 @@ RUN ARCH=$(uname -m) && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
+ENV CLOUDSDK_CONFIG=/usr/local/configs/gcloud
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
     curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
@@ -68,6 +69,7 @@ RUN ARCH=$(uname -m) && \
 ENV PATH=$PATH:/google-cloud-sdk/bin
 
 # Install AWS CLI (architecture-aware)
+ENV AWS_CONFIG_FILE=/usr/local/configs/aws
 RUN ARCH=$(uname -m) && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
@@ -76,6 +78,7 @@ RUN ARCH=$(uname -m) && \
 
 # Install Azure CLI with manual GPG key retrieval as root
 ENV GNUPGHOME=/root/.gnupg
+ENV AZURE_CONFIG_DIR=/usr/local/configs/azure
 RUN mkdir -p $GNUPGHOME && \
     chmod 700 $GNUPGHOME && \
     gpg --keyserver keyserver.ubuntu.com --recv-keys EB3E94ADBE1229CF && \
@@ -122,7 +125,7 @@ RUN touch /usr/local/configs/worker/merged_worker.yml
 
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh && \
-    chown -R ${UID}:${GID} /usr/local
+    chown -R ${UID}:${GID} /usr/local/configs
 
 # Prepare directories for the user and worker configuration
 RUN mkdir -p ${HOME} && \
