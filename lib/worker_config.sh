@@ -3,7 +3,7 @@
 # Paths for configurations
 BUILT_IN_CONFIG="/usr/local/configs/worker/default.yml"
 # Dynamically find user configuration in any subfolder of /home/$USER
-USER_CONFIG=$(find "/home/$USER" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
+USER_CONFIG=$( (find "/home/$USER" -name 'worker.yaml' -print | head -n 1) 2>/dev/null)
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 
 # Utility functions for logging
