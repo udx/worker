@@ -35,30 +35,30 @@ test_authenticate_actors() {
        case "$provider" in
                 azure)
                     if az account show > /dev/null 2>&1; then
-                        echo "az is authorized."
+                        echo "AZ is authorized."
                     else
-                        echo "az authorization failed."
+                        echo "AZ authorization failed."
                     fi
                 ;;
                 gcp)
                     if gcloud auth list > /dev/null 2>&1; then
-                        echo "gcloud is authorized."
+                        echo "GCLOUD is authorized."
                     else
-                        echo "gcloud authorization failed."
+                        echo "GCLOUD authorization failed."
                     fi
                 ;;
                 aws)
                     if aws sts get-caller-identity > /dev/null 2>&1; then
-                        echo "aws is authorized."
+                        echo "AWS is authorized."
                     else
-                        echo "aws authorization failed."
+                        echo "AWS authorization failed."
                     fi
                 ;;
                 bitwarden)
                     if bw status > /dev/null 2>&1; then
-                        echo "bw is authorized."
+                        echo "BW is authorized."
                     else
-                        echo "bw authorization failed."
+                        echo "BW authorization failed."
                     fi
                 ;;
                 *)

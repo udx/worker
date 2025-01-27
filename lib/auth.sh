@@ -37,21 +37,30 @@ authenticate_actors() {
 
         # Try to evaluate the credentials as an environment variable
         creds=$(resolve_env_vars "$creds")
-
+        
+        # Skip if the credentials are empty
+        if [[ -z "$creds" ]]; then
+            continue
+        else
+            log_info "Detected credentials for provider: $provider."
+        fi
+        
         # If the credentials are a file path, read the file and evaluate as JSON
         if [[ -f "$creds" ]]; then
+            log_info "Reading credentials from file: $creds"
+
             # Read the contents of the file and evaluate as JSON
             creds=$(jq -c . "$creds")
             
             # Remove the file after reading
             rm -f "$creds"
         else
+            # Try to parse the credentials as JSON
             creds=$(resolve_env_vars "$creds")
-        fi
-        
-        if [[ -z "$creds" || "$creds" == "null" ]]; then
-            log_info "Skipping $provider authentication as no credentials were provided."
-            continue
+
+            if [[ -n "$creds" ]]; then
+                log_info "Detected credentials as JSON string."
+            fi
         fi
         
         # Determine the authentication script and function to use
@@ -59,7 +68,6 @@ authenticate_actors() {
         auth_function="${provider}_authenticate"
         
         if [[ -f "$auth_script" ]]; then
-            log_info "Found authentication script for provider: $provider"
             # shellcheck source=/dev/null
             source "$auth_script"
             

@@ -57,7 +57,7 @@ cleanup_actors() {
     log_info "Starting cleanup of actors"
     
     # Accept configured providers as arguments
-    local configured_providers=("$@")
+    local configured_providers=('azure' 'gcp' 'aws' 'bitwarden')
     
     # Track if any actual cleanup was performed
     local any_cleanup=false

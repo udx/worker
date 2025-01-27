@@ -31,21 +31,20 @@ ensure_config_exists() {
 
 # Merge built-in and user-provided configurations
 merge_worker_configs() {
-    log_info "Merging worker configurations..."
 
     # Ensure built-in config exists
     ensure_config_exists "$BUILT_IN_CONFIG" || return 1
 
     # If a user-provided configuration exists, merge it
     if [[ -f "$USER_CONFIG" ]]; then
-        log_info "User configuration detected. Merging with the built-in configuration."
+        log_info "User configuration detected."
 
         if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
             log_error "Failed to merge configurations. yq returned an error."
             return 1
         fi
     else
-        log_info "No user configuration provided. Using built-in configuration only."
+        log_info "No worker configuration provided."
 
         # Copy the built-in configuration to the merged configuration
         if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
@@ -73,14 +72,14 @@ load_and_parse_config() {
 export_variables_from_config() {
     local config_json="$1"
 
-    log_info "Exporting variables from configuration..."
-
     # Extract the `variables` section
     local variables
     variables=$(echo "$config_json" | jq -r '.config.env // empty')
     if [[ -z "$variables" || "$variables" == "null" ]]; then
         log_info "No variables found in the configuration."
         return 0
+    else
+        log_info "Found variables in the configuration. Exporting..."
     fi
 
     # Iterate over variables and export them into the main shell
