@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Paths for configurations
-BUILT_IN_CONFIG="/usr/local/configs/worker/worker.yml"
+BUILT_IN_CONFIG="/usr/local/configs/worker/default.yml"
 USER_CONFIG="/home/$USER/worker.yml"
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 

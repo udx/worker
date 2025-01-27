@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define paths
-CONFIG_FILE="/usr/local/configs/services.yml"
-COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor.common.conf"
+CONFIG_FILE="/usr/local/configs/worker/services.yml"
+COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor/supervisor.common.conf"
 PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor.program.conf"
 FINAL_CONFIG="/usr/local/configs/supervisord.conf"
 
