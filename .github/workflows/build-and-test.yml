@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Development Pipeline
         run: |
-          echo '${{ secrets.AZURE_CREDS }}' > azure_creds.json
+          echo ${{ secrets.AZURE_CREDS }} > azure_creds.json
           echo "AZURE_CREDS=azure_creds.json" >> .env
           make dev-pipeline
         working-directory: .
