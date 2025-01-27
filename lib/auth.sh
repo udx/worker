@@ -34,7 +34,7 @@ authenticate_actors() {
         
         # Extract the credentials from the actor data
         creds=$(echo "$actor" | jq -r '.creds')
-
+        
         # Try to evaluate the credentials as an environment variable
         creds=$(resolve_env_vars "$creds")
         
@@ -45,47 +45,38 @@ authenticate_actors() {
             log_info "Detected credentials for provider: $provider."
         fi
         
-        # If the credentials are a file path, read the file and evaluate as JSON
-        if [[ -f "$creds" ]]; then
-            log_info "Reading credentials from file: $creds"
-
-            # Read the contents of the file and evaluate as JSON
-            creds=$(jq -c . "$creds")
-        else
-            # Try to parse the credentials as JSON
-            creds=$(resolve_env_vars "$creds")
-            creds=$(echo "$creds" | jq -c .)
-
-            if [[ -n "$creds" ]]; then
-                log_info "Detected credentials as JSON string."
-            fi
-        fi
-        
-        # Determine the authentication script and function to use
-        auth_script="/usr/local/lib/auth/${provider}.sh"
-        auth_function="${provider}_authenticate"
-        
-        if [[ -f "$auth_script" ]]; then
-            # shellcheck source=/dev/null
-            source "$auth_script"
+        # Expect credentials to be base64 encoded JSON
+        creds=$(echo "$creds" | tr -d '\n' | base64 --decode | jq -c .)
+        if [[ -n "$creds" ]]; then
+            log_info "Decoded credentials from base64 encoded JSON."
+            # Determine the authentication script and function to use
+            auth_script="/usr/local/lib/auth/${provider}.sh"
+            auth_function="${provider}_authenticate"
             
-            if command -v "$auth_function" > /dev/null; then
-                log_info "Authenticating with $provider"
+            if [[ -f "$auth_script" ]]; then
+                # shellcheck source=/dev/null
+                source "$auth_script"
                 
-                # Handle authentication based on provider type
-                if ! authenticate_provider "$provider" "$auth_function" "$creds"; then
-                    log_error "Authentication failed for provider $provider"
+                if command -v "$auth_function" > /dev/null; then
+                    log_info "Authenticating with $provider"
+                    
+                    # Handle authentication based on provider type
+                    if ! authenticate_provider "$provider" "$auth_function" "$creds"; then
+                        log_error "Authentication failed for provider $provider"
+                        return 1
+                    fi
+                    # Add provider to configured list if authentication succeeds
+                    configured_providers+=("$provider")
+                else
+                    log_error "Authentication function $auth_function not found for provider $provider"
                     return 1
                 fi
-                # Add provider to configured list if authentication succeeds
-                configured_providers+=("$provider")
             else
-                log_error "Authentication function $auth_function not found for provider $provider"
+                log_error "No authentication script found for provider: $provider"
                 return 1
             fi
         else
-            log_error "No authentication script found for provider: $provider"
-            return 1
+            log_warn "Failed to decode credentials for provider: $provider. It may not be base64 encoded."
         fi
     done
     

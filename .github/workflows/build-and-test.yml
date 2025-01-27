@@ -32,7 +32,10 @@ jobs:
 
       - name: Build
         run: |
-          make build
+          echo "AZURE_CREDS=$AZURE_CREDS" > .env
+          make dev-pipeline
+        env:
+          AZURE_CREDS: ${{ secrets.AZURE_CREDS }}
         working-directory: .
 
       - name: Install Trivy
