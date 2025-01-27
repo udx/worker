@@ -2,6 +2,7 @@
 
 # Dynamically source all command modules
 for module in /usr/local/lib/cli/*.sh; do
+  # shellcheck disable=SC1090
   source "$module"
 done
 
