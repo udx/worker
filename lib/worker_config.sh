@@ -3,8 +3,9 @@
 # Paths for configurations
 BUILT_IN_CONFIG="/usr/local/configs/worker/default.yml"
 # Dynamically find user configuration in any subfolder of /home/$USER
-USER_CONFIG=$( (find "/home/$USER" -name 'worker.yaml' -print | head -n 1) 2>/dev/null)
-MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
+# shellcheck disable=SC2227
+USER_CONFIG=$(find "/home/$USER" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
+MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yaml"
 
 # Utility functions for logging
 log_info() {
@@ -32,6 +33,10 @@ ensure_config_exists() {
 
 # Merge built-in and user-provided configurations
 merge_worker_configs() {
+    # Ensure the merged configuration file exists
+    if [ ! -f "$MERGED_CONFIG" ]; then
+        touch "$MERGED_CONFIG" || { log_error "Failed to create merged configuration file at $MERGED_CONFIG"; return 1; }
+    fi
 
     # Ensure built-in config exists
     ensure_config_exists "$BUILT_IN_CONFIG" || return 1

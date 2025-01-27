@@ -120,9 +120,6 @@ COPY etc/configs /usr/local/configs
 COPY lib /usr/local/lib
 COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Create a merged worker.yml file
-RUN touch /usr/local/configs/worker/merged_worker.yml
-
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh && \
     chown -R ${UID}:${GID} /usr/local/configs

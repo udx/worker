@@ -65,7 +65,7 @@ clean:
 # Test Docker container
 test: clean
 	@echo "Setting up test environment..."
-	@$(MAKE) run VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks:ro $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh:ro" COMMAND="/home/$(USER)/main.sh"
+	@$(MAKE) run VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yaml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks:ro $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh:ro" COMMAND="/home/$(USER)/main.sh"
 	@$(MAKE) log FOLLOW_LOGS=true
 	@$(MAKE) clean
 
