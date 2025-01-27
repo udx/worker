@@ -107,7 +107,7 @@ RUN groupadd -g ${GID} ${USER} && \
 
 # Create the Supervisor log directory and set permissions
 RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
-    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor /usr/local/lib
+    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor
 
 # Copy the CLI tool into the image
 COPY lib/cli.sh /usr/local/bin/udx_worker_mgmt
@@ -126,6 +126,9 @@ RUN touch /usr/local/configs/worker/merged_worker.yml
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh && \
     chown -R ${UID}:${GID} /usr/local/configs
+
+# Create a symbolic link for the supervisord configuration file
+RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf    
 
 # Prepare directories for the user and worker configuration
 RUN mkdir -p ${HOME} && \

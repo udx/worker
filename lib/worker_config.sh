@@ -2,7 +2,8 @@
 
 # Paths for configurations
 BUILT_IN_CONFIG="/usr/local/configs/worker/default.yml"
-USER_CONFIG="/home/$USER/worker.yml"
+# Dynamically find user configuration in any subfolder of /home/$USER
+USER_CONFIG=$(find "/home/$USER" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yml"
 
 # Utility functions for logging
@@ -35,9 +36,9 @@ merge_worker_configs() {
     # Ensure built-in config exists
     ensure_config_exists "$BUILT_IN_CONFIG" || return 1
 
-    # If a user-provided configuration exists, merge it
-    if [[ -f "$USER_CONFIG" ]]; then
-        log_info "User configuration detected."
+    # If a user-provided configuration exists (and path is not empty), merge it
+    if [[ -f "$USER_CONFIG" && -n "$USER_CONFIG" ]]; then
+        log_info "User configuration detected at $USER_CONFIG"
 
         if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
             log_error "Failed to merge configurations. yq returned an error."
