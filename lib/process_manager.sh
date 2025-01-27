@@ -1,10 +1,16 @@
 #!/bin/bash
 
 # Define paths
-CONFIG_FILE="/etc/worker/services.yml"
-COMMON_TEMPLATE_FILE="/home/${USER}/etc/supervisor.common.conf"
-PROGRAM_TEMPLATE_FILE="/home/${USER}/etc/supervisor.program.conf"
-FINAL_CONFIG="/home/${USER}/etc/supervisord.conf"
+DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yml"
+# Define the user-specific configuration path search
+# shellcheck disable=SC2227
+USER_CONFIG_PATH=$(find "/home/$USER" -name 'services.yaml' 2>/dev/null -print | head -n 1)
+
+# Use the first user-specific config found; if none, use the default
+CONFIG_FILE="${USER_CONFIG_PATH:-$DEFAULT_CONFIG_FILE}"
+COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor/common.conf"
+PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor/program.conf"
+FINAL_CONFIG="/usr/local/configs/supervisor/supervisord.conf"
 
 # Function to check for service configurations
 should_generate_config() {

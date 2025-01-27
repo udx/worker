@@ -33,8 +33,8 @@ RUN apt-get update && \
     zip=3.0-13build1 \
     unzip=6.0-28ubuntu4 \
     nano=7.2-2build1 \
-    vim=2:9.1.0016-1ubuntu7.5 \
-    python3.12=3.12.3-1ubuntu0.3 \
+    vim=2:9.1.0016-1ubuntu7.6 \
+    python3.12=3.12.3-1ubuntu0.4 \
     python3-pip=24.0+dfsg-1ubuntu1.1 \
     supervisor=4.2.5-1ubuntu0.1 && \
     apt-get clean && \
@@ -54,11 +54,12 @@ RUN ARCH=$(uname -m) && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
+ENV CLOUDSDK_CONFIG=/usr/local/configs/gcloud
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-507.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-504.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-507.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
@@ -68,6 +69,7 @@ RUN ARCH=$(uname -m) && \
 ENV PATH=$PATH:/google-cloud-sdk/bin
 
 # Install AWS CLI (architecture-aware)
+ENV AWS_CONFIG_FILE=/usr/local/configs/aws
 RUN ARCH=$(uname -m) && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
@@ -76,13 +78,14 @@ RUN ARCH=$(uname -m) && \
 
 # Install Azure CLI with manual GPG key retrieval as root
 ENV GNUPGHOME=/root/.gnupg
+ENV AZURE_CONFIG_DIR=/usr/local/configs/azure
 RUN mkdir -p $GNUPGHOME && \
     chmod 700 $GNUPGHOME && \
     gpg --keyserver keyserver.ubuntu.com --recv-keys EB3E94ADBE1229CF && \
     gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.67.0-1~noble && \
+    apt-get install -y --no-install-recommends azure-cli=2.68.0-1~noble && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -103,47 +106,36 @@ RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
 
 # Create the Supervisor log directory and set permissions
-RUN mkdir -p /var/log/supervisor /var/run/supervisor /home/${USER}/etc && \
-    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor /home/${USER}/etc
-
-# Prepare directories for the user and worker configuration
-RUN mkdir -p /etc/worker /home/${USER}/.cd/bin /home/${USER}/.cd/configs && \
-    touch /home/${USER}/.cd/configs/merged_worker.yml && \
-    mkdir -p /home/${USER}/.config/gcloud && \
-    mkdir -p /home/${USER}/.azure && \
-    chown -R ${UID}:${GID} /etc/worker /home/${USER}/.cd /home/${USER}/.config /home/${USER}/.azure && \
-    chmod 600 /home/${USER}/.cd/configs/merged_worker.yml
-
-# Switch to the user directory
-WORKDIR /home/${USER}
+RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
+    chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor
 
 # Copy the CLI tool into the image
 COPY lib/cli.sh /usr/local/bin/udx_worker_mgmt
 RUN chmod +x /usr/local/bin/udx_worker_mgmt && \
-    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker
-
-# Copy built-in worker.yml to the container
-COPY ./src/configs /etc/worker
-COPY ./src/scripts /usr/local/scripts
+    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker    
 
 # Copy the bin, etc, and lib directories
-COPY ./etc/home /home/${USER}/etc
-COPY ./lib /usr/local/lib
-COPY ./bin/entrypoint.sh /usr/local/bin/entrypoint.sh
-
-# Copy the tests directory
-COPY ./tests/main.sh /usr/local/tests/main.sh
-COPY ./tests/tasks /usr/local/tests/tasks
+COPY etc/home /etc
+COPY etc/configs /usr/local/configs
+COPY lib /usr/local/lib
+COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Set permissions during build
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/tests/main.sh && \
-    chown -R ${UID}:${GID} /usr/local/lib /etc/worker /home/${USER}/etc /home/${USER}/.cd /usr/local/tests
+RUN chmod +x /usr/local/bin/entrypoint.sh && \
+    chown -R ${UID}:${GID} /usr/local/configs
 
 # Create a symbolic link for the supervisord configuration file
-RUN ln -sf /home/${USER}/etc/supervisord.conf /etc/supervisord.conf    
+RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf    
+
+# Prepare directories for the user and worker configuration
+RUN mkdir -p ${HOME} && \
+    chown -R ${USER}:${USER} ${HOME}
 
 # Switch to non-root user
 USER ${USER}
+
+# Switch to the user directory
+WORKDIR ${HOME}
 
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -5,6 +5,9 @@
 # Example usage of the function
 # azure_authenticate "/path/to/your/azure_creds.json"
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # Function to authenticate Azure accounts
 azure_authenticate() {
     local creds_json="$1"
@@ -31,7 +34,7 @@ azure_authenticate() {
         return 1
     fi
 
-    echo "[INFO] Authenticating Azure service principal..."
+    log_info "Authenticating Azure service principal..."
     if ! az login --service-principal -u "$clientId" -p "$clientSecret" --tenant "$tenantId" >/dev/null 2>&1; then
         echo "[ERROR] Azure service principal authentication failed." >&2
         return 1
@@ -42,5 +45,5 @@ azure_authenticate() {
         return 1
     fi
 
-    echo "[INFO] Azure service principal authenticated and subscription set."
+    log_info "Azure service principal authenticated and subscription set."
 }

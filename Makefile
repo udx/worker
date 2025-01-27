@@ -25,33 +25,16 @@ build:
 run: clean
 	@echo "Running Docker container..."
 
-	@echo "Detecting JSON credentials files..."
-	$(eval JSON_CREDS_ENV := $(shell \
-		for file in $(wildcard *.json); do \
-			CREDS_VAR_NAME=$$(echo "$${file}" | sed -e 's/\.json//g' -e 's/\./_/g' | tr '[:lower:]' '[:upper:]'); \
-			CREDS_VAR_VALUE=$$(cat "$${file}" | jq -c .); \
-			echo "-e $${CREDS_VAR_NAME}='$${CREDS_VAR_VALUE}'"; \
-		done \
-	))
-
-	@echo "Detecting host environment credentials..."
-	$(eval CREDS_ENV := $(shell bash -c '\
-		for env_var in $(filter %_CREDS,$(.VARIABLES)); do \
-			creds_value=$${!env_var}; \
-			creds_value_escaped=$$(printf "%q" "$${creds_value}"); \
-			echo "-e $${env_var}=$${creds_value_escaped}"; \
-		done \
-	'))
-
-	@echo "Setting Docker volumes if any..."
-	$(eval DOCKER_VOLUMES := $(if $(VOLUMES),\
-		$(foreach vol,$(VOLUMES),-v $(vol)) \
-	))
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "Creating environment file..."; \
+		touch $(ENV_FILE); \
+	else \
+		echo "Environment file exists..."; \
+	fi
 
 	@docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
-		$(JSON_CREDS_ENV) \
-		$(CREDS_ENV) \
-		$(DOCKER_VOLUMES) \
+		--env-file $(ENV_FILE) \
+		$(foreach vol,$(VOLUMES),-v $(vol)) \
 		$(DOCKER_IMAGE) $(COMMAND)
 	$(if $(filter false,$(INTERACTIVE)),docker logs -f $(CONTAINER_NAME);)
 
@@ -80,9 +63,9 @@ clean:
 	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
 
 # Test Docker container
-test: VOLUMES=$(TEST_WORKER_CONFIG):/home/udx/.cd/configs/worker.yml:ro
-test: COMMAND=/usr/local/tests/main.sh
-test: run
+test: clean
+	@echo "Setting up test environment..."
+	@$(MAKE) run VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yaml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks:ro $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh:ro" COMMAND="/home/$(USER)/main.sh"
 	@$(MAKE) log FOLLOW_LOGS=true
 	@$(MAKE) clean
 

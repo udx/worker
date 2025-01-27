@@ -1,6 +1,9 @@
 # macOS system files
 .DS_Store
 
+# Bash history
+.bash_history
+
 # Node modules
 node_modules/
 

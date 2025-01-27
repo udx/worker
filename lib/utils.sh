@@ -6,7 +6,7 @@ if [ -z "${UTILS_SH_INCLUDED+x}" ]; then
     
     # Function to print the UDX logo
     udx_logo() {
-        cat /home/"${USER}"/etc/logo.txt
+        cat /etc/logo.txt
     }
     
     # Simple logging functions

@@ -2,9 +2,6 @@
 kind: workerConfig
 version: udx.io/worker-v1/config
 config:
-  env:
-    DOCKER_IMAGE_NAME: "udx-worker"
-
   actors:
     - type: gcp
       creds: "${GCP_CREDS}"

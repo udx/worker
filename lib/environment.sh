@@ -41,10 +41,7 @@ configure_environment() {
         return 1
     fi
 
-    log_info "Worker configuration loaded successfully."
-
     # Export variables from the configuration
-    log_info "Exporting variables from configuration to environment..."
     if ! export_variables_from_config "$resolved_config"; then
         log_error "Failed to export variables."
         return 1
@@ -80,11 +77,6 @@ configure_environment() {
     log_info "Cleaning up sensitive data..."
     if ! cleanup_actors; then
         log_error "Failed to clean up actors."
-        return 1
-    fi
-
-    if ! cleanup_sensitive_env_vars; then
-        log_error "Failed to clean up sensitive environment variables."
         return 1
     fi
 

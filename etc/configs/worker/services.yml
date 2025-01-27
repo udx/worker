@@ -4,7 +4,7 @@ version: udx.io/worker-v1/service
 services:
   - name: "app_service"
     ignore: "true"
-    command: "sh /usr/local/scripts/process_example.sh"
+    command: "sh /usr/local/scripts/main.sh"
     autostart: "true"
     autorestart: "false"
     envs:
@@ -12,7 +12,7 @@ services:
       - "KEY2=value2"
   - name: "another_service"
     ignore: "true"
-    command: "sh /usr/local/scripts/process_example.sh"
+    command: "sh /usr/local/scripts/main.sh"
     autostart: "true"
     autorestart: "true"
     envs: []
