@@ -131,11 +131,11 @@ RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf
 RUN mkdir -p ${HOME} && \
     chown -R ${USER}:${USER} ${HOME}
 
-# Switch to non-root user
-USER ${USER}
-
 # Switch to the user directory
 WORKDIR ${HOME}
+
+# Switch to non-root user
+USER ${USER}
 
 # Set the entrypoint to run the entrypoint script using shell form
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

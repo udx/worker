@@ -34,6 +34,9 @@ authenticate_actors() {
         
         # Extract the credentials from the actor data
         creds=$(echo "$actor" | jq -r '.creds')
+
+        # Extract the environment variable name using parameter expansion and sed
+        env_var_name=$(echo $creds | sed 's/\${\([A-Z_]*\)}/\1/')
         
         # Try to evaluate the credentials as an environment variable
         creds=$(resolve_env_vars "$creds")
@@ -43,6 +46,9 @@ authenticate_actors() {
             continue
         else
             log_info "Detected credentials for provider: $provider."
+
+            # Reset creds env
+            eval "export $env_var_name=''"        
         fi
         
         # Expect credentials to be base64 encoded JSON
