@@ -57,6 +57,7 @@ authenticate_actors() {
         else
             # Try to parse the credentials as JSON
             creds=$(resolve_env_vars "$creds")
+            creds=$(echo "$creds" | jq -c .)
 
             if [[ -n "$creds" ]]; then
                 log_info "Detected credentials as JSON string."
