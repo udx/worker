@@ -51,9 +51,6 @@ authenticate_actors() {
 
             # Read the contents of the file and evaluate as JSON
             creds=$(jq -c . "$creds")
-            
-            # Remove the file after reading
-            rm -f "$creds"
         else
             # Try to parse the credentials as JSON
             creds=$(resolve_env_vars "$creds")

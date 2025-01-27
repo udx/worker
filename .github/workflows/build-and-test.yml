@@ -30,11 +30,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup Azure Credentials and Run Development Pipeline
+      - name: Build
         run: |
-          echo ${{ secrets.AZURE_CREDS }} | jq . > azure_creds.json
-          echo "AZURE_CREDS=azure_creds.json" >> .env
-          make dev-pipeline
+          make build
         working-directory: .
 
       - name: Install Trivy
