@@ -36,7 +36,8 @@ authenticate_actors() {
         creds=$(echo "$actor" | jq -r '.creds')
 
         # Extract the environment variable name using parameter expansion and sed
-        env_var_name=$(echo $creds | sed 's/\${\([A-Z_]*\)}/\1/')
+        # shellcheck disable=SC2001
+        env_var_name=$(echo "$creds" | sed 's/\${\([A-Z_]*\)}/\1/')
         
         # Try to evaluate the credentials as an environment variable
         creds=$(resolve_env_vars "$creds")
@@ -54,7 +55,7 @@ authenticate_actors() {
         # Expect credentials to be base64 encoded JSON
         creds=$(echo "$creds" | tr -d '\n' | base64 --decode | jq -c .)
         if [[ -n "$creds" ]]; then
-            log_info "Decoded credentials from base64 encoded JSON."
+            log_info "Processing credentials..."
             # Determine the authentication script and function to use
             auth_script="/usr/local/lib/auth/${provider}.sh"
             auth_function="${provider}_authenticate"
