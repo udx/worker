@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Function to display current environment settings or a specific variable
-show_environment() {
+get_environment() {
     if [ $# -eq 0 ]; then
         echo "Current Environment Settings:"
         env
@@ -23,9 +23,9 @@ set_environment() {
 # Handle environment commands
 env_handler() {
     case $1 in
-        show)
+        get)
             shift
-            show_environment "$@"
+            get_environment "$@"
             ;;
         set)
             shift

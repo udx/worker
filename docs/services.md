@@ -1,6 +1,6 @@
-## Services 
+## Services Configuration
 
-The `services.yml` file, located in the `src/configs` directory, is a critical component for configuring service behavior in the UDX Worker environment. This file follows the `workerService` kind specification, designed to manage and orchestrate services dynamically, based on the `udx.io/worker-v1/service` version schema. Below, we break down the structure and explain the significance of each field, including default values as defined in the `lib/process_manager.sh` script.
+The `services.yaml` file contains a list of services to be managed by the worker. Each service is defined using the following structure:
 
 ```yaml
 ---
@@ -32,16 +32,4 @@ services:
 
 ## Usage
 
-To use these configuration file, ensure that the `services.yml` file is correctly configured and placed in the appropriate directory (`/etc/worker`) within the container.
-
-### Volume Mount
-
-If you have a worker configuration outside of the worker image, you can mount it as a volume into the container:
-
-```shell
-docker run -d --name udx-worker \
-  --env-file .env \
-  -v $(pwd)/my-tasks:/usr/src/app \
-  -v $(pwd)/src/configs/services.yml:/etc/worker \
-  usabilitydynamics/udx-worker:latest
-```
+To use this configuration file, make sure to mount it with your application under `/home/udx/`. It doesn't matter where you mount it, it could be autodetected in any subdirectory if it's mounted correctly and named `services.yaml`.
