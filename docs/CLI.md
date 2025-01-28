@@ -1,5 +1,7 @@
 ### Commands
 
+#### Service
+
 * `worker service list` 
 Lists all available services.
 
@@ -23,3 +25,16 @@ Stops a specified service.
 
 * `worker service restart <service_name>`
 Restarts a specified service.
+
+#### ENV 
+
+* `worker env set <key> <value>`
+Sets an environment variable.
+
+* `worker env get [key]`
+Retrieves an environment variable. Show all environment variables if no key is provided.
+
+#### SBOM
+
+* `worker sbom generate`
+Generates container SBOM.

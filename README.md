@@ -21,7 +21,7 @@ docker run -d \
   usabilitydynamics/udx-worker:latest
 ```
 
-_Make sure to mount the current directory to /home/udx in the container._
+_Make sure to mount the current directory to `/home/udx` in the container._
 
 ### Development
 
@@ -62,9 +62,19 @@ _For more details on available commands_
 make
 ```
 
+### Docs
+
+- [Authorization](/docs/authorization.md)
+- [CLI](/docs/cli.md)
+- [Config](/docs/config.md)
+- [Git Help](/docs/git.md)
+- [Notes](/docs/notes.md)
+- [Services](/docs/services.md)
+
 ### Resources
 
 - [Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker)
+- [Documentation](https://udx.dev/worker)
 - [Marketing Page](https://udx.io/products/udx-worker)
 
 ### Contributing

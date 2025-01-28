@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Function to display dpkg packages in a table format using awk
-show_sbom() {
+generate_sbom() {
     echo "Package Name            | Version          | Architecture"
     echo "----------------------------------------------------------"
     dpkg-query -W -f='${binary:Package} | ${Version} | ${Architecture}\n' | awk -F'|' '{
@@ -12,9 +12,9 @@ show_sbom() {
 # Handler for the sbom command
 sbom_handler() {
     case $1 in
-        show)
+        generate)
             shift
-            show_sbom "$@"
+            generate_sbom "$@"
             ;;
         *)
             echo "Usage: $0 sbom show"
