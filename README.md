@@ -1,79 +1,73 @@
-# UDX Worker
+## UDX Worker
 
-The UDX Worker simplifies DevSecOps by providing a secure, containerized environment for handling secrets and running automation tasks.
+The UDX Worker simplifies DevSecOps by providing a secure, containerized environment for handling secrets and running automation tasks. This repository contains the UDX Worker Docker image, designed for secure and reliable automation tasks based on 12-factor methodology. UDX Worker environments are ephemeral and adhere to zero-trust principles and methodology, ensuring maximum security and reliability.
 
-This repository contains the UDX Worker Docker image, designed for secure and reliable automation tasks based on 12-factor methodology.
+### Deployment
 
-UDX Worker environments are ephemeral and adhere to zero-trust principles and methodology, ensuring maximum security and reliability.
+1. Make sure Docker installed.
 
-![UDX Worker Diagram](https://storage.googleapis.com/stateless-udx-io/2023/07/e5a9ac2b-understanding-containerization-in-microservices-architecture.png)
-
-## Prerequisites
-
-Before using the UDX Worker Image, make sure you have the following prerequisites installed:
-
-- Docker: [Installation Guide](https://docs.docker.com/get-docker/)
-
-## Quick Start
-
-1. **Clone the Repository**
+2. Pull the Docker image:
 
 ```shell
-git clone https://github.com/udx/udx-worker.git
-cd udx-worker
+docker pull usabilitydynamics/udx-worker:latest
 ```
 
-2. **Run Dev Pipeline**
+3. Run the Docker container:
 
 ```shell
-make dev-pipeline
+docker run -d \
+  --name my-app \
+  -v $(pwd):/home/udx \
+  usabilitydynamics/udx-worker:latest
 ```
 
-3. **Utilize commands for local development**
+_Make sure to mount the current directory to /home/udx in the container._
+
+### Development
+
+1. Clone the Repository
+
+```shell
+git clone https://github.com/udx/worker.git
+cd worker
+```
+
+2. Build Image
 
 ```shell
 make build
 ```
 
+3. Start the container
+
 ```shell
 make run
 ```
+
+_Interactively_
 
 ```shell
 make run-it
 ```
 
+4. Run tests
+
 ```shell
 make test
 ```
 
-For more details on available commands
+_For more details on available commands_
 
 ```shell
 make
 ```
 
-## Detailed Modules Documentation
+### Resources
 
-- [Secure Environment Configuration](src/configs/readme.md)
-- [Authentication](lib/auth/readme.md)
-- [Secrets Management](lib/secrets/readme.md)
+- [Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker)
+- [Marketing Page](https://udx.io/products/udx-worker)
 
-## Docker Hub
-
-Our project is available on Docker Hub. Pull the latest image with:
-
-```sh
-docker pull usabilitydynamics/udx-worker:latest
-```
-
-For more details, visit our [docker hub repository](https://hub.docker.com/r/usabilitydynamics/udx-worker).
-
-## Marketing Page
-
-For more details about our product, visit our [marketing page](https://udx.io/products/udx-worker).
-
-## Contributing
+### Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please fork the repository and submit a pull request.
 
