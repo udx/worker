@@ -30,7 +30,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build
+      - name: Dev Pipeline
         run: |
           echo "AZURE_CREDS=$AZURE_CREDS" > .env
           make dev-pipeline

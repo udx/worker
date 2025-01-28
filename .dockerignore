@@ -1,15 +1,11 @@
 # Credentials and sensitive data
-azure_creds.json
-aws_creds.json
-gcp_creds.json
-bitwarden_creds.json
+*_creds.json
 .env
 
 # Git and version control related files
 .git
 .gitignore
 .gitattributes
-.yamllint
 
 # CI/CD and GitHub-related files
 ci/*
@@ -32,15 +28,8 @@ Makefile.variables
 *.bak
 *.old
 
-# Readme files in the secrets and auth directories
-lib/auth/readme.md
-lib/secrets/readme.md
-
-# Unnecessary configuration documentation
-src/configs/readme.md
-
 # Ignore test configuration files
-tests/configs/*
+src/*
 
 # Ignore IDE specific and Prettier configuration files
 .vscode/
