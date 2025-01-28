@@ -8,85 +8,86 @@ declare -a configured_providers=()
 
 # Function to authenticate actors
 authenticate_actors() {
-    local actors_json="$1"  # Expect the extracted actors JSON as a parameter
-    
+    local actors_json="$1"
+
     if [[ -z "$actors_json" || "$actors_json" == "null" ]]; then
         log_info "No worker actors found in the configuration."
         return 0
     fi
-    
-    # Use a temporary file to avoid a subshell
+
     local actors_file
     actors_file=$(mktemp)
     echo "$actors_json" | jq -c '.[]' > "$actors_file"
-    
-    # Read all lines into an array, then delete the file
+
     mapfile -t actors_array < "$actors_file"
     rm -f "$actors_file"
-    
-    # Process each actor in the array
+
     for actor in "${actors_array[@]}"; do
         local type provider creds auth_script auth_function
-        
-        # Extract the type and provider from the actor data
+
         type=$(resolve_env_vars "$(echo "$actor" | jq -r '.type')")
         provider=$(echo "$type" | cut -d '-' -f 1)
-        
-        # Extract the credentials from the actor data
         creds=$(echo "$actor" | jq -r '.creds')
 
-        # Extract the environment variable name using parameter expansion and sed
-        # shellcheck disable=SC2001
-        env_var_name=$(echo "$creds" | sed 's/\${\([A-Z_]*\)}/\1/')
-        
-        # Try to evaluate the credentials as an environment variable
-        creds=$(resolve_env_vars "$creds")
-        
-        # Skip if the credentials are empty
+        # Evaluate creds as a reference to an environment variable
+        if [[ "$creds" =~ ^\$\{(.+)\}$ ]]; then
+            local env_var_name="${BASH_REMATCH[1]}"
+            creds="${!env_var_name}"
+        fi
+
+        # Skip if the credentials are empty or not defined
         if [[ -z "$creds" ]]; then
             continue
         else
-            log_info "Detected credentials for provider: $provider."
-
-            # Reset creds env
-            eval "export $env_var_name=''"        
+            log_info "Detected credentials for $type"
         fi
-        
-        # Expect credentials to be base64 encoded JSON
-        creds=$(echo "$creds" | tr -d '\n' | base64 --decode | jq -c .)
-        if [[ -n "$creds" ]]; then
-            log_info "Processing credentials..."
-            # Determine the authentication script and function to use
+
+        # Explicitly check for JSON format
+        if echo "$creds" | jq -e . >/dev/null 2>&1; then
+            log_info "Reading JSON credentials"
+        # Then, check if it's a file path
+        elif [[ -f "$creds" ]]; then
+            log_info "Reading credentials from file: $creds"
+            creds=$(cat "$creds")
+        # Finally, check if it's possibly base64 encoded
+        elif echo "$creds" | base64 --decode &>/dev/null && echo "$creds" | base64 --decode | jq empty &>/dev/null; then
+            log_info "Reading base64 encoded JSON credentials"
+            creds=$(echo "$creds" | base64 --decode)
+        else
+            log_error "Credentials format not recognized for $provider. Skipping..."
+            continue
+        fi
+
+        # Proceed only if creds are valid JSON
+        if echo "$creds" | jq empty &>/dev/null; then
+            log_info "Processing credentials for $provider"
             auth_script="/usr/local/lib/auth/${provider}.sh"
             auth_function="${provider}_authenticate"
-            
+
             if [[ -f "$auth_script" ]]; then
-                # shellcheck source=/dev/null
                 source "$auth_script"
-                
+
                 if command -v "$auth_function" > /dev/null; then
-                    log_info "Authenticating with $provider"
-                    
-                    # Handle authentication based on provider type
+
                     if ! authenticate_provider "$provider" "$auth_function" "$creds"; then
-                        log_error "Authentication failed for provider $provider"
+                        log_error "Authentication failed for provider $provider."
                         return 1
                     fi
-                    # Add provider to configured list if authentication succeeds
                     configured_providers+=("$provider")
                 else
-                    log_error "Authentication function $auth_function not found for provider $provider"
-                    return 1
+                    log_error "Authentication function $auth_function not found for $provider. Skipping..."
+                    continue
                 fi
             else
-                log_error "No authentication script found for provider: $provider"
-                return 1
+                log_error "Authentication script $auth_script not found for $provider. Skipping..."
+                continue
             fi
         else
-            log_warn "Failed to decode credentials for provider: $provider. It may not be base64 encoded."
+            log_error "Invalid JSON credentials for $provider. Skipping..."
+            continue
         fi
     done
-    
+
     return 0
 }
 
