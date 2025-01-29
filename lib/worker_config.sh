@@ -2,9 +2,9 @@
 
 # Paths for configurations
 BUILT_IN_CONFIG="/usr/local/configs/worker/default.yaml"
-# Dynamically find user configuration in any subfolder of /home/$USER
+# Dynamically find user configuration in any subfolder of $HOME
 # shellcheck disable=SC2227
-USER_CONFIG=$(find "/home/$USER" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
+USER_CONFIG=$(find "$HOME" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yaml"
 
 # Utility functions for logging
