@@ -4,19 +4,19 @@ FROM ubuntu:24.04
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
-# Define the user to be created
-ARG USER=udx
-ARG UID=500
-ARG GID=500
-
 # Set environment variables to avoid interactive prompts and set a fixed timezone
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC \
-    USER=${USER} \
-    HOME=/home/${USER}
+    USER=udx \
+    UID=500 \
+    GID=500 \
+    HOME=/home/udx
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Set user to root for installation
+USER root
 
 # Install necessary packages
 RUN apt-get update && \
@@ -110,9 +110,9 @@ RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
     chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor
 
 # Copy the CLI tool into the image
-COPY lib/cli.sh /usr/local/bin/udx_worker_mgmt
-RUN chmod +x /usr/local/bin/udx_worker_mgmt && \
-    ln -s /usr/local/bin/udx_worker_mgmt /usr/local/bin/worker    
+COPY lib/cli.sh /usr/local/bin/worker_mgmt
+RUN chmod +x /usr/local/bin/worker_mgmt && \
+    ln -s /usr/local/bin/worker_mgmt /usr/local/bin/worker    
 
 # Copy the bin, etc, and lib directories
 COPY etc/home /etc
