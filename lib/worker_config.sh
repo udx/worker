@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Paths for configurations
-BUILT_IN_CONFIG="/usr/local/configs/worker/default.yml"
+BUILT_IN_CONFIG="/usr/local/configs/worker/default.yaml"
 # Dynamically find user configuration in any subfolder of /home/$USER
 # shellcheck disable=SC2227
 USER_CONFIG=$(find "/home/$USER" -name 'worker.yaml' 2>/dev/null -print | head -n 1)

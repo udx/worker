@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define paths
-DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yml"
+DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yaml"
 # Define the user-specific configuration path search
 # shellcheck disable=SC2227
 USER_CONFIG_PATH=$(find "/home/$USER" -name 'services.yaml' 2>/dev/null -print | head -n 1)
