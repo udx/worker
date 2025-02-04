@@ -33,7 +33,7 @@ jobs:
       - name: Dev Pipeline
         run: |
           echo "AZURE_CREDS=$AZURE_CREDS" > .env
-          make dev-pipeline
+          MULTIPLATFORM=true make dev-pipeline
         env:
           AZURE_CREDS: ${{ secrets.AZURE_CREDS }}
         working-directory: .
