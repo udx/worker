@@ -13,8 +13,8 @@ MULTIPLATFORM ?= false
 build:
 	@echo "Building Docker image..."
 	@if [ "$(MULTIPLATFORM)" = "true" ]; then \
-		echo "Multiple platforms: [linux/amd64, linux/arm64]..."; \
-		docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE) --load .; \
+		echo "Custom platform: [linux/arm64]..."; \
+		docker buildx build --platform linux/arm64 -t $(DOCKER_IMAGE) --load .; \
 	else \
 		echo "Only local platform..."; \
 		docker build -t $(DOCKER_IMAGE) .; \
