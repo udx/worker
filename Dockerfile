@@ -20,7 +20,7 @@ USER root
 
 # Install necessary packages
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+    apt-get install -y \
     tzdata=2024b-6ubuntu1 \
     curl=8.11.1-1ubuntu1 \
     bash=5.2.37-1ubuntu1 \
