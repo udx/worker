@@ -19,6 +19,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 USER root
 
 # Install necessary packages
+# hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y \
     tzdata=2024b-6ubuntu1 \
