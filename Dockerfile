@@ -1,5 +1,5 @@
 # Use the latest version of the Ubuntu image with a specific tag for stability
-FROM ubuntu:24.04
+FROM ubuntu:25.04
 
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
@@ -21,22 +21,22 @@ USER root
 # Install necessary packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2024a-3ubuntu1.1 \
-    curl=8.5.0-2ubuntu10.6 \
-    bash=5.2.21-2ubuntu4 \
-    apt-utils=2.7.14build2 \
-    gettext=0.21-14ubuntu2 \
-    gnupg=2.4.4-2ubuntu17 \
-    ca-certificates=20240203 \
-    lsb-release=12.0-2 \
+    tzdata=2024b-6ubuntu1 \
+    curl=8.11.1-1ubuntu1 \
+    bash=5.2.37-1ubuntu1 \
+    apt-utils=2.9.18 \
+    gettext=0.23.1-1 \
+    gnupg=2.4.4-2ubuntu22 \
+    ca-certificates=20241223 \
+    lsb-release=12.1-1 \
     jq=1.7.1-3build1 \
-    zip=3.0-13build1 \
-    unzip=6.0-28ubuntu4 \
-    nano=7.2-2build1 \
-    vim=2:9.1.0016-1ubuntu7.6 \
-    python3.12=3.12.3-1ubuntu0.4 \
-    python3-pip=24.0+dfsg-1ubuntu1.1 \
-    supervisor=4.2.5-1ubuntu0.1 && \
+    zip=3.0-14ubuntu2 \
+    unzip=6.0-28ubuntu6 \
+    nano=8.3-1 \
+    vim=2:9.1.0861-1ubuntu1 \
+    python3.12=3.12.8-5 \
+    python3-pip=25.0+dfsg-1 \
+    supervisor=4.2.5-3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -57,9 +57,9 @@ RUN ARCH=$(uname -m) && \
 ENV CLOUDSDK_CONFIG=/usr/local/configs/gcloud
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-507.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-508.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-507.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-508.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
@@ -83,9 +83,9 @@ RUN mkdir -p $GNUPGHOME && \
     chmod 700 $GNUPGHOME && \
     gpg --keyserver keyserver.ubuntu.com --recv-keys EB3E94ADBE1229CF && \
     gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/azure-cli.list && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ jammy main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.68.0-1~noble && \
+    apt-get install -y --no-install-recommends azure-cli=2.68.0-1~jammy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
