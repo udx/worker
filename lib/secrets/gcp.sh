@@ -27,7 +27,11 @@ resolve_gcp_secret() {
         return 1
     fi
 
-    # Output only the secret value
-    printf "%s" "$secret_value"
+    # For multiline secrets (like private keys), base64 encode them
+    if [[ "$secret_value" == *"-----BEGIN"* ]] || [[ "$secret_value" == *$'\n'* ]]; then
+        printf "%s" "$secret_value" | base64
+    else
+        printf "%s" "$secret_value"
+    fi
     return 0
 }
