@@ -104,10 +104,7 @@ RUN ARCH=$(uname -m) && \
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
-    useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER} && \
-    mkdir -p /etc/sudoers.d && \
-    echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
-    chmod 0440 /etc/sudoers.d/${USER}
+    useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
 
 # Create the Supervisor log directory and set permissions
 RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
