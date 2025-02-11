@@ -42,3 +42,32 @@ git push -f
 - `-f` or `--force`: This option forces Git to push the amended commit to the remote repository, rewriting history.
 
 > Note: Force pushing can overwrite changes in the remote repository, so use it carefully, especially when working in a shared environment.
+
+### 4. Moving Unpushed Commits Between Branches
+
+If you need to move an unpushed commit from one branch to another, you can use git cherry-pick. Here's an example of moving a commit from branch `UAT-69` to branch `1629`:
+
+1. First, identify the unpushed commit on the source branch:
+```shell
+git log UAT-69 --not --remotes --oneline
+```
+
+2. Note the commit hash from the output (e.g., `4cff367`)
+
+3. Switch to the target branch and stash any current changes:
+```shell
+git checkout 1629
+git stash  # if you have uncommitted changes
+```
+
+4. Cherry-pick the commit:
+```shell
+git cherry-pick 4cff367
+```
+
+5. Restore your stashed changes if any:
+```shell
+git stash pop
+```
+
+> Note: The cherry-pick command creates a new commit on the target branch with the same changes but a different commit hash.
