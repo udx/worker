@@ -25,7 +25,7 @@ RUN apt-get update && \
     tzdata=2024b-6ubuntu1 \
     curl=8.11.1-1ubuntu1 \
     bash=5.2.37-1ubuntu1 \
-    apt-utils=2.9.18 \
+    apt-utils=2.9.28 \
     gettext=0.23.1-1 \
     gnupg=2.4.4-2ubuntu22 \
     ca-certificates=20241223 \
@@ -35,7 +35,7 @@ RUN apt-get update && \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
     vim=2:9.1.0861-1ubuntu1 \
-    python3.12=3.12.8-5 \
+    python3.12=3.12.9-1 \
     python3-pip=25.0+dfsg-1 \
     supervisor=4.2.5-3 && \
     apt-get clean && \
@@ -104,7 +104,10 @@ RUN ARCH=$(uname -m) && \
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
-    useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}
+    useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER} && \
+    mkdir -p /etc/sudoers.d && \
+    echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
+    chmod 0440 /etc/sudoers.d/${USER}
 
 # Create the Supervisor log directory and set permissions
 RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
@@ -123,7 +126,10 @@ COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Set permissions during build
 RUN chmod +x /usr/local/bin/entrypoint.sh && \
-    chown -R ${UID}:${GID} /usr/local/configs
+    chown -R ${UID}:${GID} /usr/local/configs && \
+    chown -R ${UID}:${GID} /usr/local/bin && \
+    chown -R ${UID}:${GID} /usr/local/lib && \
+    chmod -R g-w,o-w /usr/local/configs /usr/local/bin /usr/local/lib
 
 # Create a symbolic link for the supervisord configuration file
 RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf    
