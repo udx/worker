@@ -33,3 +33,7 @@ log_error() {
 log_success() {
     printf "✅ %s: %s\n" "$1" "$2" >&2
 }
+
+log_debug() {
+    printf "%s: %s\n" "$1" "$2" >&2
+}

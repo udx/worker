@@ -5,12 +5,12 @@ source /usr/local/lib/utils.sh
 
 # Function to display dpkg packages in a table format using awk
 generate_sbom() {
-    log_success "Package Name            | Version          | Architecture"
-    log_success "----------------------------------------------------------"
+    log_debug "Package Name            | Version          | Architecture"
+    log_debug "----------------------------------------------------------"
     dpkg-query -W -f='${binary:Package} | ${Version} | ${Architecture}\n' | awk -F'|' '{
         printf("%-30s | %-20s | %-10s\n", $1, $2, $3)
     }'
-    log_success "----------------------------------------------------------"
+    log_debug "----------------------------------------------------------"
 }
 
 # Handler for the sbom command

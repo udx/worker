@@ -42,10 +42,10 @@ list_services() {
         exit 1
     fi
     
-    log_success "Service" "Listing all managed services:"
+    log_debug "Service" "Listing all managed services:"
     local i=1
     echo "$services_status" | while read -r line; do
-        log_success "Service" "$i. $line"
+        log_debug "Service" "$i. $line"
         ((i++))
     done
 }

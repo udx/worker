@@ -69,7 +69,8 @@ handle_services() {
         wait_for_services
         log_info "Services are fully running."
     else
-        log_warn "No services are active."
+        log_warn "Entrypoint" "No services are active. Keeping container alive..."
+        exec tail -f /dev/null
     fi
 }
 
@@ -79,7 +80,7 @@ check_active_services() {
         log_info "Active or starting services found."
         return 0
     else
-        log_warn "No active or starting services detected."
+        log_warn "Entrypoint" "No active or starting services detected."
         return 1
     fi
 }
@@ -96,7 +97,7 @@ wait_for_services() {
         attempts=$((attempts + 1))
         sleep 5
     done
-    log_warn "Services are not fully running after $max_attempts attempts."
+    log_warn "Entrypoint" "Services are not fully running after $max_attempts attempts."
     return 1
 }
 

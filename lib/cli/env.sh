@@ -6,9 +6,9 @@ source /usr/local/lib/utils.sh
 # Function to display current environment settings or a specific variable
 get_environment() {
     if [ $# -eq 0 ]; then
-        log_success "Current Environment Settings:" "$(env)"
+        log_debug "Current Environment Settings:" "$(env)"
     else
-        log_success "$1" "${!1}"
+        log_debug "$1" "${!1}"
     fi
 }
 
@@ -19,7 +19,7 @@ set_environment() {
         return 1
     fi
     export "$1=$2"
-    log_success "CLI" "Set $1 to '$2'."
+    log_debug "CLI" "Set $1 to '$2'."
 }
 
 # Handle environment commands
