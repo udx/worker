@@ -10,16 +10,33 @@ include Makefile.help
 # Build the Docker image
 MULTIPLATFORM ?= false
 
+# Use BuildKit for better output
+export DOCKER_BUILDKIT=1
+
+# Colors for better visibility
+COLOR_RESET=\033[0m
+COLOR_BLUE=\033[34m
+COLOR_GREEN=\033[32m
+
+.SILENT: build
 build:
-	@echo "Building Docker image..."
-	@if [ "$(MULTIPLATFORM)" = "true" ]; then \
-		echo "Multiple platforms: [linux/amd64, linux/arm64]..."; \
-		docker buildx build --platform linux/amd64,linux/arm64 -t $(DOCKER_IMAGE) --load .; \
-	else \
-		echo "Only local platform..."; \
-		docker build -t $(DOCKER_IMAGE) .; \
-	fi
-	@echo "Docker image build completed."
+	@bash -c 'set -eo pipefail; \
+		filter="(error|Error|ERROR|failed|Failed|FAILED|\\[.*[0-9]+/[0-9]+\\]|^#[0-9]+ DONE|sha256|CACHED)"; \
+		printf "\033[34m➜ Starting Docker build...\033[0m\n"; \
+		if [ "$(MULTIPLATFORM)" = "true" ]; then \
+			printf "\033[34m➜ Building for multiple platforms: [linux/amd64, linux/arm64]\033[0m\n"; \
+			docker buildx build --progress=plain \
+				--platform linux/amd64,linux/arm64 \
+				-t $(DOCKER_IMAGE) \
+				--load . 2>&1 | grep -E "$$filter" || exit 1; \
+		else \
+			printf "\033[34m➜ Building for local platform\033[0m\n"; \
+			DOCKER_BUILDKIT=1 docker build \
+				--progress=plain \
+				-t $(DOCKER_IMAGE) . 2>&1 | grep -E "$$filter" || exit 1; \
+		fi && \
+		printf "\033[32m✔ Docker image build completed\033[0m\n" || \
+		{ printf "\033[31m✖ Docker build failed\033[0m\n"; exit 1; }'
 
 # Run Docker container (supports interactive mode)
 run: clean
