@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # Paths for configurations
 BUILT_IN_CONFIG="/usr/local/configs/worker/default.yaml"
 # Dynamically find user configuration in any subfolder of $HOME
@@ -7,18 +10,9 @@ BUILT_IN_CONFIG="/usr/local/configs/worker/default.yaml"
 USER_CONFIG=$(find "$HOME" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yaml"
 
-# Utility functions for logging
-log_info() {
-    echo "[INFO] $1" >&2
-}
-
-log_error() {
-    echo "[ERROR] $1" >&2
-}
-
 # Ensure `yq` is available
 if ! command -v yq >/dev/null 2>&1; then
-    log_error "yq is not installed. Please ensure it is available in the PATH."
+    log_error "Worker configuration" "yq is not installed. Please ensure it is available in the PATH."
     exit 1
 fi
 
@@ -26,7 +20,7 @@ fi
 ensure_config_exists() {
     local config_path="$1"
     if [[ ! -s "$config_path" ]]; then
-        log_error "Configuration file not found or empty: $config_path"
+        log_error "Worker configuration" "Configuration file not found or empty: $config_path"
         return 1
     fi
 }
@@ -35,7 +29,7 @@ ensure_config_exists() {
 merge_worker_configs() {
     # Ensure the merged configuration file exists
     if [ ! -f "$MERGED_CONFIG" ]; then
-        touch "$MERGED_CONFIG" || { log_error "Failed to create merged configuration file at $MERGED_CONFIG"; return 1; }
+        touch "$MERGED_CONFIG" || { log_error "Worker configuration" "Failed to create merged configuration file at $MERGED_CONFIG"; return 1; }
     fi
 
     # Ensure built-in config exists
@@ -46,7 +40,7 @@ merge_worker_configs() {
         log_info "User configuration detected at $USER_CONFIG"
 
         if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
-            log_error "Failed to merge configurations. yq returned an error."
+            log_error "Worker configuration" "Failed to merge configurations. yq returned an error."
             return 1
         fi
     else
@@ -54,7 +48,7 @@ merge_worker_configs() {
 
         # Copy the built-in configuration to the merged configuration
         if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
-            log_error "Failed to copy built-in configuration to merged configuration."
+            log_error "Worker configuration" "Failed to copy built-in configuration to merged configuration."
             return 1
         fi
     fi
@@ -67,7 +61,7 @@ load_and_parse_config() {
     # Parse the merged configuration into JSON
     local json_output
     if ! json_output=$(yq eval -o=json "$MERGED_CONFIG" 2>/dev/null); then
-        log_error "Failed to parse merged YAML from $MERGED_CONFIG. yq returned an error."
+        log_error "Worker configuration" "Failed to parse merged YAML from $MERGED_CONFIG. yq returned an error."
         return 1
     fi
 
@@ -100,14 +94,14 @@ get_config_section() {
     local section="$2"
 
     if [[ -z "$config_json" ]]; then
-        log_error "Empty configuration JSON provided."
+        log_error "Worker configuration" "Empty configuration JSON provided."
         return 1
     fi
 
     # Attempt to extract the section and handle missing/null cases
     local extracted_section
     if ! extracted_section=$(echo "$config_json" | jq -r ".config.${section} // empty" 2>/dev/null); then
-        log_error "Failed to parse section '${section}' from configuration."
+        log_error "Worker configuration" "Failed to parse section '${section}' from configuration."
         return 1
     fi
 

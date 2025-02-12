@@ -7,6 +7,7 @@ ENV_FILE ?= .env
 TESTS_MAIN_SCRIPT ?= ./src/tests/main.sh
 TESTS_TASKS_DIR ?= ./src/tests/tasks
 TEST_WORKER_CONFIG ?= ./src/tests/configs/worker.yaml
+TEST_SERVICES_CONFIG ?= ./src/tests/configs/services.yaml
 USER = udx
 VOLUMES ?= ./src/scripts:/home/$(USER)
 DEBUG ?= false

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 service_handler() {
     case $1 in
         list)
@@ -21,7 +24,7 @@ service_handler() {
             manage_service "$1" "$2"
         ;;
         *)
-            echo "Usage: $0 {list|status|logs|config|start|stop|restart}"
+            log_warn "CLI" "Usage: $0 {list|status|logs|config|start|stop|restart}"
             exit 1
         ;;
     esac
@@ -35,14 +38,14 @@ list_services() {
     
     # Check if Supervisor is not running, not accessible, or if there are no managed services
     if [[ -z "$services_status" ]] || echo "$services_status" | grep -Eq 'no such|ERROR'; then
-        echo "No services are currently managed."
+        log_warn "Service" "No services are currently managed."
         exit 1
     fi
     
-    echo "Listing all managed services:"
+    log_success "Service" "Listing all managed services:"
     local i=1
     echo "$services_status" | while read -r line; do
-        echo "$i. $line"
+        log_success "Service" "$i. $line"
         ((i++))
     done
 }
@@ -51,8 +54,8 @@ list_services() {
 check_status() {
     # Require a service name for this function
     if [ -z "$1" ]; then
-        echo "Error: No service name provided."
-        echo "Usage: $0 status <service_name>"
+        log_warn "Service" "Error: No service name provided."
+        log_warn "Service" "Usage: $0 status <service_name>"
         exit 1
     fi
     
@@ -62,7 +65,7 @@ check_status() {
     
     # Check if Supervisor is not running, not accessible, or if the service does not exist
     if [[ -z "$service_status" ]] || echo "$service_status" | grep -Eq 'no such|ERROR'; then
-        echo "The service '$1' does not exist."
+        log_warn "Service" "The service '$1' does not exist."
         exit 1
     fi
     
@@ -83,7 +86,7 @@ follow_logs() {
     logfile="$logfile.$type.log"
     
     if [ ! -f "$logfile" ]; then
-        echo "Log file does not exist: $logfile"
+        log_error "Service" "Log file does not exist: $logfile"
         exit 1
     fi
     
@@ -93,7 +96,7 @@ follow_logs() {
 # Function to show supervisor configuration
 show_config() {
     if [ ! -f "/etc/supervisord.conf" ]; then
-        echo "Configuration file is not generated since no services are managed."
+        log_error "Service" "Configuration file is not generated since no services are managed."
         exit 1
     fi
     cat /etc/supervisord.conf
@@ -102,13 +105,13 @@ show_config() {
 # Function to start, stop, or restart a service
 manage_service() {
     if [ -z "$2" ]; then
-        echo "Error: No service name provided."
-        echo "Usage: $0 $1 <service_name>"
+        log_error "Service" "Error: No service name provided."
+        log_warn "Service" "Usage: $0 $1 <service_name>"
         exit 1
     fi
     
     if [ ! -e "/var/run/supervisor/supervisord.sock" ]; then
-        echo "Error: Service doesn't exist."
+        log_error "Service" "Error: Service doesn't exist."
         exit 1
     fi
     

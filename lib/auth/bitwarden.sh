@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # Function to authenticate Bitwarden using API key or master password
 #
 # Example usage of the function
@@ -9,7 +12,7 @@ bitwarden_authenticate() {
     local creds_file="$1"
 
     if [[ ! -f "$creds_file" ]]; then
-        echo "[ERROR] Credentials file not found: $creds_file" >&2
+        log_error "Bitwarden Authentication" "Credentials file not found: $creds_file"
         return 1
     fi
 
@@ -18,7 +21,7 @@ bitwarden_authenticate() {
     creds_content=$(cat "$creds_file")
 
     if [[ -z "$creds_content" ]]; then
-        echo "[ERROR] Credentials file is empty: $creds_file" >&2
+        log_error "Bitwarden Authentication" "Credentials file is empty: $creds_file"
         return 1
     fi
 
@@ -28,7 +31,7 @@ bitwarden_authenticate() {
     master_password=$(echo "$creds_content" | jq -r '.masterPassword // empty')
     
     if [[ -z "$api_key" && -z "$master_password" ]]; then
-        echo "[ERROR] Either API key or master password must be provided in the credentials file." >&2
+        log_error "Bitwarden Authentication" "Either API key or master password must be provided in the credentials file."
         return 1
     fi
 
@@ -40,18 +43,18 @@ bitwarden_authenticate() {
         local email
         email=$(echo "$creds_content" | jq -r '.email // empty')
         if [[ -z "$email" ]]; then
-            echo "[ERROR] Email must be provided with the master password." >&2
+            log_error "Bitwarden Authentication" "Email must be provided with the master password."
             return 1
         fi
         session_key=$(bw login "$email" "$master_password" --raw 2>/dev/null)
     fi
 
     if [[ -z "$session_key" ]]; then
-        echo "[ERROR] Failed to authenticate with Bitwarden." >&2
+        log_error "Bitwarden Authentication" "Failed to authenticate with Bitwarden."
         return 1
     fi
     
-    echo "[INFO] Bitwarden authentication successful. Session key obtained."
+    log_success "Bitwarden Authentication" "Authenticated with Bitwarden."
     export BW_SESSION="$session_key"
     return 0
 }

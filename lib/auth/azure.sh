@@ -17,7 +17,7 @@ azure_authenticate() {
     creds_content=$(cat "$creds_json")
 
     if [[ -z "$creds_content" ]]; then
-        echo "[ERROR] No Azure credentials provided." >&2
+        log_error "Azure Authentication" "No Azure credentials provided."
         return 1
     fi
 
@@ -30,20 +30,20 @@ azure_authenticate() {
     tenantId=$(echo "$creds_content" | jq -r '.tenantId')
 
     if [[ -z "$clientId" || -z "$clientSecret" || -z "$subscriptionId" || -z "$tenantId" ]]; then
-        echo "[ERROR] Missing required Azure credentials." >&2
+        log_error "Azure Authentication" "Missing required Azure credentials."
         return 1
     fi
 
     log_info "Authenticating Azure service principal..."
     if ! az login --service-principal -u "$clientId" -p "$clientSecret" --tenant "$tenantId" >/dev/null 2>&1; then
-        echo "[ERROR] Azure service principal authentication failed." >&2
+        log_error "Azure Authentication" "Azure service principal authentication failed."
         return 1
     fi
 
     if ! az account set --subscription "$subscriptionId" >/dev/null 2>&1; then
-        echo "[ERROR] Failed to set Azure subscription." >&2
+        log_error "Azure Authentication" "Failed to set Azure subscription."
         return 1
     fi
 
-    log_info "Azure service principal authenticated and subscription set."
+    log_success "Azure Authentication" "Azure service principal authenticated and subscription set."
 }

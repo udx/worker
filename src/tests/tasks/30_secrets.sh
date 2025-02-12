@@ -1,13 +1,16 @@
 #!/bin/bash
 
-echo "Starting validation of secrets fetching..."
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
+log_info "Starting validation of secrets fetching..."
 
 # Path to the merged configuration file
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yaml"
 
 # Test verify_secrets function
 test_verify_secrets() {
-    echo "Running test: verify_secrets"
+    log_info "Running test: verify_secrets"
 
     # Load the merged configuration
     merged_config=$(cat "$MERGED_CONFIG")
@@ -17,7 +20,7 @@ test_verify_secrets() {
 
     # Check if secrets is empty or null
     if [[ -z "$secrets" || "$secrets" == "null" ]]; then
-        echo "Info: No secrets found in the configuration."
+        log_info "No secrets found in the configuration."
         return 0
     fi
 
@@ -34,27 +37,24 @@ test_verify_secrets() {
 
         # Verify that the environment variable is set and different from the reference
         if [[ -z "$actual_value" || "$actual_value" == "$expected_reference" ]]; then
-            echo "Test failed: $secret_key is not replaced correctly. Got: $actual_value"
+            log_error "Secrets" "$secret_key is not replaced correctly. Got: $actual_value"
             return 1
         else
-            echo "Test passed: $secret_key is resolved correctly."
+            log_success "Secrets" "$secret_key is resolved correctly"
         fi
     done
 
-    echo "Test passed: verify_secrets"
+    log_success "Secrets" "verify_secrets test passed"
+    return 0
 }
 
 # Run the test
 if test_verify_secrets; then
-    echo "Secrets fetching tests passed successfully."
+    log_success "Secrets" "All secrets fetching tests passed successfully"
 else
-    echo "Secrets fetching tests failed."
+    log_error "Secrets" "Secrets fetching tests failed"
     exit 1
 fi
-
-# Run the test
-if test_verify_secrets; then
-    echo "Secrets fetching tests passed successfully."
 else
     echo "Secrets fetching tests failed."
     exit 1

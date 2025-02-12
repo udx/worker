@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # Define paths
 DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yaml"
 # Define the user-specific configuration path search
@@ -51,13 +54,13 @@ parse_service_info() {
     
     # Check if 'name' is set, log error and return if not
     if [ -z "$name" ]; then
-        echo "Error: 'name' not set for a service. Skipping..."
+        log_error "Process Manager" "Error: 'name' not set for service $name. Skipping..."
         return
     fi
     
     # Check if 'command' is set, log error and return if not
     if [ -z "$command" ]; then
-        echo "Error: 'command' not set for service $name. Skipping..."
+        log_error "Process Manager" "Error: 'command' not set for service $name. Skipping..."
         return
     fi
 
@@ -79,7 +82,7 @@ start_supervisor() {
 # Function to configure and start the Supervisor
 configure_and_execute_services() {
     if ! should_generate_config; then
-        echo "No services found in $CONFIG_FILE. No Supervisor configuration generated."
+        log_warn "Process Manager" "No services found in $CONFIG_FILE. No Supervisor configuration generated."
         return 1
     fi
     
@@ -91,7 +94,7 @@ configure_and_execute_services() {
     services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE" | jq -c .)
     
     if [ -z "$services_yaml" ]; then
-        echo "Failed to parse services from $CONFIG_FILE or no services defined."
+        log_error "Process Manager" "Failed to parse services from $CONFIG_FILE or no services defined."
         return 1
     fi
     

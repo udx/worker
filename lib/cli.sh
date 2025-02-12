@@ -6,6 +6,9 @@ for module in /usr/local/lib/cli/*.sh; do
   source "$module"
 done
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # CLI Interface
 case $1 in
     env)
@@ -21,7 +24,7 @@ case $1 in
         service_handler "$@"
         ;;
     *)
-        echo "Usage: $0 {service|env|...}"
+        log_error "CLI" "Unknown command: $1"
         exit 1
         ;;
 esac

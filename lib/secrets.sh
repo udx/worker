@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Include utility functions and worker config utilities
 # shellcheck source=/usr/local/lib/utils.sh disable=SC1091
 source /usr/local/lib/utils.sh
 
@@ -32,7 +31,7 @@ fetch_secrets() {
 
     # Confirm secrets_json is valid JSON before processing
     if ! echo "$secrets_json" | jq empty > /dev/null 2>&1; then
-        log_error "Invalid JSON format for secrets configuration."
+        log_error "Secrets" "Invalid JSON format for secrets configuration."
         return 1
     fi
 
@@ -49,7 +48,7 @@ fetch_secrets() {
 
         # Check if the secret has a valid name and URL
         if [[ -z "$name" || -z "$url" ]]; then
-            log_error "Secret name or URL is missing or empty."
+            log_error "Secrets" "Secret name or URL is missing or empty."
             continue
         fi
 
@@ -62,7 +61,7 @@ fetch_secrets() {
                 key_vault_name=$(echo "$url" | cut -d '/' -f 2)
                 secret_name=$(echo "$url" | cut -d '/' -f 3)
                 if [[ -z "$secret_name" ]]; then
-                    log_error "Invalid GCP secret name format: $url"
+                    log_error "Secrets" "Invalid GCP secret name format: $url"
                     continue
                 fi
                 ;;
@@ -70,7 +69,7 @@ fetch_secrets() {
                 key_vault_name=$(echo "$url" | cut -d '/' -f 2)
                 secret_name=$(echo "$url" | cut -d '/' -f 3)
                 if [[ -z "$key_vault_name" || -z "$secret_name" ]]; then
-                    log_error "Invalid secret format for $provider: $url"
+                    log_error "Secrets" "Invalid secret format for $provider: $url"
                     continue
                 fi
                 ;;
@@ -95,9 +94,9 @@ fetch_secrets() {
         # Export the secret as an environment variable
         if [[ -n "$value" ]]; then
             echo "export $name=\"$value\"" >> "$secrets_env_file"
-            log_info "Resolved secret for $name from $provider."
+            log_success "Resolved secret for $name from $provider."
         else
-            log_error "Failed to resolve secret for $name from $provider."
+            log_error "Secrets" "Failed to resolve secret for $name from $provider."
         fi
     done
 
@@ -109,7 +108,7 @@ fetch_secrets() {
         set +a
         log_info "Secrets environment variables sourced successfully."
     else
-        log_error "No secrets were written to the environment file."
+        log_error "Secrets" "No secrets were written to the environment file."
         return 1
     fi
 

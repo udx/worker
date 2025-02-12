@@ -54,7 +54,7 @@ authenticate_actors() {
             log_info "Reading base64 encoded JSON credentials"
             creds=$(echo "$creds" | base64 --decode)
         else
-            log_error "Credentials format not recognized for $provider. Skipping..."
+            log_error "Authentication" "Credentials format not recognized for $provider. Skipping..."
             continue
         fi
         
@@ -70,20 +70,20 @@ authenticate_actors() {
                 if command -v "$auth_function" > /dev/null; then
                     
                     if ! authenticate_provider "$provider" "$auth_function" "$creds"; then
-                        log_error "Authentication failed for provider $provider."
+                        log_error "Authentication" "Authentication failed for provider $provider."
                         return 1
                     fi
                     configured_providers+=("$provider")
                 else
-                    log_error "Authentication function $auth_function not found for $provider. Skipping..."
+                    log_error "Authentication" "Authentication function $auth_function not found for $provider. Skipping..."
                     continue
                 fi
             else
-                log_error "Authentication script $auth_script not found for $provider. Skipping..."
+                log_error "Authentication" "Authentication script $auth_script not found for $provider. Skipping..."
                 continue
             fi
         else
-            log_error "Invalid JSON credentials for $provider. Skipping..."
+            log_error "Authentication" "Invalid JSON credentials for $provider. Skipping..."
             continue
         fi
     done
