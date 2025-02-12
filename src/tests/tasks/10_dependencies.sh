@@ -10,7 +10,7 @@ check_command() {
     local cmd_path
     cmd_path=$(command -v "$1")
     if [ -x "$cmd_path" ]; then
-        log_info "$1 is installed at $cmd_path"
+        log_success "$1" "$1 is installed at $cmd_path"
         local version
         version=$($1 --version 2>&1 | head -n 1)
         log_success "$1" "Version: $version"

@@ -11,7 +11,7 @@ test_services() {
     
     # Test 1: Check service configuration
     log_info "Testing service configuration..."
-    if ! worker service config | grep -q "test_service"; then
+    if ! worker service config 2>/dev/null | grep -q "test_service"; then
         log_error "$test_name" "test_service not found in configuration"
         return 1
     fi
@@ -21,27 +21,27 @@ test_services() {
     log_info "Testing service lifecycle..."
     
     # Start service
-    worker service start test_service
+    worker service start test_service > /dev/null
     sleep 2
-    if ! worker service status test_service | grep -q "RUNNING"; then
+    if ! worker service status test_service 2>/dev/null | grep -q "RUNNING"; then
         log_error "$test_name" "Failed to start service"
         return 1
     fi
     log_success "$test_name" "Service started successfully"
     
     # Stop service
-    worker service stop test_service
+    worker service stop test_service > /dev/null
     sleep 5  # Allow time for graceful shutdown
-    if worker service status test_service | grep -q "RUNNING"; then
+    if worker service status test_service 2>/dev/null | grep -q "RUNNING"; then
         log_error "$test_name" "Failed to stop service"
         return 1
     fi
     log_success "$test_name" "Service stopped successfully"
     
     # Restart service
-    worker service restart test_service
+    worker service restart test_service > /dev/null
     sleep 2
-    if ! worker service status test_service | grep -q "RUNNING"; then
+    if ! worker service status test_service 2>/dev/null | grep -q "RUNNING"; then
         log_error "$test_name" "Failed to restart service"
         return 1
     fi
@@ -57,16 +57,16 @@ test_services() {
     
     # Test 4: Graceful shutdown
     log_info "Testing graceful shutdown..."
-    worker service stop test_service
+    worker service stop test_service > /dev/null
     sleep 1
     
     # Check logs for cleanup
-    if ! worker service logs test_service | grep -q "Starting cleanup..."; then
+    if ! worker service logs test_service 2>/dev/null | grep -q "Starting cleanup..."; then
         log_error "$test_name" "Service did not initiate cleanup"
         return 1
     fi
     sleep 5
-    if ! worker service logs test_service | grep -q "Cleanup completed"; then
+    if ! worker service logs test_service 2>/dev/null | grep -q "Cleanup completed"; then
         log_error "$test_name" "Service did not complete cleanup"
         return 1
     fi

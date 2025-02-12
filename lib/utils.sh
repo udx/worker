@@ -7,11 +7,18 @@ resolve_env_vars() {
 }
 
 # Logging functions with direct ANSI sequences
+# log_info() {
+#     if [ $# -eq 1 ]; then
+#         printf "\033[0;34m[INFO] %s\033[0m\n" "$1" >&2
+#     else
+#         printf "\033[0;34m[INFO] %s: %s\033[0m\n" "$1" "$2" >&2
+#     fi
+# }
 log_info() {
     if [ $# -eq 1 ]; then
-        printf "\033[0;34m[INFO] %s\033[0m\n" "$1" >&2
+        printf "[INFO] %s\n" "$1" >&2
     else
-        printf "\033[0;34m[INFO] %s: %s\033[0m\n" "$1" "$2" >&2
+        printf "[INFO] %s: %s\n" "$1" "$2" >&2
     fi
 }
 

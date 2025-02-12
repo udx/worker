@@ -94,7 +94,7 @@ fetch_secrets() {
         # Export the secret as an environment variable
         if [[ -n "$value" ]]; then
             echo "export $name=\"$value\"" >> "$secrets_env_file"
-            log_success "Resolved secret for $name from $provider."
+            log_success "Secrets" "Resolved secret for $name from $provider."
         else
             log_error "Secrets" "Failed to resolve secret for $name from $provider."
         fi

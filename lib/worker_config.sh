@@ -37,7 +37,7 @@ merge_worker_configs() {
 
     # If a user-provided configuration exists (and path is not empty), merge it
     if [[ -f "$USER_CONFIG" && -n "$USER_CONFIG" ]]; then
-        log_info "User configuration detected at $USER_CONFIG"
+        log_success "Worker configuration" "User configuration detected at $USER_CONFIG"
 
         if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
             log_error "Worker configuration" "Failed to merge configurations. yq returned an error."
@@ -79,7 +79,7 @@ export_variables_from_config() {
         log_info "No variables found in the configuration."
         return 0
     else
-        log_info "Found variables in the configuration. Exporting..."
+        log_success "Worker configuration" "Found variables in the configuration. Exporting..."
     fi
 
     # Iterate over variables and export them into the main shell

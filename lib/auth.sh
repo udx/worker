@@ -39,7 +39,7 @@ authenticate_actors() {
         if [[ -z "$creds" ]]; then
             continue
         else
-            log_info "Detected credentials for $type"
+            log_success "Authentication" "Detected credentials for $type"
         fi
         
         # Explicitly check for JSON format
@@ -121,7 +121,6 @@ authenticate_provider() {
     
     # Set an environment variable to mark successful authorization
     export "${provider^^}_AUTHORIZED=true"
-    log_info "Authorization successful for provider $provider."
     
     return 0
 }

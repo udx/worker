@@ -51,7 +51,7 @@ cleanup_provider() {
             return 1
         fi
     else
-        log_info "$name authentication cleaned up successfully."
+        log_success "Cleanup" "$name authentication cleaned up successfully."
         cleaned_up=true
     fi
     
