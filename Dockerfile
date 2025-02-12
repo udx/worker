@@ -23,7 +23,7 @@ USER root
 RUN apt-get update && \
     apt-get install -y \
     tzdata=2024b-6ubuntu1 \
-    curl=8.11.1-1ubuntu1 \
+    curl=8.12.0+git20250209.89ed161+ds-1ubuntu1 \
     bash=5.2.37-1ubuntu1 \
     apt-utils=2.9.28 \
     gettext=0.23.1-1 \
