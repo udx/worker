@@ -16,24 +16,24 @@ resolve_env_vars() {
 # }
 log_info() {
     if [ $# -eq 1 ]; then
-        printf "[INFO] %s\n" "$1" >&2
+        printf "ℹ️  %s\n" "$1" >&2
     else
-        printf "[INFO] %s: %s\n" "$1" "$2" >&2
+        printf "ℹ️  %s: %s\n" "$1" "$2" >&2
     fi
 }
 
 log_warn() {
-    printf "\033[1;33m[WARN] %s: %s\033[0m\n" "$1" "$2" >&2
+    printf "⚠️  %s: %s\n" "$1" "$2" >&2
 }
 
 log_error() {
-    printf "\033[0;31m[ERROR] %s: %s\033[0m\n" "$1" "$2" >&2
+    printf "❌ %s: %s\n" "$1" "$2" >&2
 }
 
 log_success() {
-    printf "\033[0;32m[SUCCESS] %s: %s\033[0m\n" "$1" "$2" >&2
+    printf "✅ %s: %s\n" "$1" "$2" >&2
 }
 
 udx_logo() {
-    printf "\033[0;34m%s\033[0m\n" "$(cat /etc/logo.txt)"
+    printf "%s\n" "$(cat /etc/logo.txt)"
 }
