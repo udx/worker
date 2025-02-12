@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Source utils.sh for logging functions
+# shellcheck disable=SC1091
 source /usr/local/lib/utils.sh
 
 log_info "Main" "Running all test suites"
