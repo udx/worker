@@ -17,7 +17,7 @@ handle_shutdown() {
     fi
     SHUTDOWN_IN_PROGRESS=1
     
-    log_info "⏹️ $signal received - initiating graceful shutdown..."
+    log_info "$signal received - initiating graceful shutdown..."
     
     # Stop supervisor itself gracefully
     if [ -f /var/run/supervisord.pid ]; then
@@ -37,7 +37,7 @@ handle_shutdown() {
         done
         
         if [ $elapsed -eq $timeout ]; then
-            log_error "Entrypoint" "❌ Timeout waiting for services to stop"
+            log_error "Entrypoint" "Timeout waiting for services to stop"
         fi
         
         # Stop supervisord itself
@@ -57,8 +57,6 @@ handle_shutdown() {
 trap 'handle_shutdown SIGTERM' TERM
 trap 'handle_shutdown SIGINT' INT
 trap 'handle_shutdown SIGQUIT' QUIT
-
-udx_logo
 
 log_info "Welcome to UDX Worker Container. Initializing environment..."
 

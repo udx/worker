@@ -116,7 +116,6 @@ RUN chmod +x /usr/local/bin/worker_mgmt && \
     ln -s /usr/local/bin/worker_mgmt /usr/local/bin/worker    
 
 # Copy the bin, etc, and lib directories
-COPY etc/home /etc
 COPY etc/configs /usr/local/configs
 COPY lib /usr/local/lib
 COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -33,7 +33,3 @@ log_error() {
 log_success() {
     printf "✅ %s: %s\n" "$1" "$2" >&2
 }
-
-udx_logo() {
-    printf "%s\n" "$(cat /etc/logo.txt)"
-}
