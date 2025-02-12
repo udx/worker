@@ -55,7 +55,3 @@ else
     log_error "Secrets" "Secrets fetching tests failed"
     exit 1
 fi
-else
-    echo "Secrets fetching tests failed."
-    exit 1
-fi
