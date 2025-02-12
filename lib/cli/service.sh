@@ -92,17 +92,14 @@ follow_logs() {
                 shift
                 if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
                     lines="$1"
-                    log_debug "Service" "Found --lines argument, value: $lines"
                 fi
                 ;;
             err)
                 type="err"
-                log_debug "Service" "Setting type to err"
                 ;;
             *)
                 if [[ -z "$service_name" ]]; then
                     service_name="$1"
-                    log_debug "Service" "Setting service_name to: $service_name"
                 fi
                 ;;
         esac
