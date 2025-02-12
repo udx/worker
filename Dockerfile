@@ -86,7 +86,7 @@ RUN mkdir -p $GNUPGHOME && \
     gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ jammy main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.68.0-1~jammy && \
+    apt-get install -y --no-install-recommends azure-cli=2.69.0-1~jammy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
