@@ -4,24 +4,27 @@
 source /usr/local/lib/utils.sh
 
 service_handler() {
-    case $1 in
+    local cmd=$1
+    shift  # Remove the command from args
+
+    case $cmd in
         list)
             list_services
         ;;
         status)
-            check_status "$2"
+            check_status "$1"
         ;;
         logs)
-            follow_logs "$2"
+            follow_logs "$@"
         ;;
         errors)
-            follow_logs "$2" "err"
+            follow_logs "$1" "err"
         ;;
         config)
             show_config
         ;;
         start|stop|restart)
-            manage_service "$1" "$2"
+            manage_service "$cmd" "$1"
         ;;
         *)
             log_warn "CLI" "Usage: $0 {list|status|logs|config|start|stop|restart}"
@@ -75,22 +78,59 @@ check_status() {
 
 # Function to follow logs for a specific service
 follow_logs() {
-    if [ -z "$1" ]; then
-        echo "Error: No service name provided."
-        echo "Usage: $0 logs <service_name>"
+    local service_name=""
+    local type="out"
+    local lines=20
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --lines=*)
+                lines="${1#*=}"
+                ;;
+            --lines)
+                shift
+                if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
+                    lines="$1"
+                    log_debug "Service" "Found --lines argument, value: $lines"
+                fi
+                ;;
+            err)
+                type="err"
+                log_debug "Service" "Setting type to err"
+                ;;
+            *)
+                if [[ -z "$service_name" ]]; then
+                    service_name="$1"
+                    log_debug "Service" "Setting service_name to: $service_name"
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -z "$service_name" ]]; then
+        log_error "Service" "Error: No service name provided."
+        log_error "Service" "Usage: $0 logs <service_name> [--lines N]"
         exit 1
     fi
     
-    local logfile="/var/log/supervisor/$1"
-    local type=${2:-out}  # Default to 'out' if not specified
+    local logfile="/var/log/supervisor/$service_name"
     logfile="$logfile.$type.log"
     
-    if [ ! -f "$logfile" ]; then
+    if [[ ! -f "$logfile" ]]; then
         log_error "Service" "Log file does not exist: $logfile"
         exit 1
     fi
+
+    # Ensure lines is a valid number
+    if ! [[ "$lines" =~ ^[0-9]+$ ]]; then
+        log_error "Service" "Invalid line count: $lines"
+        exit 1
+    fi
     
-    tail -f "$logfile"
+    # Show the last N lines and follow
+    exec tail -n "$lines" -f "$logfile"
 }
 
 # Function to show supervisor configuration
