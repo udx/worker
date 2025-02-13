@@ -7,11 +7,11 @@ The UDX Worker provides a command-line interface for managing services, environm
 ### Service Management
 
 * `worker service list`
-  - Lists all available services with their current status
+  - Lists of configured services.
   - Shows service name, status, PID, and uptime
 
 * `worker service status <service_name>`
-  - Displays detailed status of a specified service
+  - Displays detailed status of a service
   - Shows service state, uptime, and process information
 
 * `worker service logs <service_name> [options]`
@@ -19,7 +19,12 @@ The UDX Worker provides a command-line interface for managing services, environm
   - Options:
     - `--lines N`: Show last N lines (default: 20)
     - `--nostream`: Show logs without following
-    - `err`: Show error logs instead of output logs
+
+* `worker service errors <service_name> [options]`
+  - Views service error logs
+  - Options:
+    - `--lines N`: Show last N lines (default: 20)
+    - `--nostream`: Show logs without following    
 
 * `worker service config`
   - Shows the services configuration settings

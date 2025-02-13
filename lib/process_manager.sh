@@ -4,41 +4,42 @@
 source /usr/local/lib/utils.sh
 
 # Define paths
-DEFAULT_CONFIG_FILE="/home/udx/services.yaml"
+DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yaml"
+# Define the user-specific configuration path search
+# shellcheck disable=SC2227
+USER_CONFIG_PATH=$(find "$HOME" -name 'services.yaml' 2>/dev/null -print | head -n 1)
+
+# Use the first user-specific config found; if none, use the default
 CONFIG_FILE="${USER_CONFIG_PATH:-$DEFAULT_CONFIG_FILE}"
 COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor/common.conf"
 PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor/program.conf"
 FINAL_CONFIG="/usr/local/configs/supervisor/supervisord.conf"
 
-# Copy common configuration
-cp "$COMMON_TEMPLATE_FILE" "$FINAL_CONFIG"
+# Set up signal handling
+trap 'handle_supervisor_signals SIGTERM' SIGTERM
+trap 'handle_supervisor_signals SIGINT' SIGINT
 
-# Process services if config exists
-if [ -f "$CONFIG_FILE" ]; then
-    services_json=$(yq e -o=json '.services' "$CONFIG_FILE")
+# Main execution
+main() {
+    log_info "Process Manager" "Starting process manager..."
     
-    # Process each service
-    echo "$services_json" | jq -c '.[]' | while read -r service; do
-        name=$(echo "$service" | jq -r '.name')
-        command=$(echo "$service" | jq -r '.command')
-        ignore=$(echo "$service" | jq -r '.ignore // "false"')
-        autostart=$(echo "$service" | jq -r '.autostart // "true"')
-        autorestart=$(echo "$service" | jq -r '.autorestart // "false"')
-        envs=$(echo "$service" | jq -r '.envs // [] | join(",")')
-        
-        if [[ "$ignore" != "true" ]] && [ -n "$name" ] && [ -n "$command" ]; then
-            echo -e "\n" >> "$FINAL_CONFIG"
-            sed "s|\${process_name}|$name|g; \
-                s|\${command}|$command|g; \
-                s|\${autostart}|$autostart|g; \
-                s|\${autorestart}|$autorestart|g; \
-                s|\${envs}|$envs|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
-        fi
-    done
-fi
+    if ! configure_and_execute_services; then
+        log_error "Process Manager" "Failed to configure and start services"
+        exit 1
+    fi
 
-# Start supervisord
-exec /usr/bin/supervisord -c "$FINAL_CONFIG"
+    # Wait for services to be ready
+    if ! wait_for_services_ready; then
+        log_error "Process Manager" "Services failed to start properly"
+        exit 1
+    fi
+
+    # Monitor services in the background
+    monitor_services &
+    
+    # Wait for signals
+    wait
+}
 
 # Helper function to parse and process each service configuration
 parse_service_info() {
@@ -160,6 +161,22 @@ start_supervisor() {
     exec supervisord -n
 }
 
+# Function to check for service configurations
+should_generate_config() {
+    local enabled_services_count
+    # Extract services into JSON format
+    services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE")
+    # Count the number of items in the JSON array, trimming any newlines or spaces
+    enabled_services_count=$(echo "$services_yaml" | jq -c '. | length' | tr -d '\n')
+
+    # Check if the configuration file exists and there is at least one enabled service
+    if [ -f "$CONFIG_FILE" ] && [ "${enabled_services_count:-0}" -gt 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Function to configure services
 configure_services() {
     if ! should_generate_config; then
@@ -197,3 +214,6 @@ configure_and_execute_services() {
     # Then start supervisor
     start_supervisor
 }
+
+# Execute main function
+main
