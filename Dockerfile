@@ -120,11 +120,8 @@ COPY etc/configs /usr/local/configs
 COPY lib /usr/local/lib
 COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Make all shell scripts executable
-RUN chmod +x /usr/local/lib/*.sh /usr/local/bin/entrypoint.sh
-
 # Set permissions during build
-RUN chmod +x /usr/local/bin/entrypoint.sh && \
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/lib/process_manager.sh && \
     chown -R ${UID}:${GID} /usr/local/configs && \
     chown -R ${UID}:${GID} /usr/local/bin && \
     chown -R ${UID}:${GID} /usr/local/lib && \
