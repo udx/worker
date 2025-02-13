@@ -4,37 +4,41 @@
 source /usr/local/lib/utils.sh
 
 # Define paths
-DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yaml"
-# Define the user-specific configuration path search
-# shellcheck disable=SC2227
-USER_CONFIG_PATH=$(find "$HOME" -name 'services.yaml' 2>/dev/null -print | head -n 1)
-
-# Use the first user-specific config found; if none, use the default
+DEFAULT_CONFIG_FILE="/home/udx/services.yaml"
 CONFIG_FILE="${USER_CONFIG_PATH:-$DEFAULT_CONFIG_FILE}"
 COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor/common.conf"
 PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor/program.conf"
 FINAL_CONFIG="/usr/local/configs/supervisor/supervisord.conf"
 
-# Function to check for service configurations
-should_generate_config() {
-    # Check if config file exists
-    if [ ! -f "$CONFIG_FILE" ]; then
-        log_info "No services.yaml found at $CONFIG_FILE"
-        return 1
-    fi
+# Copy common configuration
+cp "$COMMON_TEMPLATE_FILE" "$FINAL_CONFIG"
 
-    # Count enabled services (not ignored)
-    local enabled_count
-    enabled_count=$(yq e '.services[] | select(.ignore != true) | .name' "$CONFIG_FILE" | wc -l)
+# Process services if config exists
+if [ -f "$CONFIG_FILE" ]; then
+    services_json=$(yq e -o=json '.services' "$CONFIG_FILE")
+    
+    # Process each service
+    echo "$services_json" | jq -c '.[]' | while read -r service; do
+        name=$(echo "$service" | jq -r '.name')
+        command=$(echo "$service" | jq -r '.command')
+        ignore=$(echo "$service" | jq -r '.ignore // "false"')
+        autostart=$(echo "$service" | jq -r '.autostart // "true"')
+        autorestart=$(echo "$service" | jq -r '.autorestart // "false"')
+        envs=$(echo "$service" | jq -r '.envs // [] | join(",")')
+        
+        if [[ "$ignore" != "true" ]] && [ -n "$name" ] && [ -n "$command" ]; then
+            echo -e "\n" >> "$FINAL_CONFIG"
+            sed "s|\${process_name}|$name|g; \
+                s|\${command}|$command|g; \
+                s|\${autostart}|$autostart|g; \
+                s|\${autorestart}|$autorestart|g; \
+                s|\${envs}|$envs|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
+        fi
+    done
+fi
 
-    if [ "$enabled_count" -gt 0 ]; then
-        log_info "Found $enabled_count enabled service(s) in $CONFIG_FILE"
-        return 0
-    else
-        log_info "No enabled services found in $CONFIG_FILE"
-        return 1
-    fi
-}
+# Start supervisord
+exec /usr/bin/supervisord -c "$FINAL_CONFIG"
 
 # Helper function to parse and process each service configuration
 parse_service_info() {
@@ -150,12 +154,9 @@ handle_supervisor_signals() {
 
 # Function to start Supervisor with the generated configuration
 start_supervisor() {
-    # Set up signal handlers
-    trap 'handle_supervisor_signals SIGTERM' TERM
-    trap 'handle_supervisor_signals SIGINT' INT
-    trap 'handle_supervisor_signals SIGQUIT' QUIT
-
-    # Start supervisord in foreground mode
+    log_info "Starting supervisord..."
+    
+    # Start supervisord in non-daemon mode
     exec supervisord -n
 }
 

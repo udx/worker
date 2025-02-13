@@ -89,7 +89,7 @@ clean:
 test: clean
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Running tests...$(COLOR_RESET)\n"
 	@$(MAKE) run \
-		VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yaml:ro $(TEST_SERVICES_CONFIG):/home/$(USER)/services.yaml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks:ro $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh:ro ./src/tests/utils.sh:/usr/local/tests/utils.sh:ro" \
+		VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yaml:ro $(TEST_SERVICES_CONFIG):/home/$(USER)/services.yaml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks:ro $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh:ro" \
 		COMMAND="/home/$(USER)/main.sh" || exit 1
 	@$(MAKE) log FOLLOW_LOGS=true || exit 1
 	@$(MAKE) clean || exit 1

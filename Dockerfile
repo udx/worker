@@ -37,8 +37,7 @@ RUN apt-get update && \
     vim=2:9.1.0861-1ubuntu1 \
     python3.12=3.12.9-1 \
     python3-pip=25.0+dfsg-1 \
-    supervisor=4.2.5-3 \
-    tini=0.19.0-1 && \
+    supervisor=4.2.5-3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
