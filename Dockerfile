@@ -121,11 +121,16 @@ COPY lib /usr/local/lib
 COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Set permissions during build
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/lib/process_manager.sh && \
-    chown -R ${UID}:${GID} /usr/local/configs && \
-    chown -R ${UID}:${GID} /usr/local/bin && \
-    chown -R ${UID}:${GID} /usr/local/lib && \
-    chmod -R g-w,o-w /usr/local/configs /usr/local/bin /usr/local/lib
+# Set ownership
+RUN chown -R ${UID}:${GID} /usr/local/configs /usr/local/bin /usr/local/lib && \
+    # Make specific scripts executable
+    chmod 755 /usr/local/bin/entrypoint.sh /usr/local/lib/process_manager.sh && \
+    # Set read-only permissions for config files
+    find /usr/local/configs -type f -exec chmod 644 {} + && \
+    # Set read-only permissions for library files
+    find /usr/local/lib -type f ! -name process_manager.sh -exec chmod 644 {} + && \
+    # Ensure directories are accessible
+    find /usr/local/configs /usr/local/bin /usr/local/lib -type d -exec chmod 755 {} +
 
 # Create a symbolic link for the supervisord configuration file
 RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf    

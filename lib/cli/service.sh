@@ -81,6 +81,7 @@ follow_logs() {
     local service_name=""
     local type="out"
     local lines=20
+    local nostream=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -93,6 +94,9 @@ follow_logs() {
                 if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
                     lines="$1"
                 fi
+                ;;
+            --nostream)
+                nostream=true
                 ;;
             err)
                 type="err"
@@ -108,7 +112,7 @@ follow_logs() {
 
     if [[ -z "$service_name" ]]; then
         log_error "Service" "Error: No service name provided."
-        log_error "Service" "Usage: $0 logs <service_name> [--lines N]"
+        log_error "Service" "Usage: $0 logs <service_name> [--lines N] [--nostream]"
         exit 1
     fi
     
@@ -126,8 +130,13 @@ follow_logs() {
         exit 1
     fi
     
-    # Show the last N lines and follow
-    exec tail -n "$lines" -f "$logfile"
+    if [ "$nostream" = true ]; then
+        # Just show the last N lines without following
+        tail -n "$lines" "$logfile"
+    else
+        # Show the last N lines and follow
+        exec tail -n "$lines" -f "$logfile"
+    fi
 }
 
 # Function to show supervisor configuration
