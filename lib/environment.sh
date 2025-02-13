@@ -8,8 +8,6 @@ source /usr/local/lib/secrets.sh
 # shellcheck disable=SC1091
 source /usr/local/lib/cleanup.sh
 # shellcheck disable=SC1091
-source /usr/local/lib/process_manager.sh
-# shellcheck disable=SC1091
 source /usr/local/lib/worker_config.sh
 
 # shellcheck disable=SC1091
@@ -66,15 +64,7 @@ configure_environment() {
         return 1
     fi
 
-    # Perform process manager setup
-    log_info "Setting up process manager..."
-    if should_generate_config; then
-        log_info "Generating Supervisor configuration..."
-        configure_and_execute_services
-    else
-        log_info "No services found in the configuration. Skipping process manager setup."
-    fi
-
+    # Environment setup complete
     log_info "Secure environment setup completed successfully."
 }
 

@@ -3,7 +3,7 @@ kind: workerService
 version: udx.io/worker-v1/service
 services:
   - name: "test_service"
-    command: "bash -c 'while true; do echo \"Service running...\"; sleep 1; trap \"echo Starting cleanup...; sleep 5; echo Cleanup completed; exit 0\" TERM; done'"
+    command: "bash -c 'trap \"echo Starting cleanup...; sleep 5; echo Cleanup completed; exit 0\" TERM; while true; do echo \"Service running...\"; sleep 1; done'"
     autostart: "false"
     autorestart: "false"
     stopsignal: "TERM"
