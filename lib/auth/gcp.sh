@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # Function to authenticate GCP service accounts
 #
 # Example usage of the function
@@ -15,7 +18,7 @@ gcp_authenticate() {
     creds_content=$(cat "$creds_json")
     
     if [[ -z "$creds_content" ]]; then
-        echo "[ERROR] No GCP credentials provided." >&2
+        log_error "GCP Authentication" "No GCP credentials provided."
         return 1
     fi
     
@@ -27,7 +30,7 @@ gcp_authenticate() {
     projectId=$(echo "$creds_content" | jq -r '.project_id')
     
     if [[ -z "$clientEmail" || -z "$privateKey" || -z "$projectId" ]]; then
-        echo "[ERROR] Missing required GCP credentials." >&2
+        log_error "GCP Authentication" "Missing required GCP credentials."
         return 1
     fi
     
@@ -41,20 +44,20 @@ gcp_authenticate() {
     jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
     '{client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$temp_creds_file"
     
-    echo "[INFO] Authenticating GCP service account..."
+    log_info "GCP Authentication" "Authenticating GCP service account..."
     if ! gcloud auth activate-service-account "$clientEmail" --key-file="$temp_creds_file" >/dev/null 2>&1; then
-        echo "[ERROR] GCP service account authentication failed." >&2
+        log_error "GCP Authentication" "GCP service account authentication failed."
         rm -f "$temp_creds_file"
         return 1
     fi
     
     if ! gcloud config set project "$projectId" >/dev/null 2>&1; then
-        echo "[ERROR] Failed to set GCP project." >&2
+        log_error "GCP Authentication" "Failed to set GCP project."
         rm -f "$temp_creds_file"
         return 1
     fi
     
-    echo "[INFO] GCP service account authenticated and project set."
+    log_success "GCP Authentication" "GCP service account authenticated and project set."
     
     # Clean up temporary credentials file
     rm -f "$temp_creds_file"

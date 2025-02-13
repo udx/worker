@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Include utility functions and worker config utilities
-# shellcheck source=/dev/null
-source /usr/local/lib/utils.sh
+# Include worker config utilities first
 # shellcheck source=/dev/null
 source /usr/local/lib/worker_config.sh
+
+# shellcheck source=/dev/null
+source /usr/local/lib/utils.sh
 
 # Generic function to clean up authentication for any provider
 cleanup_provider() {
@@ -46,11 +47,11 @@ cleanup_provider() {
         if echo "$logout_output" | grep -q -E "No credentials available to revoke|No active sessions|No active accounts"; then
             log_info "No active $name credentials to revoke."
         else
-            log_error "Failed to log out of $name: $logout_output"
+            log_error "Cleanup" "Failed to log out of $name: $logout_output"
             return 1
         fi
     else
-        log_info "$name authentication cleaned up successfully."
+        log_success "Cleanup" "$name authentication cleaned up successfully."
         cleaned_up=true
     fi
     

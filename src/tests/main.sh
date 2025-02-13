@@ -1,11 +1,20 @@
 #!/bin/bash
 
-echo "Running all tests..."
+# Source utils.sh for logging functions
+# shellcheck disable=SC1091
+source /usr/local/lib/utils.sh
 
-# Find and execute all test scripts in the /usr/local/tests directory
+log_info "Main" "Running all test suites"
+
+# Find and execute all test scripts in the tasks directory
 for test_script in ./tasks/*.sh; do
-    echo "Running $(basename "$test_script")..."
-    bash "$test_script"
+    log_info "Running $(basename "$test_script")..."
+    if bash "$test_script"; then
+        log_success "$(basename "$test_script")" "Test completed successfully"
+    else
+        log_error "$(basename "$test_script")" "Test failed"
+        exit 1
+    fi
 done
 
-echo "All tests completed."
+log_success "Main" "All test suites completed successfully"

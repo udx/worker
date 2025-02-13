@@ -1,27 +1,33 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 service_handler() {
-    case $1 in
+    local cmd=$1
+    shift  # Remove the command from args
+
+    case $cmd in
         list)
             list_services
         ;;
         status)
-            check_status "$2"
+            check_status "$1"
         ;;
         logs)
-            follow_logs "$2"
+            follow_logs "$@"
         ;;
         errors)
-            follow_logs "$2" "err"
+            follow_logs "$1" "err"
         ;;
         config)
             show_config
         ;;
         start|stop|restart)
-            manage_service "$1" "$2"
+            manage_service "$cmd" "$1"
         ;;
         *)
-            echo "Usage: $0 {list|status|logs|config|start|stop|restart}"
+            log_warn "CLI" "Usage: $0 {list|status|logs|config|start|stop|restart}"
             exit 1
         ;;
     esac
@@ -35,14 +41,14 @@ list_services() {
     
     # Check if Supervisor is not running, not accessible, or if there are no managed services
     if [[ -z "$services_status" ]] || echo "$services_status" | grep -Eq 'no such|ERROR'; then
-        echo "No services are currently managed."
+        log_warn "Service" "No services are currently managed."
         exit 1
     fi
     
-    echo "Listing all managed services:"
+    log_debug "Service" "Listing all managed services:"
     local i=1
     echo "$services_status" | while read -r line; do
-        echo "$i. $line"
+        log_debug "Service" "$i. $line"
         ((i++))
     done
 }
@@ -51,8 +57,8 @@ list_services() {
 check_status() {
     # Require a service name for this function
     if [ -z "$1" ]; then
-        echo "Error: No service name provided."
-        echo "Usage: $0 status <service_name>"
+        log_warn "Service" "Error: No service name provided."
+        log_warn "Service" "Usage: $0 status <service_name>"
         exit 1
     fi
     
@@ -62,7 +68,7 @@ check_status() {
     
     # Check if Supervisor is not running, not accessible, or if the service does not exist
     if [[ -z "$service_status" ]] || echo "$service_status" | grep -Eq 'no such|ERROR'; then
-        echo "The service '$1' does not exist."
+        log_warn "Service" "The service '$1' does not exist."
         exit 1
     fi
     
@@ -72,28 +78,71 @@ check_status() {
 
 # Function to follow logs for a specific service
 follow_logs() {
-    if [ -z "$1" ]; then
-        echo "Error: No service name provided."
-        echo "Usage: $0 logs <service_name>"
+    local service_name=""
+    local type="out"
+    local lines=20
+    local nostream=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --lines=*)
+                lines="${1#*=}"
+                ;;
+            --lines)
+                shift
+                if [[ -n "$1" && "$1" =~ ^[0-9]+$ ]]; then
+                    lines="$1"
+                fi
+                ;;
+            --nostream)
+                nostream=true
+                ;;
+            err)
+                type="err"
+                ;;
+            *)
+                if [[ -z "$service_name" ]]; then
+                    service_name="$1"
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -z "$service_name" ]]; then
+        log_error "Service" "Error: No service name provided."
+        log_error "Service" "Usage: $0 logs <service_name> [--lines N] [--nostream]"
         exit 1
     fi
     
-    local logfile="/var/log/supervisor/$1"
-    local type=${2:-out}  # Default to 'out' if not specified
+    local logfile="/var/log/supervisor/$service_name"
     logfile="$logfile.$type.log"
     
-    if [ ! -f "$logfile" ]; then
-        echo "Log file does not exist: $logfile"
+    if [[ ! -f "$logfile" ]]; then
+        log_error "Service" "Log file does not exist: $logfile"
+        exit 1
+    fi
+
+    # Ensure lines is a valid number
+    if ! [[ "$lines" =~ ^[0-9]+$ ]]; then
+        log_error "Service" "Invalid line count: $lines"
         exit 1
     fi
     
-    tail -f "$logfile"
+    if [ "$nostream" = true ]; then
+        # Just show the last N lines without following
+        tail -n "$lines" "$logfile"
+    else
+        # Show the last N lines and follow
+        exec tail -n "$lines" -f "$logfile"
+    fi
 }
 
 # Function to show supervisor configuration
 show_config() {
     if [ ! -f "/etc/supervisord.conf" ]; then
-        echo "Configuration file is not generated since no services are managed."
+        log_error "Service" "Configuration file is not generated since no services are managed."
         exit 1
     fi
     cat /etc/supervisord.conf
@@ -102,13 +151,13 @@ show_config() {
 # Function to start, stop, or restart a service
 manage_service() {
     if [ -z "$2" ]; then
-        echo "Error: No service name provided."
-        echo "Usage: $0 $1 <service_name>"
+        log_error "Service" "Error: No service name provided."
+        log_warn "Service" "Usage: $0 $1 <service_name>"
         exit 1
     fi
     
     if [ ! -e "/var/run/supervisor/supervisord.sock" ]; then
-        echo "Error: Service doesn't exist."
+        log_error "Service" "Error: Service doesn't exist."
         exit 1
     fi
     

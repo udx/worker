@@ -1,13 +1,16 @@
 #!/bin/bash
 
-echo "Starting validation of config..."
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
+log_info "Starting validation of config..."
 
 # Path to the merged configuration file
 MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yaml"
 
 # Test configure_environment function
 test_configure_environment() {
-    echo "Running test: configure_environment"
+    log_info "Running test: configure_environment"
 
     # Load the merged configuration
     merged_config=$(cat "$MERGED_CONFIG")
@@ -26,20 +29,21 @@ test_configure_environment() {
         actual_value="${!key}"
 
         if [[ "$actual_value" != "$value" ]]; then
-            echo "Test failed: $key is not set correctly. Expected: $value, Got: $actual_value"
+            log_error "Config" "$key is not set correctly. Expected: $value, Got: $actual_value"
             return 1
         else
-            echo "Test passed: $key is set correctly."
+            log_success "Config" "$key is set correctly"
         fi
     done
 
-    echo "Test passed: configure_environment"
+    log_success "Config" "configure_environment test passed"
+    return 0
 }
 
 # Run the test
 if test_configure_environment; then
-    echo "Config tests passed successfully."
+    log_success "Config" "All config tests passed successfully"
 else
-    echo "Config tests failed."
+    log_error "Config" "Config tests failed"
     exit 1
 fi

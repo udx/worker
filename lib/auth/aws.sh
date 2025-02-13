@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
+source /usr/local/lib/utils.sh
+
 # Example usage of the function
 # aws_authenticate "/path/to/your/aws_creds.json"
 
@@ -12,7 +15,7 @@ aws_authenticate() {
     creds_content=$(cat "$creds_json")
     
     if [[ -z "$creds_content" ]]; then
-        echo "[ERROR] No AWS credentials provided." >&2
+        log_error "AWS Authentication" "No AWS credentials provided."
         return 1
     fi
     
@@ -24,7 +27,7 @@ aws_authenticate() {
     sessionToken=$(echo "$creds_content" | jq -r '.SessionToken')
 
     if [[ -z "$accessKeyId" || -z "$secretAccessKey" ]]; then
-        echo "[ERROR] Missing required AWS credentials." >&2
+        log_error "AWS Authentication" "Missing required AWS credentials."
         return 1
     fi
 
@@ -35,5 +38,5 @@ aws_authenticate() {
         export AWS_SESSION_TOKEN="$sessionToken"
     fi
 
-    echo "[INFO] AWS credentials set successfully."
+    log_success "AWS Authentication" "AWS credentials set successfully."
 }

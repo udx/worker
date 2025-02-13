@@ -1,33 +1,17 @@
 #!/bin/bash
 
-# Get the directory of this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Include necessary modules
+# shellcheck disable=SC1091
+source /usr/local/lib/auth.sh
+# shellcheck disable=SC1091
+source /usr/local/lib/secrets.sh
+# shellcheck disable=SC1091
+source /usr/local/lib/cleanup.sh
+# shellcheck disable=SC1091
+source /usr/local/lib/worker_config.sh
 
-# Source a file if it exists
-source_if_exists() {
-    local file_path="$1"
-    if [[ -f "$file_path" ]]; then
-        # shellcheck disable=SC1090
-        source "$file_path"
-    else
-        echo "[ERROR] Missing file: $file_path" >&2
-        exit 1
-    fi
-}
-
-# Include necessary modules from the same directory
-# shellcheck source=./utils.sh
-source_if_exists "$SCRIPT_DIR/utils.sh"
-# shellcheck source=./auth.sh
-source_if_exists "$SCRIPT_DIR/auth.sh"
-# shellcheck source=./secrets.sh
-source_if_exists "$SCRIPT_DIR/secrets.sh"
-# shellcheck source=./cleanup.sh
-source_if_exists "$SCRIPT_DIR/cleanup.sh"
-# shellcheck source=./process_manager.sh
-source_if_exists "$SCRIPT_DIR/process_manager.sh"
-# shellcheck source=./worker_config.sh
-source_if_exists "$SCRIPT_DIR/worker_config.sh"
+# shellcheck disable=SC1091
+source /usr/local/lib/utils.sh
 
 # Main function to coordinate environment setup
 configure_environment() {
@@ -37,13 +21,13 @@ configure_environment() {
     local resolved_config
     resolved_config=$(load_and_parse_config)
     if [[ -z "$resolved_config" ]]; then
-        log_error "Configuration loading failed. Exiting..."
+        log_error "Environment" "Configuration loading failed. Exiting..."
         return 1
     fi
 
     # Export variables from the configuration
     if ! export_variables_from_config "$resolved_config"; then
-        log_error "Failed to export variables."
+        log_error "Environment" "Failed to export variables."
         return 1
     fi
 
@@ -53,7 +37,7 @@ configure_environment() {
     if [[ $? -eq 0 && -n "$actors" ]]; then
         log_info "Authenticating actors from configuration..."
         if ! authenticate_actors "$actors"; then
-            log_error "Failed to authenticate actors."
+            log_error "Environment" "Failed to authenticate actors."
             return 1
         fi
     else
@@ -66,7 +50,7 @@ configure_environment() {
     if [[ $? -eq 0 && -n "$secrets" ]]; then
         log_info "Fetching secrets from configuration..."
         if ! fetch_secrets "$secrets"; then
-            log_error "Failed to fetch secrets."
+            log_error "Environment" "Failed to fetch secrets."
             return 1
         fi
     else
@@ -76,19 +60,11 @@ configure_environment() {
     # Perform cleanup
     log_info "Cleaning up sensitive data..."
     if ! cleanup_actors; then
-        log_error "Failed to clean up actors."
+        log_error "Environment" "Failed to clean up actors."
         return 1
     fi
 
-    # Perform process manager setup
-    log_info "Setting up process manager..."
-    if should_generate_config; then
-        log_info "Generating Supervisor configuration..."
-        configure_and_execute_services
-    else
-        log_info "No services found in the configuration. Skipping process manager setup."
-    fi
-
+    # Environment setup complete
     log_info "Secure environment setup completed successfully."
 }
 

@@ -23,7 +23,7 @@ USER root
 RUN apt-get update && \
     apt-get install -y \
     tzdata=2024b-6ubuntu1 \
-    curl=8.11.1-1ubuntu1 \
+    curl=8.12.0+git20250209.89ed161+ds-1ubuntu1 \
     bash=5.2.37-1ubuntu1 \
     apt-utils=2.9.28 \
     gettext=0.23.1-1 \
@@ -58,9 +58,9 @@ RUN ARCH=$(uname -m) && \
 ENV CLOUDSDK_CONFIG=/usr/local/configs/gcloud
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-508.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-510.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-508.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-510.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
@@ -86,7 +86,7 @@ RUN mkdir -p $GNUPGHOME && \
     gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ jammy main" | tee /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.68.0-1~jammy && \
+    apt-get install -y --no-install-recommends azure-cli=2.69.0-1~jammy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -116,17 +116,21 @@ RUN chmod +x /usr/local/bin/worker_mgmt && \
     ln -s /usr/local/bin/worker_mgmt /usr/local/bin/worker    
 
 # Copy the bin, etc, and lib directories
-COPY etc/home /etc
 COPY etc/configs /usr/local/configs
 COPY lib /usr/local/lib
 COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Set permissions during build
-RUN chmod +x /usr/local/bin/entrypoint.sh && \
-    chown -R ${UID}:${GID} /usr/local/configs && \
-    chown -R ${UID}:${GID} /usr/local/bin && \
-    chown -R ${UID}:${GID} /usr/local/lib && \
-    chmod -R g-w,o-w /usr/local/configs /usr/local/bin /usr/local/lib
+# Set ownership
+RUN chown -R ${UID}:${GID} /usr/local/configs /usr/local/bin /usr/local/lib && \
+    # Make specific scripts executable
+    chmod 755 /usr/local/bin/entrypoint.sh /usr/local/lib/process_manager.sh && \
+    # Set read-only permissions for config files
+    find /usr/local/configs -type f -exec chmod 644 {} + && \
+    # Set read-only permissions for library files
+    find /usr/local/lib -type f ! -name process_manager.sh -exec chmod 644 {} + && \
+    # Ensure directories are accessible
+    find /usr/local/configs /usr/local/bin /usr/local/lib -type d -exec chmod 755 {} +
 
 # Create a symbolic link for the supervisord configuration file
 RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf    
