@@ -4,13 +4,27 @@ FROM ubuntu:25.04
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
-# Set environment variables to avoid interactive prompts and set a fixed timezone
+# Set base environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC \
     USER=udx \
     UID=500 \
     GID=500 \
-    HOME=/home/udx
+    HOME=/home/udx \
+    # Worker specific paths
+    WORKER_BASE_DIR=/opt/worker \
+    WORKER_CONFIG_DIR=/etc/worker \
+    WORKER_APP_DIR=/opt/worker/apps \
+    WORKER_DATA_DIR=/opt/worker/data \
+    WORKER_LIB_DIR=/usr/local/worker/lib \
+    WORKER_BIN_DIR=/usr/local/worker/bin \
+    WORKER_ETC_DIR=/usr/local/worker/etc \
+    # Add worker bin to PATH
+    PATH=/usr/local/worker/bin:${PATH} \
+    # Cloud SDK configurations
+    CLOUDSDK_CONFIG=/usr/local/configs/gcloud \
+    AWS_CONFIG_FILE=/usr/local/configs/aws \
+    AZURE_CONFIG_DIR=/usr/local/configs/azure
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -22,10 +36,10 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y \
-    tzdata=2024b-6ubuntu1 \
+    tzdata=2025a-2ubuntu1 \
     curl=8.12.0+git20250209.89ed161+ds-1ubuntu1 \
     bash=5.2.37-1ubuntu1 \
-    apt-utils=2.9.28 \
+    apt-utils=2.9.29 \
     gettext=0.23.1-1 \
     gnupg=2.4.4-2ubuntu22 \
     ca-certificates=20241223 \
@@ -110,34 +124,73 @@ RUN groupadd -g ${GID} ${USER} && \
 RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
     chown -R ${USER}:${USER} /var/log/supervisor /var/run/supervisor
 
-# Copy the CLI tool into the image
-COPY lib/cli.sh /usr/local/bin/worker_mgmt
-RUN chmod +x /usr/local/bin/worker_mgmt && \
-    ln -s /usr/local/bin/worker_mgmt /usr/local/bin/worker    
+# Create directory structure
+RUN mkdir -p \
+    # Worker directories
+    ${WORKER_CONFIG_DIR} \
+    ${WORKER_APP_DIR} \
+    ${WORKER_DATA_DIR} \
+    ${WORKER_LIB_DIR} \
+    ${WORKER_BIN_DIR} \
+    ${WORKER_ETC_DIR} \
+    # Environment and secrets files directory
+    ${WORKER_CONFIG_DIR}/environment.d \
+    # User and config directories
+    ${HOME}/.config/worker \
+    # Cloud SDK config directories
+    ${CLOUDSDK_CONFIG} \
+    ${AWS_CONFIG_FILE%/*} \
+    ${AZURE_CONFIG_DIR} && \
+    # Create and set permissions for environment files
+    touch ${WORKER_CONFIG_DIR}/environment ${WORKER_CONFIG_DIR}/secrets && \
+    chown ${USER}:${USER} \
+        ${WORKER_CONFIG_DIR}/environment \
+        ${WORKER_CONFIG_DIR}/secrets && \
+    chmod 644 ${WORKER_CONFIG_DIR}/environment && \
+    chmod 600 ${WORKER_CONFIG_DIR}/secrets
 
-# Copy the bin, etc, and lib directories
-COPY etc/configs /usr/local/configs
-COPY lib /usr/local/lib
-COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
+# Copy worker files
+COPY bin/entrypoint.sh ${WORKER_BIN_DIR}/
+COPY lib ${WORKER_LIB_DIR}/
+COPY etc/configs/worker/default.yaml ${WORKER_CONFIG_DIR}/worker.yaml
+COPY etc/configs/supervisor ${WORKER_CONFIG_DIR}/supervisor/
 
-# Set permissions during build
-# Set ownership
-RUN chown -R ${UID}:${GID} /usr/local/configs /usr/local/bin /usr/local/lib && \
-    # Make specific scripts executable
-    chmod 755 /usr/local/bin/entrypoint.sh /usr/local/lib/process_manager.sh && \
-    # Set read-only permissions for config files
-    find /usr/local/configs -type f -exec chmod 644 {} + && \
-    # Set read-only permissions for library files
-    find /usr/local/lib -type f ! -name process_manager.sh -exec chmod 644 {} + && \
-    # Ensure directories are accessible
-    find /usr/local/configs /usr/local/bin /usr/local/lib -type d -exec chmod 755 {} +
+# Make scripts executable and initialize environment
+RUN chmod +x ${WORKER_LIB_DIR}/*.sh && \
+    ${WORKER_LIB_DIR}/env_handler.sh init_environment
 
-# Create a symbolic link for the supervisord configuration file
-RUN ln -sf /usr/local/configs/supervisor/supervisord.conf /etc/supervisord.conf    
+# Set up CLI tool
+COPY lib/cli.sh ${WORKER_BIN_DIR}/worker_mgmt
+RUN chmod +x ${WORKER_BIN_DIR}/worker_mgmt && \
+    ln -s ${WORKER_BIN_DIR}/worker_mgmt ${WORKER_BIN_DIR}/worker
 
-# Prepare directories for the user and worker configuration
-RUN mkdir -p ${HOME} && \
-    chown -R ${USER}:${USER} ${HOME}
+# Set permissions
+RUN \
+    # Set base ownership
+    chown -R ${UID}:${GID} \
+        ${WORKER_BASE_DIR} \
+        ${WORKER_CONFIG_DIR} \
+        ${WORKER_LIB_DIR} \
+        ${WORKER_BIN_DIR} \
+        ${HOME} \
+        ${CLOUDSDK_CONFIG} \
+        ${AWS_CONFIG_FILE%/*} \
+        ${AZURE_CONFIG_DIR} && \
+    # Set directory permissions
+    find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
+    # Set file permissions
+    find ${WORKER_CONFIG_DIR} -type f -exec chmod 644 {} + && \
+    find ${WORKER_LIB_DIR} -type f ! -name process_manager.sh -exec chmod 644 {} + && \
+    # Make specific files executable
+    chmod 755 \
+        ${WORKER_BIN_DIR}/entrypoint.sh \
+        ${WORKER_BIN_DIR}/worker_mgmt \
+        ${WORKER_LIB_DIR}/process_manager.sh && \
+    # Set runtime directories permissions
+    chmod 775 ${WORKER_APP_DIR} ${WORKER_DATA_DIR}
+
+# Set up supervisor configuration
+RUN ln -sf ${WORKER_CONFIG_DIR}/supervisor/supervisord.conf /etc/supervisord.conf
 
 # Switch to the user directory
 WORKDIR ${HOME}
@@ -146,7 +199,7 @@ WORKDIR ${HOME}
 USER ${USER}
 
 # Set the entrypoint to run the entrypoint script using shell form
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/worker/bin/entrypoint.sh"]
 
 # Set the default command
 CMD ["tail", "-f", "/dev/null"]

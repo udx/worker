@@ -1,19 +1,23 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Define paths
-DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yaml"
-# Define the user-specific configuration path search
-# shellcheck disable=SC2227
-USER_CONFIG_PATH=$(find "$HOME" -name 'services.yaml' 2>/dev/null -print | head -n 1)
+USER_CONFIG_PATH="${HOME}/.config/worker/services.yaml"
+CONFIG_FILE="${USER_CONFIG_PATH}"
 
-# Use the first user-specific config found; if none, use the default
-CONFIG_FILE="${USER_CONFIG_PATH:-$DEFAULT_CONFIG_FILE}"
-COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor/common.conf"
-PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor/program.conf"
-FINAL_CONFIG="/usr/local/configs/supervisor/supervisord.conf"
+# Check if user config exists
+if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
+    log_info "No services configuration found at ${USER_CONFIG_PATH}. Services will not be started."
+    log_info "Run 'worker help service' for information about service configuration"
+    exit 0
+fi
+
+# Supervisor configuration paths
+COMMON_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/common.conf"
+PROGRAM_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/program.conf"
+FINAL_CONFIG="${WORKER_CONFIG_DIR}/supervisor/supervisord.conf"
 
 # Set up signal handling
 trap 'handle_supervisor_signals SIGTERM' SIGTERM
@@ -25,6 +29,7 @@ main() {
     
     if ! configure_and_execute_services; then
         log_error "Process Manager" "Failed to configure and start services"
+        log_info "Run 'worker help service' for information about service configuration"
         exit 1
     fi
 

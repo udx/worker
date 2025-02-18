@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source ${WORKER_LIB_DIR}/utils.sh
 
 # Array to track configured providers
 declare -a configured_providers=()
@@ -61,7 +61,7 @@ authenticate_actors() {
         # Proceed only if creds are valid JSON
         if echo "$creds" | jq empty &>/dev/null; then
             log_info "Processing credentials for $provider"
-            auth_script="/usr/local/lib/auth/${provider}.sh"
+            auth_script="${WORKER_LIB_DIR}/auth/${provider}.sh"
             auth_function="${provider}_authenticate"
             
             if [[ -f "$auth_script" ]]; then

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source ${WORKER_LIB_DIR}/utils.sh
 
 service_handler() {
     local cmd=$1
@@ -33,6 +33,45 @@ service_handler() {
     esac
 }
 
+# Show help for service command
+service_help() {
+    cat << EOF
+Manage UDX Worker services and applications
+
+Usage: worker service [command] [options]
+
+Commands:
+  list              List all configured services and their status
+  status [name]     Show status of all services or a specific service
+  logs [name]       View logs for all services or a specific service
+  errors [name]     View error logs for all services or a specific service
+  config            Show current service configuration
+  start [name]      Start a service
+  stop [name]       Stop a service
+  restart [name]    Restart a service
+
+Configuration:
+  Services are configured in: ${HOME}/.config/worker/services.yaml
+
+Example service configuration:
+  version: "1.0"
+  services:
+    my-app:
+      name: "my-app"
+      command: "python app.py"
+      working_dir: "/opt/worker/apps"
+      autostart: true
+      autorestart: true
+      environment:
+        APP_PORT: "8080"
+
+Examples:
+  worker service list          # List all services
+  worker service logs my-app   # View logs for my-app
+  worker service start my-app  # Start my-app service
+EOF
+}
+
 # Function to list all services
 list_services() {
     # Capture the output of supervisorctl status
@@ -41,14 +80,16 @@ list_services() {
     
     # Check if Supervisor is not running, not accessible, or if there are no managed services
     if [[ -z "$services_status" ]] || echo "$services_status" | grep -Eq 'no such|ERROR'; then
-        log_warn "Service" "No services are currently managed."
-        exit 1
+        log_info "No services are currently managed."
+        log_info "To configure services, create ${HOME}/.config/worker/services.yaml"
+        log_info "Run 'worker help service' for configuration examples."
+        return 0
     fi
     
-    log_debug "Service" "Listing all managed services:"
+    log_info "Managed services:"
     local i=1
     echo "$services_status" | while read -r line; do
-        log_debug "Service" "$i. $line"
+        log_info "$i. $line"
         ((i++))
     done
 }

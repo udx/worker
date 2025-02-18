@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source ${WORKER_LIB_DIR}/utils.sh
 
 # Dynamically source the required provider-specific modules
 source_provider_module() {
     local provider="$1"
-    local module_path="/usr/local/lib/secrets/${provider}.sh"
+    local module_path="${WORKER_LIB_DIR}/secrets/${provider}.sh"
 
     if [[ -f "$module_path" ]]; then
-        # shellcheck source=/usr/local/lib/secrets/${provider}.sh disable=SC1091
+        # shellcheck source=${WORKER_LIB_DIR}/secrets/${provider}.sh disable=SC1091
         source "$module_path"
         log_info "Loaded module for provider: $provider"
     else
