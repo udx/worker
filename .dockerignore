@@ -9,6 +9,18 @@
 
 # CI/CD and GitHub-related files
 ci/*
+
+# macOS system files
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor and IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
 .github/*
 
 # Documentation files
@@ -35,3 +47,4 @@ src/*
 .vscode/
 *.iml
 .prettierignore
+.DS_Store

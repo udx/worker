@@ -159,10 +159,10 @@ COPY etc/configs/supervisor ${WORKER_CONFIG_DIR}/supervisor/
 RUN chmod +x ${WORKER_LIB_DIR}/*.sh && \
     ${WORKER_LIB_DIR}/env_handler.sh init_environment
 
-# Set up CLI tool
+# Set up CLI tool and create symlink
 COPY lib/cli.sh ${WORKER_BIN_DIR}/worker_mgmt
-RUN chmod +x ${WORKER_BIN_DIR}/worker_mgmt && \
-    ln -s ${WORKER_BIN_DIR}/worker_mgmt ${WORKER_BIN_DIR}/worker
+RUN chmod 755 ${WORKER_BIN_DIR}/worker_mgmt && \
+    ln -sf ${WORKER_BIN_DIR}/worker_mgmt ${WORKER_BIN_DIR}/worker
 
 # Set permissions
 RUN \
@@ -178,7 +178,7 @@ RUN \
         ${AZURE_CONFIG_DIR} && \
     # Set directory permissions
     find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
-    # Set file permissions
+    # Set base file permissions
     find ${WORKER_CONFIG_DIR} -type f -exec chmod 644 {} + && \
     find ${WORKER_LIB_DIR} -type f ! -name process_manager.sh -exec chmod 644 {} + && \
     # Make specific files executable
@@ -187,7 +187,9 @@ RUN \
         ${WORKER_BIN_DIR}/worker_mgmt \
         ${WORKER_LIB_DIR}/process_manager.sh && \
     # Set runtime directories permissions
-    chmod 775 ${WORKER_APP_DIR} ${WORKER_DATA_DIR}
+    chmod 775 ${WORKER_APP_DIR} ${WORKER_DATA_DIR} && \
+    # Set sensitive file permissions
+    chmod 600 ${WORKER_CONFIG_DIR}/secrets
 
 # Set up supervisor configuration
 RUN ln -sf ${WORKER_CONFIG_DIR}/supervisor/supervisord.conf /etc/supervisord.conf
