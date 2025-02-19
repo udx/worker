@@ -24,7 +24,8 @@ Examples:
 EOF
 }
 
-# Run health check
+# Description: Run comprehensive health check of the worker
+# Example: worker health check
 check_health() {
     log_info "Health" "Running health check..."
     local failed=0
@@ -49,7 +50,8 @@ check_health() {
     fi
 }
 
-# Check system resources
+# Description: Check system resource usage (disk, memory, CPU)
+# Example: worker health check system
 check_system_resources() {
     local failed=0
     
@@ -86,7 +88,8 @@ check_system_resources() {
     return $failed
 }
 
-# Check supervisor status
+# Description: Check if supervisor is running and responsive
+# Example: worker health check supervisor
 check_supervisor_status() {
     if ! pgrep -f supervisord > /dev/null; then
         log_error "Health" "Supervisor is not running"
@@ -102,7 +105,8 @@ check_supervisor_status() {
     return 0
 }
 
-# Check services health
+# Description: Check health status of all managed services
+# Example: worker health check services
 check_services_health() {
     local failed=0
     local services_status
@@ -129,7 +133,8 @@ check_services_health() {
     return $failed
 }
 
-# Check authentication status
+# Description: Check authentication status for all providers
+# Example: worker health check auth
 check_auth_status() {
     local failed=0
     
@@ -148,7 +153,9 @@ check_auth_status() {
     return $failed
 }
 
-# Generate health report
+# Description: Generate detailed health report
+# Options: --format text|json
+# Example: worker health report --format json
 generate_report() {
     local format=${1:-text}
     local report_file

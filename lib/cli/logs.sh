@@ -57,7 +57,9 @@ get_log_file() {
     esac
 }
 
-# Show logs
+# Description: Display logs for a specific service
+# Options: --service NAME, --type out|err|all, --lines N, --since TIME, --until TIME
+# Example: worker logs show --service myapp --type err --lines 100 --since "2024-01-01"
 show_logs() {
     local service=$1
     local type=${2:-all}
@@ -91,7 +93,9 @@ show_logs() {
     eval "$cmd $log_file"
 }
 
-# Follow logs
+# Description: Follow logs in real-time for a service
+# Options: --service NAME, --type out|err|all
+# Example: worker logs follow --service myapp --type err
 follow_logs() {
     local service=$1
     local type=${2:-all}
@@ -112,7 +116,9 @@ follow_logs() {
     tail -f "$log_file"
 }
 
-# Search logs
+# Description: Search logs for a specific pattern
+# Options: --pattern PATTERN, --service NAME, --type out|err|all
+# Example: worker logs search --pattern "error" --service myapp
 search_logs() {
     local pattern=$1
     local service=$2
@@ -133,7 +139,9 @@ search_logs() {
     grep -n "$pattern" $log_file
 }
 
-# Export logs
+# Description: Export logs to a file
+# Options: --service NAME, --type out|err|all, --since TIME, --until TIME, --format text|json
+# Example: worker logs export --service myapp --since "2024-01-01" --format json
 export_logs() {
     local service=$1
     local type=${2:-all}
@@ -180,7 +188,9 @@ export_logs() {
     log_success "Logs" "Logs exported to $output_file"
 }
 
-# Clean old logs
+# Description: Clean old log files
+# Options: --older-than DURATION
+# Example: worker logs clean --older-than 7d
 clean_logs() {
     local older_than=${1:-7d}  # Default: 7 days
     

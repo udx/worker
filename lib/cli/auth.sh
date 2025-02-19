@@ -25,7 +25,8 @@ Examples:
 EOF
 }
 
-# Show authentication status
+# Description: Display authentication status for all cloud providers
+# Example: worker auth status
 show_auth_status() {
     log_info "Auth" "Checking authentication status..."
     
@@ -39,7 +40,9 @@ show_auth_status() {
     done
 }
 
-# Test authentication
+# Description: Test authentication for cloud providers
+# Options: --provider aws|gcp|azure|bitwarden
+# Example: worker auth test --provider aws
 test_auth() {
     local provider=$1
     
@@ -61,7 +64,8 @@ test_auth() {
     fi
 }
 
-# Refresh credentials
+# Description: Refresh credentials for all configured providers
+# Example: worker auth refresh
 refresh_auth() {
     log_info "Auth" "Refreshing credentials..."
     
@@ -82,7 +86,9 @@ refresh_auth() {
     fi
 }
 
-# Rotate credentials
+# Description: Rotate credentials for a specific provider
+# Options: --provider aws|gcp|azure|bitwarden
+# Example: worker auth rotate --provider aws
 rotate_auth() {
     local provider=$1
     

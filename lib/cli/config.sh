@@ -29,7 +29,9 @@ Examples:
 EOF
 }
 
-# Show current configuration
+# Description: Display current worker configuration
+# Options: --format yaml|json
+# Example: worker config show --format json
 show_config() {
     local format=${1:-yaml}
     log_info "Config" "Current configuration:"
@@ -51,7 +53,8 @@ show_config() {
     esac
 }
 
-# Edit configuration
+# Description: Edit configuration in default editor
+# Example: worker config edit
 edit_config() {
     local config_file="${HOME}/.config/worker/worker.yaml"
     
@@ -75,7 +78,9 @@ edit_config() {
     fi
 }
 
-# Validate configuration
+# Description: Validate all configuration files or a specific one
+# Options: --file PATH
+# Example: worker config validate --file ~/.config/worker/worker.yaml
 validate_config() {
     local config_file=${1:-}
     log_info "Config" "Validating configuration..."
@@ -113,7 +118,8 @@ validate_config() {
     fi
 }
 
-# Show configuration locations
+# Description: Display paths of all configuration files
+# Example: worker config locations
 show_locations() {
     cat << EOF
 Configuration Locations:
@@ -124,7 +130,8 @@ Configuration Locations:
 EOF
 }
 
-# Initialize new configuration
+# Description: Initialize a new configuration file with defaults
+# Example: worker config init
 init_config() {
     local config_dir="${HOME}/.config/worker"
     local config_file="$config_dir/worker.yaml"
@@ -153,7 +160,9 @@ init_config() {
     fi
 }
 
-# Show differences between default and current config
+# Description: Show differences between default and current configuration
+# Options: --format unified|context|git
+# Example: worker config diff --format git
 show_diff() {
     local default_config="/etc/worker/worker.yaml"
     local user_config="${HOME}/.config/worker/worker.yaml"

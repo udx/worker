@@ -37,49 +37,61 @@ Examples:
 EOF
 }
 
-# Show environment variables
+# Description: Display environment variables with optional filtering
+# Options: --format text|json, --filter PATTERN, --include-secrets
+# Example: worker env show --format json --filter AWS_* --include-secrets
 show_environment() {
     local format=${1:-text}
     local filter=$2
     local include_secrets=${3:-false}
     
-    if [ "$include_secrets" == "true" ]; then
-        list_env_vars "$format"
-    else
-        # Only show non-secret environment variables
-        if [ -f "$WORKER_ENV_FILE" ]; then
-            case $format in
-                json)
-                    {
-                        echo "{"
-                        if [ -n "$filter" ]; then
-                            grep "^export $filter" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/  "\1": "\2",/'
-                        else
-                            grep "^export" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/  "\1": "\2",/'
-                        fi
-                        echo "}" 
-                    } | sed 's/,}/}/' | jq '.'
-                    ;;
-                text)
-                    if [ -n "$filter" ]; then
-                        grep "^export $filter" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
-                    else
-                        grep "^export" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
-                    fi
-                    ;;
-                *)
-                    log_error "Env" "Unknown format: $format"
-                    return 1
-                    ;;
-            esac
-        else
-            log_error "Env" "Environment file not found"
-            return 1
-        fi
+    # Check if environment file exists
+    if [ ! -f "$WORKER_ENV_FILE" ]; then
+        log_error "Env" "Environment file not found"
+        return 1
     fi
+    
+    case $format in
+        json)
+            # Get variables and convert to JSON
+            local vars
+            if [ -n "$filter" ]; then
+                vars=$(grep "^export $filter" "$WORKER_ENV_FILE")
+            else
+                vars=$(grep "^export" "$WORKER_ENV_FILE")
+            fi
+            
+            # Convert to JSON
+            local json="{"
+            while IFS= read -r line; do
+                if [[ $line =~ ^export[[:space:]]+([^=]+)=\"([^\"]*)\" ]]; then
+                    if [ -n "$json" ] && [ "$json" != "{" ]; then
+                        json="$json,"
+                    fi
+                    key=${BASH_REMATCH[1]}
+                    value=${BASH_REMATCH[2]}
+                    json="$json\"$key\":\"$value\""
+                fi
+            done <<< "$vars"
+            json="$json}"
+            echo "$json" | jq .
+            ;;
+        text)
+            if [ -n "$filter" ]; then
+                grep "^export $filter" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
+            else
+                grep "^export" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
+            fi
+            ;;
+        *)
+            log_error "Env" "Unknown format: $format"
+            return 1
+            ;;
+    esac
 }
 
-# Set environment variable
+# Description: Set a new environment variable or update existing one
+# Example: worker env set MY_VAR "my value"
 set_environment() {
     local name=$1
     local value=$2
@@ -110,7 +122,8 @@ set_environment() {
     fi
 }
 
-# Unset environment variable
+# Description: Remove an environment variable
+# Example: worker env unset MY_VAR
 unset_environment() {
     local name=$1
     
@@ -119,15 +132,32 @@ unset_environment() {
         return 1
     fi
     
-    if [ -n "${!name}" ]; then
+    # Check if variable exists in environment file
+    if grep -q "^export $name=" "$WORKER_ENV_FILE"; then
+        # Create a temporary file
+        local tmpfile
+        tmpfile=$(mktemp)
+        
+        # Remove the variable from environment file
+        grep -v "^export $name=" "$WORKER_ENV_FILE" > "$tmpfile"
+        cat "$tmpfile" > "$WORKER_ENV_FILE"
+        rm -f "$tmpfile"
+        
+        # Also remove from current environment
         unset "$name"
+        
         log_success "Env" "Unset $name"
+        
+        # Reload environment to ensure consistency
+        source "$WORKER_ENV_FILE"
     else
         log_warn "Env" "Variable $name is not set"
     fi
 }
 
-# Export environment variables
+# Description: Export environment variables to a file
+# Options: --file PATH, --include-secrets
+# Example: worker env export --file env.backup --include-secrets
 export_environment() {
     local file=$1
     local filter=$2
@@ -147,7 +177,9 @@ export_environment() {
     log_success "Env" "Environment variables exported to $file"
 }
 
-# Import environment variables
+# Description: Import environment variables from a file
+# Options: --file PATH
+# Example: worker env import --file env.backup
 import_environment() {
     local file=$1
     
@@ -171,7 +203,9 @@ import_environment() {
     log_success "Env" "Environment variables imported from $file"
 }
 
-# Validate environment variables
+# Description: Validate environment variables against schema
+# Options: --format text|json
+# Example: worker env validate --format json
 validate_environment() {
     local config
     config=$(load_and_parse_config)
@@ -200,7 +234,9 @@ validate_environment() {
     fi
 }
 
-# Generate environment template
+# Description: Generate a template environment file
+# Options: --file PATH
+# Example: worker env template --file .env.template
 generate_template() {
     local config
     config=$(load_and_parse_config)
@@ -218,7 +254,8 @@ generate_template() {
     echo "$config" | yq eval '.config.env | to_entries | .[] | "# " + .key + "\n" + .key + "=\"" + .value + "\""' -
 }
 
-# Reset environment
+# Description: Reset environment to default values
+# Example: worker env reset
 reset_environment() {
     # Clear all non-system variables
     local system_vars="HOME|USER|PATH|SHELL|TERM|LANG|PWD"
@@ -244,20 +281,42 @@ reset_environment() {
 
 # Parse command line arguments
 parse_args() {
+    # Initialize variables with defaults
+    format="text"
+    filter=""
+    file=""
+    include_secrets="false"
+    
     local args=()
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --format)
-                format=$2
+            --format=*|--type=*)
+                format="${1#*=}"
+                shift
+                ;;
+            --format|--type)
+                format="$2"
                 shift 2
+                ;;
+            --filter=*)
+                filter="${1#*=}"
+                shift
                 ;;
             --filter)
-                filter=$2
+                filter="$2"
                 shift 2
                 ;;
+            --file=*)
+                file="${1#*=}"
+                shift
+                ;;
             --file)
-                file=$2
+                file="$2"
                 shift 2
+                ;;
+            --include-secrets)
+                include_secrets="true"
+                shift
                 ;;
             *)
                 args+=("$1")
@@ -268,7 +327,9 @@ parse_args() {
     set -- "${args[@]}"
 }
 
-# Show environment status
+# Description: Show environment status and validation results
+# Options: --format text|json
+# Example: worker env status --format json
 show_status() {
     local format=${1:-text}
     

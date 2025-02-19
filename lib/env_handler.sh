@@ -88,6 +88,38 @@ load_secrets() {
     fi
 }
 
+# Format environment variables as JSON or text
+format_env_vars() {
+    local vars=$1
+    local format=${2:-text}
+    
+    case $format in
+        json)
+            # Convert to JSON
+            local json="{"
+            while IFS= read -r line; do
+                if [[ $line =~ ^export[[:space:]]+([^=]+)=\"([^\"]*)\" ]]; then
+                    if [ -n "$json" ] && [ "$json" != "{" ]; then
+                        json="$json,"
+                    fi
+                    key=${BASH_REMATCH[1]}
+                    value=${BASH_REMATCH[2]}
+                    json="$json\"$key\":\"$value\""
+                fi
+            done <<< "$vars"
+            json="$json}"
+            echo "$json" | jq .
+            ;;
+        text)
+            echo "$vars" | sed 's/export \([^=]*\)=\"\([^\"]*\)"/\1=\2/'
+            ;;
+        *)
+            log_error "Environment" "Unknown format: $format"
+            return 1
+            ;;
+    esac
+}
+
 # Initialize environment
 init_environment() {
     generate_env_file

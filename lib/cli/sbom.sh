@@ -33,7 +33,9 @@ Examples:
 EOF
 }
 
-# Generate SBOM
+# Description: Generate Software Bill of Materials in various formats
+# Options: --format text|json|cyclonedx|spdx, --type system|python|all, --filter PATTERN
+# Example: worker sbom generate --format json --type python --filter requests
 generate_sbom() {
     local format=${1:-text}
     local type=${2:-all}
@@ -135,7 +137,9 @@ generate_sbom() {
     esac
 }
 
-# Analyze dependencies
+# Description: Analyze dependencies for security vulnerabilities
+# Options: --type system|python|all, --severity low|medium|high|critical
+# Example: worker sbom analyze --type python --severity high
 analyze_deps() {
     log_info "SBOM" "Analyzing dependencies for security issues..."
     
@@ -153,7 +157,9 @@ analyze_deps() {
     fi
 }
 
-# Export SBOM
+# Description: Export SBOM to a file in specified format
+# Options: --format text|json|cyclonedx|spdx, --file PATH
+# Example: worker sbom export --format cyclonedx --file sbom.xml
 export_sbom() {
     local format=$1
     local file=$2
@@ -167,7 +173,9 @@ export_sbom() {
     log_success "SBOM" "SBOM exported to $file"
 }
 
-# Show dependency tree
+# Description: Display dependency tree for installed packages
+# Options: --type system|python|all, --format text|json
+# Example: worker sbom deps --type python --format json
 show_deps() {
     local type=${1:-all}
     
@@ -178,7 +186,9 @@ show_deps() {
     fi
 }
 
-# Verify package integrity
+# Description: Verify integrity of installed packages
+# Options: --type system|python|all
+# Example: worker sbom verify --type all
 verify_packages() {
     log_info "SBOM" "Verifying package integrity..."
     
@@ -198,7 +208,9 @@ verify_packages() {
     fi
 }
 
-# Check for updates
+# Description: Check for available package updates
+# Options: --type system|python|all, --format text|json
+# Example: worker sbom updates --type all --format json
 check_updates() {
     log_info "SBOM" "Checking for available updates..."
     

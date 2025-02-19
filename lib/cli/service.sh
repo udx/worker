@@ -72,7 +72,8 @@ Examples:
 EOF
 }
 
-# Function to list all services
+# Description: List all configured services and their status
+# Example: worker service list
 list_services() {
     # Capture the output of supervisorctl status
     local services_status
@@ -94,7 +95,8 @@ list_services() {
     done
 }
 
-# Function to check the status of one or all services
+# Description: Show detailed status of a specific service
+# Example: worker service status my-app
 check_status() {
     # Require a service name for this function
     if [ -z "$1" ]; then
@@ -117,7 +119,9 @@ check_status() {
     echo "$service_status"
 }
 
-# Function to follow logs for a specific service
+# Description: View and follow logs for a service
+# Options: --tail N, --follow, --error-only
+# Example: worker service logs my-app --tail 100 --follow
 follow_logs() {
     local service_name=""
     local type="out"
@@ -180,7 +184,8 @@ follow_logs() {
     fi
 }
 
-# Function to show supervisor configuration
+# Description: Display current service configuration
+# Example: worker service config
 show_config() {
     if [ ! -f "/etc/supervisord.conf" ]; then
         log_error "Service" "Configuration file is not generated since no services are managed."
@@ -189,7 +194,8 @@ show_config() {
     cat /etc/supervisord.conf
 }
 
-# Function to start, stop, or restart a service
+# Description: Start, stop, or restart a service
+# Example: worker service restart my-app
 manage_service() {
     if [ -z "$2" ]; then
         log_error "Service" "Error: No service name provided."

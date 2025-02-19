@@ -3,41 +3,135 @@
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
 
+# Get command metadata by scanning function contents
+get_command_metadata() {
+    local commands={}
+    declare -A commands
+    local current_file="${BASH_SOURCE[0]}"
+
+    # Scan the current file for show_* functions and their metadata
+    while IFS= read -r line; do
+        # Match show_* function definitions
+        if [[ $line =~ ^show_([a-z_]+)[[:space:]]*\(\)[[:space:]]*\{[[:space:]]*$ ]]; then
+            local cmd=${BASH_REMATCH[1]}
+            local desc=""
+            local options=""
+            local example=""
+
+            # Skip internal functions like show_help
+            [[ $cmd == "help" ]] && continue
+
+            # Look for metadata in comments above function
+            local temp_file=$(mktemp)
+            grep -B 10 "^show_${cmd}()" "$current_file" > "$temp_file"
+            
+            # Get description
+            desc=$(grep -B 10 "^show_${cmd}()" "$temp_file" | grep '^# Description:' | tail -n 1 | sed 's/^# Description:[[:space:]]*//')
+            if [ -z "$desc" ]; then
+                desc=$(grep -B 10 "^show_${cmd}()" "$temp_file" | grep '^#[[:space:]]' | tail -n 1 | sed 's/^#[[:space:]]*//')
+            fi
+            if [ -z "$desc" ]; then
+                desc="Show ${cmd//_/ } information"
+            fi
+
+            # Get options
+            options=$(grep -B 10 "^show_${cmd}()" "$temp_file" | grep '^# Options:' | tail -n 1 | sed 's/^# Options:[[:space:]]*//')
+            if [ -z "$options" ] && grep -q 'format=' "$temp_file"; then
+                options="--format text|json"
+            fi
+            if grep -q 'verbose=' "$temp_file"; then
+                [[ -n "$options" ]] && options="$options, " 
+                options+="--verbose"
+            fi
+
+            # Get example
+            example=$(grep -B 10 "^show_${cmd}()" "$temp_file" | grep '^# Example:' | tail -n 1 | sed 's/^# Example:[[:space:]]*//')
+            if [ -z "$example" ] && [ -n "$options" ]; then
+                if [[ $options == *"format"* ]]; then
+                    example="worker info $cmd --format json"
+                elif [[ $options == *"verbose"* ]]; then
+                    example="worker info $cmd --verbose"
+                fi
+            fi
+
+            rm "$temp_file"
+
+            # Store metadata
+            commands[$cmd]="$desc|$options|$example"
+        fi
+    done < "$current_file"
+
+    echo "$(declare -p commands)"
+}
+
 # Show help for info command
 info_help() {
+    local -A commands
+    eval "$(get_command_metadata)"
+
+    # Find the longest command name for proper padding
+    local max_length=0
+    for cmd in "${!commands[@]}"; do
+        local len=${#cmd}
+        if ((len > max_length)); then
+            max_length=$len
+        fi
+    done
+
+    # Add padding for alignment
+    max_length=$((max_length + 2))
+
     cat << EOF
 Display information about the UDX Worker image and runtime
 
 Usage: worker info [command]
 
 Available Commands:
-  overview    Show a high-level overview of the worker image
-  system      Show system information and resource usage
-  config      Show configuration and settings
-  services    Show available services and their status
-  env         Show environment variables and settings
-  auth        Show authentication and credentials status
-  deps        Show installed dependencies and versions
-  features    Show available features and capabilities
-  paths       Show important filesystem paths
-  logs        Show logging configuration and locations
-  security    Show security settings and policies
-  network     Show network configuration and ports
-  version     Show detailed version information
-
-Options:
-  --format    Output format (text/json)
-  --verbose   Show detailed information
-
-Examples:
-  worker info overview              # Get a quick overview of the worker
-  worker info system --verbose      # Show detailed system information
-  worker info deps --format json    # List dependencies in JSON format
-  worker info features              # Show available features
 EOF
+
+    # Sort commands alphabetically and display
+    local sorted_commands=($(echo "${!commands[@]}" | tr ' ' '\n' | sort))
+    for cmd in "${sorted_commands[@]}"; do
+        IFS='|' read -r desc options example <<< "${commands[$cmd]}"
+        printf "  %-${max_length}s %s\n" "$cmd" "$desc"
+    done
+
+    # Collect unique options from all commands
+    local all_options=""
+    for cmd in "${!commands[@]}"; do
+        IFS='|' read -r _ options _ <<< "${commands[$cmd]}"
+        if [ -n "$options" ]; then
+            all_options="$all_options $options"
+        fi
+    done
+
+    # Display unique options
+    if [ -n "$all_options" ]; then
+        echo -e "\nOptions:"
+        echo "$all_options" | tr ',' '\n' | tr ' ' '\n' | sort -u | grep -v '^$' | while read -r opt; do
+            printf "  %s\n" "$opt"
+        done
+    fi
+
+    # Display examples for commands that have them
+    local has_examples=false
+    for cmd in "${sorted_commands[@]}"; do
+        IFS='|' read -r desc options example <<< "${commands[$cmd]}"
+        if [ -n "$example" ]; then
+            if ! $has_examples; then
+                echo -e "\nExamples:"
+                has_examples=true
+            fi
+            printf "  %-45s # %s\n" "$example" "$desc"
+        fi
+    done
+
+    echo
 }
 
-# Show general information
+# Description: Display general information about the worker
+# Options: --format text|json
+# Example: worker info --format json
 show_info() {
     local format=${1:-text}
     
@@ -101,7 +195,9 @@ show_info() {
     esac
 }
 
-# Show system information
+# Description: Display detailed system information and resource usage
+# Options: --format text|json, --verbose
+# Example: worker info system --verbose --format json
 show_system_info() {
     local format=${1:-text}
     
@@ -197,7 +293,9 @@ get_cli_modules() {
     echo "$(declare -p modules)"
 }
 
-# Show overview of the worker
+# Description: Display a high-level overview of the worker image and its capabilities
+# Options: --format text|json
+# Example: worker info overview --format text
 show_overview() {
     local format=${1:-text}
     local -A modules
@@ -297,7 +395,9 @@ EOF
     esac
 }
 
-# Show available features
+# Description: Display available features and their capabilities
+# Options: --format text|json
+# Example: worker info features --format json
 show_features() {
     local format=${1:-text}
     local -A modules
@@ -384,54 +484,30 @@ EOF
 info_handler() {
     local command=$1
     shift
-    
-    case $command in
-        overview)
-            show_overview "$@"
-            ;;
-        system)
-            show_system_info "$@"
-            ;;
-        features)
-            show_features "$@"
-            ;;
-        deps)
-            show_deps "$@"
-            ;;
-        config)
-            show_config "$@"
-            ;;
-        services)
-            show_services "$@"
-            ;;
-        env)
-            show_env "$@"
-            ;;
-        auth)
-            show_auth "$@"
-            ;;
-        paths)
-            show_paths "$@"
-            ;;
-        logs)
-            show_logs "$@"
-            ;;
-        security)
-            show_security "$@"
-            ;;
-        network)
-            show_network "$@"
-            ;;
-        version)
-            show_version "$@"
-            ;;
-        help|"")
-            info_help
-            ;;
-        *)
-            log_error "Info" "Unknown command: $command"
-            info_help
-            return 1
-            ;;
-    esac
+
+    # If no command provided or help requested, show help
+    if [ -z "$command" ] || [ "$command" = "help" ]; then
+        info_help
+        return
+    fi
+
+    # Get available commands
+    local -A commands
+    eval "$(get_command_metadata)"
+
+    # Check if command exists
+    if [ -z "${commands[$command]+x}" ]; then
+        log_error "Info" "Unknown command: $command"
+        info_help
+        return 1
+    fi
+
+    # Try to execute the command function
+    local func_name="show_${command}"
+    if declare -F "$func_name" > /dev/null; then
+        "$func_name" "$@"
+    else
+        log_error "Info" "Command handler not implemented: $command"
+        return 1
+    fi
 }
