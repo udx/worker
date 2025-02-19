@@ -11,47 +11,80 @@ Check system health and run diagnostics
 Usage: worker health [command]
 
 Available Commands:
-  check       Run health check
   status      Show current health status
-  diag        Run diagnostics
-  report      Generate health report
+
+Options:
+  --format    Output format (text|json)
 
 Examples:
-  worker health check
   worker health status
-  worker health diag
-  worker health report --format json
+  worker health status --format json
 EOF
 }
 
-# Description: Run comprehensive health check of the worker
-# Example: worker health check
+# Description: Check system health metrics
+# Example: worker health status [--format json]
 check_health() {
-    log_info "Health" "Running health check..."
+    local format="text"
     local failed=0
+    
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --format)
+                format=$2
+                shift 2
+                ;;
+            *)
+                log_error "Health" "Unknown option: $1"
+                return 1
+                ;;
+        esac
+    done
+    
+    if [ "$format" != "json" ]; then
+        log_info "Health" "Running health check..."
+    fi
     
     # Check system resources
     check_system_resources || failed=1
     
-    # Check supervisor status
-    check_supervisor_status || failed=1
+    # Gather all data
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local disk_usage=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
+    local mem_total=$(free -b | awk '/Mem:/ {printf "%.2f", $2/1024/1024/1024}')
+    local mem_used=$(free -b | awk '/Mem:/ {printf "%.2f", $3/1024/1024/1024}')
+    local mem_usage=$(free | awk '/Mem:/ {printf("%.0f", $3/$2 * 100)}')
+    local load_avg=$(uptime | awk -F'load average:' '{print $2}' | cut -d, -f1 | tr -d ' ')
     
-    # Check service health
-    check_services_health || failed=1
-    
-    # Check authentication status
-    check_auth_status || failed=1
-    
-    if [ $failed -eq 0 ]; then
-        log_success "Health" "All health checks passed"
+    if [ "$format" = "json" ]; then
+        {
+            echo "{"
+            echo "  \"timestamp\": \"$timestamp\","
+            echo "  \"status\": \"$([ $failed -eq 0 ] && echo "healthy" || echo "unhealthy")\","
+            echo "  \"disk\": {"
+            echo "    \"usage_percent\": $disk_usage"
+            echo "  },"
+            echo "  \"memory\": {"
+            echo "    \"total_gb\": $mem_total,"
+            echo "    \"used_gb\": $mem_used,"
+            echo "    \"usage_percent\": $mem_usage"
+            echo "  },"
+            echo "  \"load_average\": $load_avg"
+            echo "}"
+        }
     else
-        log_error "Health" "Some health checks failed"
-        return 1
+        if [ $failed -eq 0 ]; then
+            log_success "Health" "All health checks passed"
+        else
+            log_error "Health" "Some health checks failed"
+        fi
     fi
+    
+    return $failed
 }
 
 # Description: Check system resource usage (disk, memory, CPU)
-# Example: worker health check system
+# Example: worker health status
 check_system_resources() {
     local failed=0
     
@@ -88,162 +121,24 @@ check_system_resources() {
     return $failed
 }
 
-# Description: Check if supervisor is running and responsive
-# Example: worker health check supervisor
-check_supervisor_status() {
-    if ! pgrep -f supervisord > /dev/null; then
-        log_error "Health" "Supervisor is not running"
-        return 1
-    fi
-    
-    if ! supervisorctl status > /dev/null; then
-        log_error "Health" "Supervisor is not responding"
-        return 1
-    fi
-    
-    log_success "Health" "Supervisor is running and responsive"
-    return 0
-}
 
-# Description: Check health status of all managed services
-# Example: worker health check services
-check_services_health() {
-    local failed=0
-    local services_status
-    
-    services_status=$(supervisorctl status)
-    if [ $? -ne 0 ]; then
-        log_error "Health" "Failed to get services status"
-        return 1
-    fi
-    
-    echo "$services_status" | while read -r line; do
-        local service_name status
-        service_name=$(echo "$line" | awk '{print $1}')
-        status=$(echo "$line" | awk '{print $2}')
-        
-        if [ "$status" != "RUNNING" ]; then
-            log_error "Health" "Service $service_name is not running (status: $status)"
-            failed=1
-        else
-            log_success "Health" "Service $service_name is running"
-        fi
-    done
-    
-    return $failed
-}
-
-# Description: Check authentication status for all providers
-# Example: worker health check auth
-check_auth_status() {
-    local failed=0
-    
-    # Check each provider
-    for provider in aws gcp azure bitwarden; do
-        if is_provider_configured "$provider"; then
-            if ! test_provider_auth "$provider"; then
-                log_error "Health" "Authentication failed for $provider"
-                failed=1
-            else
-                log_success "Health" "Authentication successful for $provider"
-            fi
-        fi
-    done
-    
-    return $failed
-}
-
-# Description: Generate detailed health report
-# Options: --format text|json
-# Example: worker health report --format json
-generate_report() {
-    local format=${1:-text}
-    local report_file
-    report_file=$(mktemp)
-    
-    {
-        echo "Worker Health Report"
-        echo "==================="
-        echo "Timestamp: $(date)"
-        echo
-        
-        echo "System Resources:"
-        echo "----------------"
-        df -h /
-        echo
-        free -h
-        echo
-        uptime
-        echo
-        
-        echo "Services Status:"
-        echo "---------------"
-        supervisorctl status
-        echo
-        
-        echo "Authentication Status:"
-        echo "--------------------"
-        for provider in aws gcp azure bitwarden; do
-            if is_provider_configured "$provider"; then
-                echo "$provider: Configured"
-            else
-                echo "$provider: Not configured"
-            fi
-        done
-    } > "$report_file"
-    
-    case $format in
-        json)
-            # Convert report to JSON format
-            jq -R -s '{
-                timestamp: now,
-                system_resources: {
-                    disk: (input | match("^/dev.*$")),
-                    memory: (input | match("^Mem:.*$")),
-                    load: (input | match("^load average:.*$"))
-                },
-                services: (input | match("^RUNNING.*$")),
-                auth: (input | match("^.*: Configured$"))
-            }' "$report_file"
-            ;;
-        text)
-            cat "$report_file"
-            ;;
-        *)
-            log_error "Health" "Unknown format: $format"
-            rm -f "$report_file"
-            return 1
-            ;;
-    esac
-    
-    rm -f "$report_file"
-}
 
 # Handle health commands
 health_handler() {
-    local cmd=$1
+    local command=$1
     shift
-    
-    case $cmd in
-        check)
-            check_health
-            ;;
+
+    case $command in
         status)
-            check_health --quiet
+            check_health "$@"
             ;;
-        diag)
-            check_health --verbose
-            ;;
-        report)
-            generate_report "$@"
-            ;;
-        help)
+        ""|-h|--help)
             health_help
             ;;
         *)
-            log_error "Health" "Unknown command: $cmd"
+            log_error "Health" "Unknown command: $command"
             health_help
-            exit 1
+            return 1
             ;;
     esac
 }
