@@ -65,32 +65,42 @@ cleanup_provider() {
 
 # Function to clean up actors based on the providers configured during authentication
 cleanup_actors() {
-    log_info "Starting cleanup of actors"
+    # Skip cleanup if no providers were configured during authentication
+    if [[ ${#configured_providers[@]} -eq 0 ]]; then
+        return 0
+    fi
     
-    # Accept configured providers as arguments
-    local configured_providers=('azure' 'gcp' 'aws' 'bitwarden')
+    log_info "Starting cleanup of actors"
     
     # Track if any actual cleanup was performed
     local any_cleanup=false
     
-    # Loop through each configured provider only
+    # Only clean up providers that were actually configured
     for provider in "${configured_providers[@]}"; do
         case "$provider" in
             azure)
-                cleanup_provider "az" "az logout" "az account show" "Azure" && any_cleanup=true
-            ;;
+                if cleanup_provider "az" "az logout" "az account show" "Azure"; then
+                    any_cleanup=true
+                fi
+                ;;
             gcp)
-                cleanup_provider "gcloud" "gcloud auth revoke --all" "gcloud auth list" "GCP" && any_cleanup=true
-            ;;
+                if cleanup_provider "gcloud" "gcloud auth revoke --all" "gcloud auth list" "GCP"; then
+                    any_cleanup=true
+                fi
+                ;;
             aws)
-                cleanup_provider "aws" "aws sso logout" "aws sso list-accounts" "AWS" && any_cleanup=true
-            ;;
+                if cleanup_provider "aws" "aws sso logout" "aws sso list-accounts" "AWS"; then
+                    any_cleanup=true
+                fi
+                ;;
             bitwarden)
-                cleanup_provider "bw" "bw logout --force" "bw status" "Bitwarden" && any_cleanup=true
-            ;;
+                if cleanup_provider "bw" "bw logout --force" "bw status" "Bitwarden"; then
+                    any_cleanup=true
+                fi
+                ;;
             *)
                 log_warn "Unsupported or unavailable actor type for cleanup: $provider"
-            ;;
+                ;;
         esac
     done
     
@@ -98,6 +108,11 @@ cleanup_actors() {
     if [[ "$any_cleanup" == false ]]; then
         log_info "No active sessions found for any configured providers."
     fi
+    
+    # Clear the configured providers array
+    configured_providers=()
+    
+    return 0
 }
 
 # Example usage

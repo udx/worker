@@ -44,7 +44,7 @@ merge_worker_configs() {
             return 1
         fi
     else
-        log_info "No worker configuration provided."
+        # Using default config
 
         # Copy the built-in configuration to the merged configuration
         if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
