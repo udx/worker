@@ -42,105 +42,73 @@ show_auth_status() {
     # Initialize JSON array if json format
     local json_output="["
     
+    # Load config once and extract actors section
+    local config actors
+    config=$(load_and_parse_config)
+    actors=$(get_config_section "$config" "actors")
+    
     # Function to check a specific provider
     check_provider_status() {
         local provider=$1
-        local has_env_creds=false
-        local has_config_creds=false
+        local status="Not configured"
         local types=""
         
-        # First check env vars from config
-        local env_vars
-        mapfile -t env_vars < <(get_provider_env_vars "$provider")
+        # Get provider's actors
+        local provider_actors
+        provider_actors=$(echo "$actors" | jq -r "[.[] | select(.type | startswith(\"$provider\"))]" 2>/dev/null)
         
-        for env_var in "${env_vars[@]}"; do
-            if [ -n "${!env_var}" ]; then
-                has_env_creds=true
-                break
-            fi
-        done
-        
-        # Then check config
-        local config
-        config=$(load_and_parse_config)
-        
-        if echo "$config" | jq -e '.config.actors' >/dev/null 2>&1; then
-            local actors
-            actors=$(echo "$config" | jq -r ".config.actors[] | select(.type | startswith(\"$provider-\"))" 2>/dev/null)
+        if [ -n "$provider_actors" ] && [ "$provider_actors" != "[]" ]; then
+            types=$(echo "$provider_actors" | jq -r '.[].type' 2>/dev/null | tr '\n' ' ')
             
-            if [ -n "$actors" ] && [ "$actors" != "null" ]; then
-                types=$(echo "$actors" | jq -r '.type' 2>/dev/null | grep . | tr '\n' ' ')
-                
-                while IFS= read -r actor; do
-                    [ -z "$actor" ] && continue
-                    
-                    local creds
-                    creds=$(echo "$actor" | jq -r '.creds' 2>/dev/null)
-                    [ "$creds" = "null" ] && continue
-                    
-                    # Evaluate creds as a reference to an environment variable
-                    if [[ "$creds" =~ ^\$\{(.+)\}$ ]]; then
-                        local env_var_name="${BASH_REMATCH[1]}"
-                        creds="${!env_var_name}"
-                    fi
-                    
-                    if [ -n "$creds" ]; then
-                        has_config_creds=true
-                        break
-                    fi
-                done <<< "$actors"
-            fi
-        fi
-        
-        # Check if currently authenticated
-        local is_authenticated=false
-        if check_provider_auth "$provider"; then
-            is_authenticated=true
-        fi
-        
-        # Prepare status message and state
-        local status_msg state
-        if [ "$has_env_creds" = true ] || [ "$has_config_creds" = true ]; then
-            if [ "$is_authenticated" = true ]; then
-                status_msg="Active session${types:+ (actors: $types)}"
-                state="active"
+            # First check if provider has credentials
+            if is_provider_configured "$provider" "$provider_actors"; then
+                # Then check if it's authenticated
+                if check_provider_auth "$provider"; then
+                    status="Authenticated"
+                    state="active"
+                else
+                    status="Needs re-auth"
+                    state="needs_reauth"
+                fi
             else
-                status_msg="Has credentials${types:+ (actors: $types)}, needs re-auth"
-                state="needs_reauth"
+                status="Not configured"
+                state="missing_creds"
             fi
         else
-            if [ -n "$types" ]; then
-                status_msg="Missing credentials (actors: $types)"
-                state="missing_creds"
-            else
-                status_msg="Not configured"
-                state="not_configured"
-            fi
+            status="Not configured"
+            state="not_configured"
         fi
-
-        # Output based on format
+        
+        # Output status based on format
         if [ "$format" = "json" ]; then
-            [ "$json_output" != "[" ] && json_output+=","
-            json_output+="{\"provider\":\"$provider\",\"state\":\"$state\",\"message\":\"$status_msg\"}"
+            [ -n "$json_output" ] && [ "$json_output" != "[" ] && json_output+=","
+            json_output+=$(jq -n \
+                --arg provider "$provider" \
+                --arg state "$state" \
+                --arg status "$status" \
+                --arg types "$types" \
+                '{provider: $provider, state: $state, status: $status, types: $types}')
         else
             case "$state" in
-                "active") log_success "Auth" "$provider: $status_msg" ;;
-                "needs_reauth") log_info "Auth" "$provider: $status_msg" ;;
-                "missing_creds") log_warn "Auth" "$provider: $status_msg" ;;
-                "not_configured") log_info "Auth" "$provider: $status_msg" ;;
+                "active") log_success "Auth" "$provider: $status" ;;
+                "needs_reauth") log_info "Auth" "$provider: $status" ;;
+                "missing_creds") log_warn "Auth" "$provider: $status" ;;
+                "not_configured") log_info "Auth" "$provider: $status" ;;
             esac
         fi
     }
     
+    # Check status for specific provider or all providers
     if [ -n "$target_provider" ]; then
         check_provider_status "$target_provider"
     else
-        for provider in aws gcp azure bitwarden; do
-            check_provider_status "$provider"
-        done
+        check_provider_status "aws"
+        check_provider_status "gcp"
+        check_provider_status "azure"
+        check_provider_status "bitwarden"
     fi
-
-    # Close and output JSON if json format
+    
+    # Close JSON array if json format
     if [ "$format" = "json" ]; then
         json_output+="]"
         echo "$json_output"
@@ -152,27 +120,27 @@ login_provider() {
     local target_provider=$1
     log_info "Auth" "Authenticating providers..."
     
-    # Load config and get actors
-    local config actors_json
+    # Load config once and extract actors section
+    local config actors
     config=$(load_and_parse_config)
-    actors_json=$(echo "$config" | jq -r '.config.actors')
+    actors=$(get_config_section "$config" "actors")
     
-    if [[ -z "$actors_json" || "$actors_json" == "null" ]]; then
+    if [[ -z "$actors" || "$actors" == "null" ]]; then
         log_warn "Auth" "No providers found in configuration"
         return 1
     fi
     
     # Filter actors by provider if specified
     if [[ -n "$target_provider" ]]; then
-        actors_json=$(echo "$config" | jq -r ".config.actors | map(select(.type | startswith(\"$target_provider-\")))") 
-        if [[ "$actors_json" == "[]" ]]; then
+        actors=$(echo "$actors" | jq -r "[.[] | select(.type | startswith(\"$target_provider\"))]")
+        if [[ "$actors" == "[]" ]]; then
             log_warn "Auth" "$target_provider: Not configured"
             return 1
         fi
     fi
     
     # Use the same authentication flow as entrypoint
-    if authenticate_actors "$actors_json"; then
+    if authenticate_actors "$actors"; then
         log_success "Auth" "Authentication complete"
         return 0
     else
@@ -231,7 +199,9 @@ check_provider_auth() {
             fi
             ;;
         azure)
-            if az account show &>/dev/null; then
+            # Azure CLI can return non-zero exit code even when it succeeds
+            # so we check if the output contains valid JSON
+            if output=$(az account show 2>/dev/null) && echo "$output" | jq empty &>/dev/null; then
                 return 0
             fi
             ;;

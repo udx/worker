@@ -15,7 +15,7 @@ Available Commands:
   show        Show environment variables (excludes secrets)
   set         Set an environment variable
   unset       Unset an environment variable
-  reload      Reload environment from config
+  reload      Reload environment from configuration (same as 'config apply')
   status      Show environment status
 
 Options:
@@ -365,8 +365,19 @@ env_handler() {
             unset_environment "$1"
             ;;
         reload)
-            config=$(load_and_parse_config)
-            export_variables_from_config "$config"
+            log_info "Env" "Reloading environment from configuration..."
+            local config_json
+            if ! config_json=$(load_and_parse_config); then
+                log_error "Env" "Failed to load and parse configuration"
+                return 1
+            fi
+
+            if ! export_variables_from_config "$config_json"; then
+                log_error "Env" "Failed to export variables from configuration"
+                return 1
+            fi
+
+            log_success "Env" "Environment successfully reloaded from configuration"
             ;;
         status)
             show_status "$format"

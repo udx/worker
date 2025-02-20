@@ -9,7 +9,7 @@ CONFIG_FILE="${USER_CONFIG_PATH}"
 
 # Check if user config exists
 if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
-    log_info "No services configuration found at ${USER_CONFIG_PATH}. Services will not be started."
+    log_info "No services configuration found at ${USER_CONFIG_PATH}."
     log_info "Run 'worker help service' for information about service configuration"
     exit 0
 fi

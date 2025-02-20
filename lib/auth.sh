@@ -6,66 +6,59 @@ source ${WORKER_LIB_DIR}/utils.sh
 # Array to track configured providers
 declare -a configured_providers=()
 
-# Function to get env var names for a provider from config
+# Function to get env var names for a provider from actors JSON
 get_provider_env_vars() {
     local provider=$1
-    local config
-    config=$(load_and_parse_config)
+    local actors_json=$2
     
     # Get all env var names from actor creds that match ${VAR} pattern
-    if echo "$config" | jq -e '.config.actors' >/dev/null 2>&1; then
-        echo "$config" | jq -r ".config.actors[] | select(.type | startswith(\"$provider\")) | .creds" 2>/dev/null | \
+    echo "$actors_json" | jq -r ".[].creds" 2>/dev/null | \
         grep -o '\${[^}]*}' | sed 's/[\${}]//g' || true
-    fi
 }
 
 # Function to check if a provider is configured
 is_provider_configured() {
     local provider=$1
+    local actors_json=$2
     
-    # Get all possible env var names from config
+    # Get provider's actors
+    local provider_actors
+    provider_actors=$(echo "$actors_json" | jq -r "[.[] | select(.type | startswith(\"$provider\"))]" 2>/dev/null)
+    
+    if [ -z "$provider_actors" ] || [ "$provider_actors" = "[]" ]; then
+        return 1
+    fi
+    
+    # Get all possible env var names from actors
     local env_vars
-    mapfile -t env_vars < <(get_provider_env_vars "$provider")
+    mapfile -t env_vars < <(get_provider_env_vars "$provider" "$provider_actors")
     
-    # First check all possible env vars
+    # Check all possible env vars
     for env_var in "${env_vars[@]}"; do
         if [ -n "${!env_var}" ]; then
             return 0
         fi
     done
     
-    # Fallback to config if no env vars are set
-    local config
-    config=$(load_and_parse_config)
-    
-    # Check if we have a valid config with actors
-    if echo "$config" | jq -e '.config.actors' >/dev/null 2>&1; then
-        # Get all actors for this provider
-        local actors
-        actors=$(echo "$config" | jq -r ".config.actors[] | select(.type | startswith(\"$provider-\"))" 2>/dev/null)
+    # Check each actor's credentials
+    while IFS= read -r actor; do
+        [ -z "$actor" ] && continue
         
-        if [ -n "$actors" ] && [ "$actors" != "null" ]; then
-            # Check each actor's credentials
-            while IFS= read -r actor; do
-                [ -z "$actor" ] && continue
-                
-                local creds
-                creds=$(echo "$actor" | jq -r '.creds' 2>/dev/null)
-                [ "$creds" = "null" ] && continue
-                
-                # Evaluate creds as a reference to an environment variable
-                if [[ "$creds" =~ ^\$\{(.+)\}$ ]]; then
-                    local env_var_name="${BASH_REMATCH[1]}"
-                    creds="${!env_var_name}"
-                fi
-                
-                # If we find any valid credentials, return success
-                if [ -n "$creds" ]; then
-                    return 0
-                fi
-            done <<< "$actors"
+        local creds
+        creds=$(echo "$actor" | jq -r '.creds' 2>/dev/null)
+        [ "$creds" = "null" ] && continue
+        
+        # Evaluate creds as a reference to an environment variable
+        if [[ "$creds" =~ ^\$\{(.+)\}$ ]]; then
+            local env_var_name="${BASH_REMATCH[1]}"
+            creds="${!env_var_name}"
         fi
-    fi
+        
+        # If we find any valid credentials, return success
+        if [ -n "$creds" ]; then
+            return 0
+        fi
+    done <<< "$(echo "$provider_actors" | jq -r '.[]')"
     
     return 1
 }

@@ -17,6 +17,7 @@ Available Commands:
   locations   Show configuration file locations
   init        Initialize a new configuration file
   diff        Show differences between default and current config
+  apply       Parse and apply the configuration
 
 Examples:
   worker config show
@@ -84,7 +85,7 @@ config_show() {
 # Description: Edit configuration in default editor
 # Example: worker config edit
 edit_config() {
-    local config_file="${HOME}/.config/worker/worker.yaml"
+    local config_file="$USER_CONFIG"
     
     # Create directory if it doesn't exist
     mkdir -p "$(dirname "$config_file")"
@@ -127,28 +128,26 @@ EOF
 show_locations() {
     cat << EOF
 Configuration Locations:
-  System config:     /etc/worker/worker.yaml
-  User config:       ${HOME}/.config/worker/worker.yaml
+  Built-in config:   $BUILT_IN_CONFIG
+  User config:      $USER_CONFIG
+  Merged config:    $MERGED_CONFIG
 EOF
 }
 
 # Description: Initialize a new configuration file with defaults
 # Example: worker config init
 init_config() {
-    local config_dir="${HOME}/.config/worker"
-    local config_file="$config_dir/worker.yaml"
-    
     # Skip if config already exists
-    if [ -f "$config_file" ]; then
-        log_info "Config" "Configuration already exists at $config_file"
+    if [ -f "$USER_CONFIG" ]; then
+        log_info "Config" "Configuration already exists at $USER_CONFIG"
         return 0
     fi
     
     # Create directory if it doesn't exist
-    mkdir -p "$config_dir"
+    mkdir -p "$(dirname "$USER_CONFIG")"
     
-    # Create new config with timestamp
-    cat > "$config_file" << EOF
+    # Create minimal config with timestamp
+    cat > "$USER_CONFIG" << EOF
 kind: workerConfig
 version: udx.io/worker-v1/config
 config:
@@ -156,8 +155,9 @@ config:
     CREATED: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 EOF
 
-    if [ -f "$config_file" ]; then
-        log_success "Config" "Configuration initialized at $config_file"
+    if [ -f "$USER_CONFIG" ]; then
+        log_success "Config" "Configuration initialized at $USER_CONFIG"
+        merge_worker_configs  # Merge with built-in config
         return 0
     else
         log_error "Config" "Failed to create configuration file"
@@ -169,16 +169,40 @@ EOF
 # Options: --format unified|context|git
 # Example: worker config diff --format git
 show_diff() {
-    local default_config="/etc/worker/worker.yaml"
-    local user_config="${HOME}/.config/worker/worker.yaml"
-    
-    if [ ! -f "$user_config" ]; then
-        log_error "Config" "User configuration does not exist at $user_config"
+    # Check if configs exist
+    if ! ensure_config_exists "$BUILT_IN_CONFIG"; then
         return 1
     fi
     
-    log_info "Config" "Differences between default and current configuration:"
-    diff -u "$default_config" "$user_config" || true
+    if [ ! -f "$USER_CONFIG" ]; then
+        log_error "Config" "User configuration does not exist at $USER_CONFIG"
+        return 1
+    fi
+    
+    log_info "Config" "Differences between built-in and user configuration:"
+    diff -u "$BUILT_IN_CONFIG" "$USER_CONFIG" || true
+}
+
+# Description: Parse and apply the configuration
+# Example: worker config apply
+apply_config() {
+    log_info "Config" "Parsing and applying configuration..."
+    
+    # Load and parse the configuration
+    local config_json
+    if ! config_json=$(load_and_parse_config); then
+        log_error "Config" "Failed to load and parse configuration"
+        return 1
+    fi
+
+    # Export variables from the configuration
+    if ! export_variables_from_config "$config_json"; then
+        log_error "Config" "Failed to export variables from configuration"
+        return 1
+    fi
+
+    log_success "Config" "Configuration successfully parsed and applied"
+    return 0
 }
 
 # Handle config commands
@@ -195,6 +219,9 @@ config_handler() {
             ;;
         locations)
             show_locations
+            ;;
+        apply)
+            apply_config
             ;;
         init)
             init_config

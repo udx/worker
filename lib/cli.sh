@@ -97,12 +97,6 @@ EOF
     
     cat << EOF
 
-Examples:
-  worker help service     Learn about service configuration
-  worker env show        View current environment
-  worker info system     Check system health
-  worker auth setup      Configure cloud provider auth
-
 Tip: Run 'worker help [command]' for detailed information about any command
 EOF
 }

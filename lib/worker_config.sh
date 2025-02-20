@@ -55,7 +55,6 @@ merge_worker_configs() {
         # Check if merge was successful
         if [ -s "${MERGED_CONFIG}.tmp" ]; then
             mv "${MERGED_CONFIG}.tmp" "$MERGED_CONFIG"
-            log_success "Worker configuration" "Using user configuration at $USER_CONFIG"
             return 0
         else
             rm -f "${MERGED_CONFIG}.tmp"
@@ -63,9 +62,6 @@ merge_worker_configs() {
             return 1
         fi
     fi
-
-    # No user config
-    log_info "Worker configuration" "No user configuration found at $USER_CONFIG, using built-in defaults"
 }
 
 # Load and parse the merged configuration

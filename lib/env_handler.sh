@@ -26,12 +26,6 @@ generate_env_file() {
         
         # Extract environment variables
         echo "$config" | yq eval '.config.env | to_entries | .[] | "export " + .key + "=\"" + .value + "\""' -
-        
-        # Add computed variables
-        echo
-        echo "# Computed variables"
-        echo "export WORKER_ENV_FILE=\"$WORKER_ENV_FILE\""
-        echo "export WORKER_SECRETS_FILE=\"$WORKER_SECRETS_FILE\""
     } > "$WORKER_ENV_FILE"
     
     # File permissions are set during build
