@@ -3,22 +3,14 @@
 # Version information
 VERSION="1.0.0"
 
-# Source worker configuration
-# shellcheck source=${WORKER_LIB_DIR}/worker_config.sh disable=SC1091
-source "${WORKER_LIB_DIR}/worker_config.sh"
-
-# Load and export configuration
-config=$(load_and_parse_config)
-export_variables_from_config "$config"
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Dynamically source all command modules
 for module in "${WORKER_LIB_DIR}/cli/"*.sh; do
     # shellcheck disable=SC1090
     source "$module"
 done
-
-# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source "${WORKER_LIB_DIR}/utils.sh"
 
 # Print version information
 show_version() {
@@ -148,6 +140,11 @@ fi
 
 # Handle app and service commands
 if [ "$1" = "app" ] || [ "$1" = "service" ]; then
+    # Source and load configuration for app/service commands
+    source "${WORKER_LIB_DIR}/worker_config.sh"
+    config=$(load_and_parse_config)
+    export_variables_from_config "$config"
+    
     log_info "Starting process manager..."
     "${WORKER_LIB_DIR}/process_manager.sh"
     pm_status=$?
