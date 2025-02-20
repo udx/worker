@@ -32,26 +32,40 @@ merge_worker_configs() {
         touch "$MERGED_CONFIG" || { log_error "Worker configuration" "Failed to create merged configuration file at $MERGED_CONFIG"; return 1; }
     fi
 
-    # Ensure built-in config exists
-    ensure_config_exists "$BUILT_IN_CONFIG" || return 1
+    # Ensure built-in config exists and has actors section
+    if ! ensure_config_exists "$BUILT_IN_CONFIG"; then
+        log_error "Worker configuration" "Built-in configuration not found"
+        return 1
+    fi
 
-    # If a user-provided configuration exists (and path is not empty), merge it
-    if [[ -f "$USER_CONFIG" && -n "$USER_CONFIG" ]]; then
-        log_success "Worker configuration" "User configuration detected at $USER_CONFIG"
+    # First copy built-in config (with actors) to merged config
+    if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
+        log_error "Worker configuration" "Failed to copy built-in configuration"
+        return 1
+    fi
 
-        if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
-            log_error "Worker configuration" "Failed to merge configurations. yq returned an error."
+    # If user config exists, merge env and secrets sections
+    if [[ -f "$USER_CONFIG" && -s "$USER_CONFIG" ]]; then
+        # Use yq to merge configs, preserving actors from built-in
+        if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$MERGED_CONFIG" "$USER_CONFIG" > "${MERGED_CONFIG}.tmp"; then
+            log_error "Worker configuration" "Failed to merge configurations"
             return 1
         fi
-    else
-        # Using default config
 
-        # Copy the built-in configuration to the merged configuration
-        if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
-            log_error "Worker configuration" "Failed to copy built-in configuration to merged configuration."
+        # Check if merge was successful
+        if [ -s "${MERGED_CONFIG}.tmp" ]; then
+            mv "${MERGED_CONFIG}.tmp" "$MERGED_CONFIG"
+            log_success "Worker configuration" "Using user configuration at $USER_CONFIG"
+            return 0
+        else
+            rm -f "${MERGED_CONFIG}.tmp"
+            log_error "Worker configuration" "Failed to merge configurations - empty result"
             return 1
         fi
     fi
+
+    # No user config
+    log_info "Worker configuration" "No user configuration found at $USER_CONFIG, using built-in defaults"
 }
 
 # Load and parse the merged configuration

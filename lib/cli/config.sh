@@ -14,7 +14,6 @@ Usage: worker config [command]
 Available Commands:
   show        Show current configuration
   edit        Edit configuration in default editor
-  validate    Validate configuration files
   locations   Show configuration file locations
   init        Initialize a new configuration file
   diff        Show differences between default and current config
@@ -22,7 +21,6 @@ Available Commands:
 Examples:
   worker config show
   worker config show --format json
-  worker config validate
   worker config edit
   worker config locations
   worker config init
@@ -32,19 +30,49 @@ EOF
 # Description: Display current worker configuration
 # Options: --format yaml|json
 # Example: worker config show --format json
-show_config() {
-    local format=${1:-yaml}
+config_show() {
+    local format="yaml"
+    local args=("$@")
+    local i=0
+    
+    # Parse arguments
+    while [ $i -lt ${#args[@]} ]; do
+        case "${args[$i]}" in
+            --format)
+                i=$((i + 1))
+                format="${args[$i]}"
+                ;;
+            *)
+                log_error "Config" "Unknown argument: ${args[$i]}"
+                return 1
+                ;;
+        esac
+        i=$((i + 1))
+    done
+
     log_info "Config" "Current configuration:"
     
+    # Check if user config exists
+    if [ ! -f "$USER_CONFIG" ] || [ ! -s "$USER_CONFIG" ]; then
+        log_info "Config" "No user configuration found at $USER_CONFIG"
+        log_info "Config" "Use 'worker config init' to create one"
+        return 0
+    fi
+
+    # Parse user config
     local config
-    config=$(load_and_parse_config)
-    
+    if ! config=$(yq eval -o=json "$USER_CONFIG" 2>/dev/null); then
+        log_error "Config" "Failed to parse user configuration"
+        return 1
+    fi
+
+    # Show config based on format
     case $format in
         json)
-            echo "$config" | yq eval -o=json '.'
+            echo "$config"
             ;;
         yaml)
-            echo "$config"
+            yq eval "$USER_CONFIG"
             ;;
         *)
             log_error "Config" "Unknown format: $format"
@@ -63,60 +91,36 @@ edit_config() {
     
     # Create file if it doesn't exist
     if [ ! -f "$config_file" ]; then
-        cp "/etc/worker/worker.yaml" "$config_file"
+        # Copy built-in config first to ensure actors section is preserved
+        if [ -f "$BUILT_IN_CONFIG" ]; then
+            cp "$BUILT_IN_CONFIG" "$config_file" || {
+                log_error "Config" "Failed to copy built-in configuration"
+                return 1
+            }
+        else
+            # If built-in config doesn't exist, create minimal structure
+            cat > "$config_file" << EOF
+kind: workerConfig
+version: udx.io/worker-v1/config
+config: {}
+EOF
+        fi
     fi
     
     # Use default editor or fallback to nano
     ${EDITOR:-nano} "$config_file"
     
-    # Validate after editing
-    if validate_config "$config_file"; then
-        log_success "Config" "Configuration updated successfully"
-    else
-        log_error "Config" "Configuration validation failed after editing"
+    # Basic YAML validation
+    if ! yq eval '.' "$config_file" >/dev/null 2>&1; then
+        log_error "Config" "Configuration is invalid YAML"
         return 1
     fi
+    
+    log_success "Config" "Configuration saved successfully"
+    return 0
 }
 
-# Description: Validate all configuration files or a specific one
-# Options: --file PATH
-# Example: worker config validate --file ~/.config/worker/worker.yaml
-validate_config() {
-    local config_file=${1:-}
-    log_info "Config" "Validating configuration..."
-    
-    # If no file specified, validate all config files
-    if [ -z "$config_file" ]; then
-        local files=(
-            "/etc/worker/worker.yaml"
-            "${HOME}/.config/worker/worker.yaml"
-            "/etc/worker/supervisor/supervisord.conf"
-        )
-        
-        local failed=0
-        for file in "${files[@]}"; do
-            if [ -f "$file" ]; then
-                if ! validate_yaml "$file"; then
-                    log_error "Config" "Validation failed for $file"
-                    failed=1
-                else
-                    log_success "Config" "Validation passed for $file"
-                fi
-            fi
-        done
-        
-        return $failed
-    else
-        # Validate specific file
-        if validate_yaml "$config_file"; then
-            log_success "Config" "Configuration is valid"
-            return 0
-        else
-            log_error "Config" "Configuration is invalid"
-            return 1
-        fi
-    fi
-}
+
 
 # Description: Display paths of all configuration files
 # Example: worker config locations
@@ -125,8 +129,6 @@ show_locations() {
 Configuration Locations:
   System config:     /etc/worker/worker.yaml
   User config:       ${HOME}/.config/worker/worker.yaml
-  Supervisor config: /etc/worker/supervisor/supervisord.conf
-  Services config:   ${HOME}/.config/worker/services.yaml
 EOF
 }
 
@@ -136,26 +138,29 @@ init_config() {
     local config_dir="${HOME}/.config/worker"
     local config_file="$config_dir/worker.yaml"
     
+    # Skip if config already exists
+    if [ -f "$config_file" ]; then
+        log_info "Config" "Configuration already exists at $config_file"
+        return 0
+    fi
+    
     # Create directory if it doesn't exist
     mkdir -p "$config_dir"
     
-    # Don't overwrite existing config without confirmation
-    if [ -f "$config_file" ]; then
-        log_warn "Config" "Configuration file already exists at $config_file"
-        read -r -p "Do you want to overwrite it? [y/N] " response
-        if [[ ! "$response" =~ ^[Yy]$ ]]; then
-            log_info "Config" "Initialization cancelled"
-            return 0
-        fi
-    fi
-    
-    # Copy default config
-    cp "/etc/worker/worker.yaml" "$config_file"
-    
+    # Create new config with timestamp
+    cat > "$config_file" << EOF
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    CREATED: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+EOF
+
     if [ -f "$config_file" ]; then
         log_success "Config" "Configuration initialized at $config_file"
+        return 0
     else
-        log_error "Config" "Failed to initialize configuration"
+        log_error "Config" "Failed to create configuration file"
         return 1
     fi
 }
@@ -183,13 +188,10 @@ config_handler() {
     
     case $cmd in
         show)
-            show_config "$@"
+            config_show "$@"
             ;;
         edit)
             edit_config
-            ;;
-        validate)
-            validate_config "$@"
             ;;
         locations)
             show_locations
@@ -201,6 +203,9 @@ config_handler() {
             show_diff
             ;;
         help)
+            config_help
+            ;;
+        "")
             config_help
             ;;
         *)

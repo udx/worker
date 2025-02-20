@@ -21,7 +21,7 @@ service_handler() {
             follow_logs "$1" "err"
         ;;
         config)
-            show_config
+            service_show_config
         ;;
         start|stop|restart)
             manage_service "$cmd" "$1"
@@ -186,7 +186,7 @@ follow_logs() {
 
 # Description: Display current service configuration
 # Example: worker service config
-show_config() {
+service_show_config() {
     if [ ! -f "/etc/supervisord.conf" ]; then
         log_error "Service" "Configuration file is not generated since no services are managed."
         exit 1
