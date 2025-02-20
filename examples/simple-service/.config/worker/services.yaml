@@ -1,0 +1,17 @@
+---
+kind: workerService
+version: udx.io/worker-v1/service
+
+services:
+  - name: "index"
+    command: "/home/udx/index.sh"
+    autostart: true
+    autorestart: true
+  - name: "index2"
+    command: "/home/udx/index.sh"
+    autostart: true
+    autorestart: true
+  - name: "index3"
+    command: "/home/udx/index.sh"
+    autostart: true
+    autorestart: true

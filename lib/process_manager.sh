@@ -7,13 +7,6 @@ source "${WORKER_LIB_DIR}/utils.sh"
 USER_CONFIG_PATH="${HOME}/.config/worker/services.yaml"
 CONFIG_FILE="${USER_CONFIG_PATH}"
 
-# Check if user config exists
-if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
-    log_info "No services configuration found at ${USER_CONFIG_PATH}."
-    log_info "Run 'worker help service' for information about service configuration"
-    exit 0
-fi
-
 # Supervisor configuration paths
 COMMON_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/common.conf"
 PROGRAM_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/program.conf"
@@ -25,6 +18,13 @@ trap 'handle_supervisor_signals SIGINT' SIGINT
 
 # Main execution
 main() {
+    # Check if user config exists
+    if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
+        log_info "No services configuration found at ${USER_CONFIG_PATH}."
+        log_info "Run 'worker help service' for information about service configuration"
+        exit 0
+    fi
+
     log_info "Process Manager" "Starting process manager..."
     
     if ! configure_and_execute_services; then
@@ -162,8 +162,34 @@ handle_supervisor_signals() {
 start_supervisor() {
     log_info "Starting supervisord..."
     
-    # Start supervisord in non-daemon mode
-    exec supervisord -n
+    # Check if supervisor is already running
+    if pgrep -f "supervisord" >/dev/null; then
+        # Reload configuration
+        if supervisorctl reread && supervisorctl update; then
+            log_info "Supervisor configuration reloaded"
+            return 0
+        fi
+        log_error "Failed to reload supervisor configuration"
+        return 1
+    fi
+    
+    # Start supervisord in daemon mode
+    supervisord
+    
+    # Wait for supervisor to be ready
+    local max_attempts=10
+    local attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if supervisorctl status >/dev/null 2>&1; then
+            log_info "Supervisor is ready"
+            return 0
+        fi
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+    
+    log_error "Failed to start supervisord"
+    return 1
 }
 
 # Function to check for service configurations
@@ -220,5 +246,7 @@ configure_and_execute_services() {
     start_supervisor
 }
 
-# Execute main function
-main
+# Only run main if not in service mode
+if [ -z "$WORKER_SERVICE_MODE" ]; then
+    main
+fi

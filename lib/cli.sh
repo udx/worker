@@ -68,24 +68,6 @@ show_help() {
     cat << EOF
 🚀 Welcome to UDX Worker Container!
 
-This container helps you run and manage cloud services and applications.
-Here's how to get started:
-
-1. Configure Services:
-   - Create service config:     ${HOME}/.config/worker/services.yaml
-   - View service commands:     worker help service
-   - Check service status:      worker service list
-
-2. Configure Environment:
-   - Set environment vars:      /etc/worker/environment
-   - View current settings:     worker env show
-   - Configure cloud auth:      worker auth setup
-
-3. Monitor & Manage:
-   - View container status:     worker info overview
-   - Check service logs:        worker service logs
-   - View system health:        worker health check
-
 Available Commands:
 EOF
     
@@ -97,33 +79,15 @@ EOF
     
     cat << EOF
 
-Tip: Run 'worker help [command]' for detailed information about any command
+Run any command without arguments to see its detailed help and usage information.
+For example: 'worker auth' will show auth command help.
 EOF
-}
-
-# Show command-specific help
-show_command_help() {
-    local cmd=$1
-    local help_function="${cmd}_help"
-    
-    # Check if the help function exists
-    if [[ $(type -t "$help_function") == function ]]; then
-        "$help_function"
-    else
-        log_error "CLI" "No help available for command: $cmd"
-        show_help
-        return 1
-    fi
 }
 
 # Main CLI interface
 if [ -z "$1" ] || [ "$1" = "help" ]; then
-    if [ -z "$2" ]; then
-        show_help
-        log_info "Container is ready. Run with a command to start services."
-    else
-        show_command_help "$2"
-    fi
+    show_help
+    log_info "Container is ready. Run a command to start services."
     exit 0
 fi
 
@@ -132,9 +96,9 @@ if [ "$1" = "version" ]; then
     exit 0
 fi
 
-# Handle app and service commands
-if [ "$1" = "app" ] || [ "$1" = "service" ]; then
-    # Source and load configuration for app/service commands
+# Handle app commands
+if [ "$1" = "app" ]; then
+    # Source and load configuration for app commands
     source "${WORKER_LIB_DIR}/worker_config.sh"
     config=$(load_and_parse_config)
     export_variables_from_config "$config"

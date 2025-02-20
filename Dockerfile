@@ -189,7 +189,9 @@ RUN \
     # Set runtime directories permissions
     chmod 775 ${WORKER_APP_DIR} ${WORKER_DATA_DIR} && \
     # Set sensitive file permissions
-    chmod 600 ${WORKER_CONFIG_DIR}/secrets
+    chmod 600 ${WORKER_CONFIG_DIR}/secrets && \
+    # Set home directory executable
+    chmod 755 ${HOME}
 
 # Set up supervisor configuration
 RUN ln -sf ${WORKER_CONFIG_DIR}/supervisor/supervisord.conf /etc/supervisord.conf
