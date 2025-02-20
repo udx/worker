@@ -17,23 +17,19 @@ Available Commands:
   unset       Unset an environment variable
   reload      Reload environment from config
   status      Show environment status
-  validate    Validate environment variables
-  export      Export environment to file
-  import      Import environment from file
 
 Options:
   --format    Output format (text/json)
   --filter    Filter variables by prefix
-  --file      File to export to or import from
   --include-secrets Include secrets in output (masked)
 
 Examples:
-  worker env show
-  worker env show --format json
-  worker env show --filter AWS_*
-  worker env show --include-secrets
-  worker env set MY_VAR "my value"
-  worker env reload
+  worker env show                    # Show all environment variables
+  worker env show --format json      # Show variables in JSON format
+  worker env show --filter AWS_*     # Show only AWS variables
+  worker env set MY_VAR "my value"   # Set a new variable
+  worker env unset MY_VAR           # Remove a variable
+  worker env reload                 # Reload from config
 EOF
 }
 
@@ -45,6 +41,7 @@ show_environment() {
     local filter=$2
     local include_secrets=${3:-false}
     
+
     # Check if environment file exists
     if [ ! -f "$WORKER_ENV_FILE" ]; then
         log_error "Env" "Environment file not found"
@@ -63,9 +60,12 @@ show_environment() {
             
             # Convert to JSON
             local json="{"
+            local first=true
             while IFS= read -r line; do
                 if [[ $line =~ ^export[[:space:]]+([^=]+)=\"([^\"]*)\" ]]; then
-                    if [ -n "$json" ] && [ "$json" != "{" ]; then
+                    if [ "$first" = true ]; then
+                        first=false
+                    else
                         json="$json,"
                     fi
                     key=${BASH_REMATCH[1]}
@@ -74,7 +74,11 @@ show_environment() {
                 fi
             done <<< "$vars"
             json="$json}"
-            echo "$json" | jq .
+            if command -v jq >/dev/null 2>&1; then
+                echo "$json" | jq .
+            else
+                echo "$json"
+            fi
             ;;
         text)
             if [ -n "$filter" ]; then
@@ -96,8 +100,13 @@ set_environment() {
     local name=$1
     local value=$2
     
-    if [ -z "$name" ] || [ -z "$value" ]; then
-        log_error "Env" "Both variable name and value are required"
+    if [ -z "$name" ]; then
+        log_error "Env" "Variable name is required"
+        return 1
+    fi
+    
+    if [ -z "$value" ] && [ "$#" -lt 2 ]; then
+        log_error "Env" "Variable value is required"
         return 1
     fi
     
@@ -155,53 +164,7 @@ unset_environment() {
     fi
 }
 
-# Description: Export environment variables to a file
-# Options: --file PATH, --include-secrets
-# Example: worker env export --file env.backup --include-secrets
-export_environment() {
-    local file=$1
-    local filter=$2
-    
-    if [ -z "$file" ]; then
-        log_error "Env" "Output file is required"
-        return 1
-    fi
-    
-    # Export variables
-    if [ -n "$filter" ]; then
-        env | grep "^$filter" > "$file"
-    else
-        env > "$file"
-    fi
-    
-    log_success "Env" "Environment variables exported to $file"
-}
 
-# Description: Import environment variables from a file
-# Options: --file PATH
-# Example: worker env import --file env.backup
-import_environment() {
-    local file=$1
-    
-    if [ -z "$file" ]; then
-        log_error "Env" "Input file is required"
-        return 1
-    fi
-    
-    if [ ! -f "$file" ]; then
-        log_error "Env" "File not found: $file"
-        return 1
-    fi
-    
-    # Import variables
-    while IFS='=' read -r key value; do
-        if [ -n "$key" ]; then
-            export "$key=$value"
-        fi
-    done < "$file"
-    
-    log_success "Env" "Environment variables imported from $file"
-}
 
 # Description: Validate environment variables against schema
 # Options: --format text|json
@@ -280,52 +243,7 @@ reset_environment() {
 }
 
 # Parse command line arguments
-parse_args() {
-    # Initialize variables with defaults
-    format="text"
-    filter=""
-    file=""
-    include_secrets="false"
-    
-    local args=()
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --format=*|--type=*)
-                format="${1#*=}"
-                shift
-                ;;
-            --format|--type)
-                format="$2"
-                shift 2
-                ;;
-            --filter=*)
-                filter="${1#*=}"
-                shift
-                ;;
-            --filter)
-                filter="$2"
-                shift 2
-                ;;
-            --file=*)
-                file="${1#*=}"
-                shift
-                ;;
-            --file)
-                file="$2"
-                shift 2
-                ;;
-            --include-secrets)
-                include_secrets="true"
-                shift
-                ;;
-            *)
-                args+=("$1")
-                shift
-                ;;
-        esac
-    done
-    set -- "${args[@]}"
-}
+
 
 # Description: Show environment status and validation results
 # Options: --format text|json
@@ -389,15 +307,59 @@ env_handler() {
     local cmd=$1
     shift
     
-    # Parse command line arguments
-    parse_args "$@"
+    # Store original arguments for set/unset commands
+    local orig_args=("$@")
+    
+    # Default values
+    local format="text"
+    local filter=""
+    local include_secrets="false"
+    
+    # Parse arguments for show/status commands
+    if [[ "$cmd" == "show" || "$cmd" == "status" ]]; then
+        while [[ $# -gt 0 ]]; do
+            case $1 in
+                --format=*|--type=*)
+                    format="${1#*=}"
+                    shift
+                    ;;
+                --format|--type)
+                    if [[ -n "$2" && ! "$2" =~ ^-- ]]; then
+                        format="$2"
+                        shift 2
+                    else
+                        shift
+                    fi
+                    ;;
+                --filter=*)
+                    filter="${1#*=}"
+                    shift
+                    ;;
+                --filter)
+                    if [[ -n "$2" && ! "$2" =~ ^-- ]]; then
+                        filter="$2"
+                        shift 2
+                    else
+                        shift
+                    fi
+                    ;;
+                --include-secrets)
+                    include_secrets="true"
+                    shift
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+        done
+    fi
     
     case $cmd in
         show)
             show_environment "$format" "$filter" "$include_secrets"
             ;;
         set)
-            set_environment "$1" "$2"
+            set_environment "${orig_args[0]}" "${orig_args[1]}"
             ;;
         unset)
             unset_environment "$1"
@@ -408,15 +370,6 @@ env_handler() {
             ;;
         status)
             show_status "$format"
-            ;;
-        validate)
-            validate_environment
-            ;;
-        export)
-            export_environment "$file" "$filter"
-            ;;
-        import)
-            import_environment "$file"
             ;;
         help)
             env_help

@@ -9,27 +9,38 @@ auth_help() {
     cat << EOF
 Manage authentication and credentials
 
-Usage: worker auth [command] [provider]
+Usage: worker auth [command] [provider] [options]
 
 Available Commands:
   status      Show authentication status for all or specific provider
   login       Re-authenticate with provider(s) using available credentials
   logout      Log out from provider(s)
 
+Options:
+  --format    Output format for status command (e.g. json)
+
 Examples:
-  worker auth status        # Show status of all providers
-  worker auth status azure # Show status of Azure only
-  worker auth login        # Re-auth all providers with available creds
+  worker auth status              # Show status of all providers
+  worker auth status azure       # Show status of Azure only
+  worker auth status --format json # Show status in JSON format
+  worker auth login              # Re-auth all providers with available creds
   worker auth login azure  # Re-auth Azure only
   worker auth logout       # Log out from all providers
 EOF
 }
 
 # Description: Display authentication status for all cloud providers
-# Example: worker auth status
+# Example: worker auth status [--format json]
 show_auth_status() {
     local target_provider=$1
-    log_info "Auth" "Checking authentication status..."
+    local format=$2
+    
+    if [ "$format" != "json" ]; then
+        log_info "Auth" "Checking authentication status..."
+    fi
+    
+    # Initialize JSON array if json format
+    local json_output="["
     
     # Function to check a specific provider
     check_provider_status() {
@@ -87,19 +98,37 @@ show_auth_status() {
             is_authenticated=true
         fi
         
-        # Show status based on env vars and config
+        # Prepare status message and state
+        local status_msg state
         if [ "$has_env_creds" = true ] || [ "$has_config_creds" = true ]; then
             if [ "$is_authenticated" = true ]; then
-                log_success "Auth" "$provider: Active session${types:+ (actors: $types)}"
+                status_msg="Active session${types:+ (actors: $types)}"
+                state="active"
             else
-                log_info "Auth" "$provider: Has credentials${types:+ (actors: $types)}, needs re-auth"
+                status_msg="Has credentials${types:+ (actors: $types)}, needs re-auth"
+                state="needs_reauth"
             fi
         else
             if [ -n "$types" ]; then
-                log_warn "Auth" "$provider: Missing credentials (actors: $types)"
+                status_msg="Missing credentials (actors: $types)"
+                state="missing_creds"
             else
-                log_info "Auth" "$provider: Not configured"
+                status_msg="Not configured"
+                state="not_configured"
             fi
+        fi
+
+        # Output based on format
+        if [ "$format" = "json" ]; then
+            [ "$json_output" != "[" ] && json_output+=","
+            json_output+="{\"provider\":\"$provider\",\"state\":\"$state\",\"message\":\"$status_msg\"}"
+        else
+            case "$state" in
+                "active") log_success "Auth" "$provider: $status_msg" ;;
+                "needs_reauth") log_info "Auth" "$provider: $status_msg" ;;
+                "missing_creds") log_warn "Auth" "$provider: $status_msg" ;;
+                "not_configured") log_info "Auth" "$provider: $status_msg" ;;
+            esac
         fi
     }
     
@@ -109,6 +138,12 @@ show_auth_status() {
         for provider in aws gcp azure bitwarden; do
             check_provider_status "$provider"
         done
+    fi
+
+    # Close and output JSON if json format
+    if [ "$format" = "json" ]; then
+        json_output+="]"
+        echo "$json_output"
     fi
 }
 
@@ -218,11 +253,37 @@ check_provider_auth() {
 # Handle auth commands
 auth_handler() {
     local cmd=$1
-    local provider=$2
+    shift
     
     case $cmd in
         status)
-            show_auth_status "$provider"
+            local provider=""
+            local format=""
+            
+            # Parse arguments
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    --format)
+                        format="$2"
+                        shift 2
+                        ;;
+                    --*)
+                        log_error "CLI" "Unknown option: $1"
+                        return 1
+                        ;;
+                    *)
+                        if [ -z "$provider" ]; then
+                            provider="$1"
+                        else
+                            log_error "CLI" "Unexpected argument: $1"
+                            return 1
+                        fi
+                        shift
+                        ;;
+                esac
+            done
+            
+            show_auth_status "$provider" "$format"
             return $?
             ;;
         login)
