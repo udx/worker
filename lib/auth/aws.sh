@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Example usage of the function
 # aws_authenticate "/path/to/your/aws_creds.json"

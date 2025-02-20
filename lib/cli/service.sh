@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Constants
 SERVICES_CONFIG_DIR="${HOME}/.config/worker"
@@ -124,8 +124,7 @@ list_services() {
     # Get supervisor status and running services
     local supervisor_status
     local supervisor_running=false
-    supervisor_status=$(supervisorctl status 2>&1)
-    if [ $? -eq 0 ]; then
+    if supervisor_status=$(supervisorctl status 2>&1); then
         supervisor_running=true
     fi
 

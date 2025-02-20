@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
-source ${WORKER_LIB_DIR}/auth.sh
+source "${WORKER_LIB_DIR}/utils.sh"
+source "${WORKER_LIB_DIR}/auth.sh"
 
 # Show help for auth command
 auth_help() {
@@ -155,7 +155,7 @@ logout_provider() {
     log_info "Auth" "Logging out providers..."
     
     # Source cleanup utilities
-    source ${WORKER_LIB_DIR}/cleanup.sh
+    source "${WORKER_LIB_DIR}/cleanup.sh"
     
     # Function to logout from a specific provider
     do_provider_logout() {

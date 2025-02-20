@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Show help for health command
 health_help() {
@@ -49,12 +49,18 @@ check_health() {
     check_system_resources || failed=1
     
     # Gather all data
-    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local disk_usage=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
-    local mem_total=$(free -b | awk '/Mem:/ {printf "%.2f", $2/1024/1024/1024}')
-    local mem_used=$(free -b | awk '/Mem:/ {printf "%.2f", $3/1024/1024/1024}')
-    local mem_usage=$(free | awk '/Mem:/ {printf("%.0f", $3/$2 * 100)}')
-    local load_avg=$(uptime | awk -F'load average:' '{print $2}' | cut -d, -f1 | tr -d ' ')
+    local timestamp
+    local disk_usage
+    local mem_total
+    local mem_used
+    local mem_usage
+    local load_avg
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    disk_usage=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
+    mem_total=$(free -b | awk '/Mem:/ {printf "%.2f", $2/1024/1024/1024}')
+    mem_used=$(free -b | awk '/Mem:/ {printf "%.2f", $3/1024/1024/1024}')
+    mem_usage=$(free | awk '/Mem:/ {printf("%.0f", $3/$2 * 100)}')
+    load_avg=$(uptime | awk -F'load average:' '{print $2}' | cut -d, -f1 | tr -d ' ')
     
     if [ "$format" = "json" ]; then
         {

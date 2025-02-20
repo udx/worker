@@ -105,7 +105,7 @@ format_env_vars() {
             echo "$json" | jq .
             ;;
         text)
-            echo "$vars" | sed 's/export \([^=]*\)=\"\([^\"]*\)"/\1=\2/'
+            echo "${vars#export }" | tr -d '\"'
             ;;
         *)
             log_error "Environment" "Unknown format: $format"

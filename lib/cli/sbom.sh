@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Show help for sbom command
 sbom_help() {
@@ -80,7 +80,7 @@ generate_sbom() {
       "version": "%s",
       "architecture": "%s"
     }' "$name" "$version" "$arch"
-                        if [ $count -lt $total ]; then
+                        if [ $count -lt "$total" ]; then
                             echo ","
                         else
                             echo ""
@@ -107,7 +107,7 @@ generate_sbom() {
                         printf '    "%s": {
       "version": "%s"
     }' "$name" "$version"
-                        if [ $count -lt $total ]; then
+                        if [ $count -lt "$total" ]; then
                             echo ","
                         else
                             echo ""
@@ -214,7 +214,6 @@ sbom_handler() {
         return 0
     fi
 
-    local args
     read -r command format type filter <<< "$(parse_args "$@")"
     
     case $command in

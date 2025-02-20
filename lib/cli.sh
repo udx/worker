@@ -29,7 +29,8 @@ get_available_commands() {
     # Scan through CLI modules to find commands and their descriptions
     for module in "${WORKER_LIB_DIR}/cli/"*.sh; do
         if [ -f "$module" ]; then
-            local name=$(basename "$module" .sh)
+            local name
+            name=$(basename "$module" .sh)
             local description=""
             
             # Extract description from help function
@@ -45,7 +46,7 @@ get_available_commands() {
         fi
     done
     
-    echo "$(declare -p commands)"
+    declare -p commands
 }
 
 # Print help information
@@ -72,7 +73,8 @@ Available Commands:
 EOF
     
     # Sort commands alphabetically and display
-    local sorted_commands=($(echo "${!commands[@]}" | tr ' ' '\n' | sort))
+    local sorted_commands
+    mapfile -t sorted_commands < <(printf '%s\n' "${!commands[@]}" | sort)
     for cmd in "${sorted_commands[@]}"; do
         printf "  %-${max_length}s %s\n" "$cmd" "${commands[$cmd]}"
     done
@@ -99,6 +101,7 @@ fi
 # Handle app commands
 if [ "$1" = "app" ]; then
     # Source and load configuration for app commands
+    # shellcheck disable=SC1091
     source "${WORKER_LIB_DIR}/worker_config.sh"
     config=$(load_and_parse_config)
     export_variables_from_config "$config"

@@ -6,7 +6,7 @@
 # azure_authenticate "/path/to/your/azure_creds.json"
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Function to authenticate Azure accounts
 azure_authenticate() {

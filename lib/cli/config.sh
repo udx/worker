@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
-source ${WORKER_LIB_DIR}/worker_config.sh
+source "${WORKER_LIB_DIR}/utils.sh"
+source "${WORKER_LIB_DIR}/worker_config.sh"
 
 # Show help for config command
 config_help() {

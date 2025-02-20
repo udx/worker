@@ -2,10 +2,10 @@
 
 # Include worker config utilities first
 # shellcheck source=/dev/null
-source ${WORKER_LIB_DIR}/worker_config.sh
+source "${WORKER_LIB_DIR}/worker_config.sh"
 
 # shellcheck source=/dev/null
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Generic function to clean up authentication for any provider
 cleanup_provider() {

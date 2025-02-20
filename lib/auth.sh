@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
-source ${WORKER_LIB_DIR}/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Array to track configured providers
 declare -a configured_providers=()
@@ -12,6 +12,7 @@ get_provider_env_vars() {
     local actors_json=$2
     
     # Get all env var names from actor creds that match ${VAR} pattern
+    # shellcheck disable=SC2016
     echo "$actors_json" | jq -r ".[].creds" 2>/dev/null | \
         grep -o '\${[^}]*}' | sed 's/[\${}]//g' || true
 }
