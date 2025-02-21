@@ -3,6 +3,7 @@
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
 source "${WORKER_LIB_DIR}/worker_config.sh"
+source "${WORKER_LIB_DIR}/secrets.sh"
 
 # Show help for config command
 config_help() {
@@ -18,6 +19,7 @@ Available Commands:
   init        Initialize a new configuration file
   diff        Show differences between default and current config
   apply       Parse and apply the configuration
+  resolve     Resolve a secret value by name
 
 Examples:
   worker config show
@@ -205,6 +207,28 @@ apply_config() {
     return 0
 }
 
+# Description: Resolve a secret value by name
+# Example: worker config resolve SECRET_NAME
+resolve_secret() {
+    local secret_name="$1"
+
+    if [[ -z "$secret_name" ]]; then
+        log_error "Config" "Secret name is required"
+        return 1
+    fi
+
+    # Load and parse the configuration
+    local config_json
+    config_json=$(load_and_parse_config)
+    if [[ -z "$config_json" ]]; then
+        log_error "Config" "Failed to load configuration"
+        return 1
+    fi
+
+    # Use resolve_secret_by_name from secrets.sh
+    resolve_secret_by_name "$secret_name" "$config_json"
+}
+
 # Handle config commands
 config_handler() {
     local cmd=$1
@@ -228,6 +252,9 @@ config_handler() {
             ;;
         diff)
             show_diff
+            ;;
+        resolve)
+            resolve_secret "$@"
             ;;
         help)
             config_help

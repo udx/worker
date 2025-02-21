@@ -6,3 +6,4 @@ config:
     CREATED: "2025-02-21T07:57:59Z"
   secrets:
     TEST_ENV: "azure/kv-udx-worker-tooling/test-secret"
+    ANOTHER_TEST_ENV: "azure/kv-udx-worker-tooling/test-secret"

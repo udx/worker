@@ -40,63 +40,28 @@ fetch_secrets() {
     secrets_env_file=$(mktemp /tmp/secret_vars.XXXXXX)
     echo "# Secrets environment variables" > "$secrets_env_file"
 
+    # Create a JSON object with the secrets in the format expected by resolve_secret_by_name
+    local config_json
+    config_json=$(echo "{ \"config\": { \"secrets\": $secrets_json } }")
+
     # Process each secret in the JSON object
     echo "$secrets_json" | jq -c 'to_entries[]' | while IFS= read -r secret; do
-        local name url value provider secret_name key_vault_name
+        local name value
         name=$(echo "$secret" | jq -r '.key')
-        url=$(resolve_env_vars "$(echo "$secret" | jq -r '.value')")
 
-        # Check if the secret has a valid name and URL
-        if [[ -z "$name" || -z "$url" ]]; then
-            log_error "Secrets" "Secret name or URL is missing or empty."
+        # Check if the secret has a valid name
+        if [[ -z "$name" ]]; then
+            log_error "Secrets" "Secret name is missing or empty."
             continue
         fi
 
-        # Extract provider from the URL (first part before '/')
-        provider=$(echo "$url" | cut -d '/' -f 1)
-
-        # Handle secrets based on the provider
-        case "$provider" in
-            gcp)
-                key_vault_name=$(echo "$url" | cut -d '/' -f 2)
-                secret_name=$(echo "$url" | cut -d '/' -f 3)
-                if [[ -z "$secret_name" ]]; then
-                    log_error "Secrets" "Invalid GCP secret name format: $url"
-                    continue
-                fi
-                ;;
-            azure|bitwarden)
-                key_vault_name=$(echo "$url" | cut -d '/' -f 2)
-                secret_name=$(echo "$url" | cut -d '/' -f 3)
-                if [[ -z "$key_vault_name" || -z "$secret_name" ]]; then
-                    log_error "Secrets" "Invalid secret format for $provider: $url"
-                    continue
-                fi
-                ;;
-            *)
-                log_warn "Unsupported provider: $provider"
-                continue
-                ;;
-        esac
-
-        # Source the provider module dynamically
-        source_provider_module "$provider"
-
-        # Determine the resolve function for the provider
-        local resolve_function="resolve_${provider}_secret"
-        if command -v "$resolve_function" > /dev/null; then
-            value=$("$resolve_function" "$key_vault_name" "$secret_name")
-        else
-            log_warn "No resolve function found for provider: $provider"
-            continue
-        fi
-
-        # Export the secret as an environment variable
-        if [[ -n "$value" ]]; then
+        # Resolve the secret value using resolve_secret_by_name
+        value=$(resolve_secret_by_name "$name" "$config_json")
+        if [[ $? -eq 0 && -n "$value" ]]; then
             echo "export $name=\"$value\"" >> "$secrets_env_file"
-            log_success "Secrets" "Resolved secret for $name from $provider."
+            log_success "Secrets" "Resolved secret for $name."
         else
-            log_error "Secrets" "Failed to resolve secret for $name from $provider."
+            log_error "Secrets" "Failed to resolve secret for $name."
         fi
     done
 
@@ -125,6 +90,71 @@ clean_up_files() {
             log_warn "Temporary file not found for cleanup: $file"
         fi
     done
+}
+
+# Resolve a secret value by name from the configuration
+resolve_secret_by_name() {
+    local secret_name="$1"
+    local config_json="$2"
+
+    if [[ -z "$secret_name" ]]; then
+        log_error "Secrets" "Secret name is required"
+        return 1
+    fi
+
+    if [[ -z "$config_json" ]]; then
+        log_error "Secrets" "Configuration is required"
+        return 1
+    fi
+
+    # Extract secrets section
+    local secrets
+    secrets=$(echo "$config_json" | jq -r '.config.secrets // empty')
+    if [[ -z "$secrets" || "$secrets" == "null" ]]; then
+        log_error "Secrets" "No secrets found in configuration"
+        return 1
+    fi
+
+    # Find the secret URL
+    local secret_url
+    secret_url=$(echo "$secrets" | jq -r ".[\"$secret_name\"] // empty")
+    if [[ -z "$secret_url" ]]; then
+        log_error "Secrets" "Secret '$secret_name' not found in configuration"
+        return 1
+    fi
+
+    # Resolve any environment variables in the URL
+    secret_url=$(resolve_env_vars "$secret_url")
+    if [[ -z "$secret_url" ]]; then
+        log_error "Secrets" "Failed to resolve environment variables in URL"
+        return 1
+    fi
+
+    # Extract provider and parts from URL
+    local provider key_vault_name secret_value
+    provider=$(echo "$secret_url" | cut -d '/' -f 1)
+    key_vault_name=$(echo "$secret_url" | cut -d '/' -f 2)
+    secret_value=$(echo "$secret_url" | cut -d '/' -f 3)
+
+    # Source the provider module
+    source_provider_module "$provider"
+
+    # Resolve the secret
+    local resolve_function="resolve_${provider}_secret"
+    if command -v "$resolve_function" > /dev/null; then
+        local value
+        value=$("$resolve_function" "$key_vault_name" "$secret_value")
+        if [[ -n "$value" ]]; then
+            echo "$value"
+            return 0
+        else
+            log_error "Secrets" "Failed to resolve secret value"
+            return 1
+        fi
+    else
+        log_error "Secrets" "No resolver found for provider: $provider"
+        return 1
+    fi
 }
 
 # Example usage:
