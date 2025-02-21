@@ -42,7 +42,7 @@ fetch_secrets() {
 
     # Create a JSON object with the secrets in the format expected by resolve_secret_by_name
     local config_json
-    config_json=$(echo "{ \"config\": { \"secrets\": $secrets_json } }")
+    config_json="{ \"config\": { \"secrets\": $secrets_json } }"
 
     # Process each secret in the JSON object
     echo "$secrets_json" | jq -c 'to_entries[]' | while IFS= read -r secret; do

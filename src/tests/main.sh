@@ -3,6 +3,7 @@
 # Main test entrypoint that runs inside the container
 
 # Source test helpers
+# shellcheck source=./test_helpers.sh disable=SC1091
 source "/home/udx/tests/test_helpers.sh"
 
 # Exit on any error

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Source test helpers
+# shellcheck source=../test_helpers.sh disable=SC1091
 source "/home/udx/tests/test_helpers.sh"
 
 # Test authentication commands
