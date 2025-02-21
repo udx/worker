@@ -203,6 +203,18 @@ apply_config() {
         return 1
     fi
 
+    # Extract secrets section from config
+    local secrets_json
+    secrets_json=$(echo "$config_json" | jq -r '.config.secrets // {}')
+
+    # Fetch and set secrets if any are defined
+    if [[ "$secrets_json" != "{}" ]]; then
+        if ! fetch_secrets "$secrets_json"; then
+            log_error "Config" "Failed to fetch and set secrets"
+            return 1
+        fi
+    fi
+
     log_success "Config" "Configuration successfully parsed and applied"
     return 0
 }

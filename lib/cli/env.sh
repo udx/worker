@@ -12,10 +12,10 @@ Manage environment variables and secrets
 Usage: worker env [command]
 
 Available Commands:
-  show        Show environment variables (excludes secrets)
+  show        Show environment variables
   set         Set an environment variable
   unset       Unset an environment variable
-  reload      Reload environment from configuration (same as 'config apply')
+  reload      Reload environment and secrets from configuration
   status      Show environment status
 
 Options:
@@ -29,7 +29,7 @@ Examples:
   worker env show --filter AWS_*     # Show only AWS variables
   worker env set MY_VAR "my value"   # Set a new variable
   worker env unset MY_VAR           # Remove a variable
-  worker env reload                 # Reload from config
+  worker env reload                 # Reload environment and secrets from config
 EOF
 }
 
@@ -375,6 +375,18 @@ env_handler() {
             if ! export_variables_from_config "$config_json"; then
                 log_error "Env" "Failed to export variables from configuration"
                 return 1
+            fi
+
+            # Extract secrets section from config
+            local secrets_json
+            secrets_json=$(echo "$config_json" | jq -r '.config.secrets // {}')
+
+            # Fetch and set secrets if any are defined
+            if [[ "$secrets_json" != "{}" ]]; then
+                if ! fetch_secrets "$secrets_json"; then
+                    log_error "Env" "Failed to fetch and set secrets"
+                    return 1
+                fi
             fi
 
             log_success "Env" "Environment successfully reloaded from configuration"

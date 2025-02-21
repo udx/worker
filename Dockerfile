@@ -133,7 +133,7 @@ RUN mkdir -p \
     ${WORKER_LIB_DIR} \
     ${WORKER_BIN_DIR} \
     ${WORKER_ETC_DIR} \
-    # Environment and secrets files directory
+    # Environment files directory
     ${WORKER_CONFIG_DIR}/environment.d \
     # User and config directories
     ${HOME}/.config/worker \
@@ -142,12 +142,9 @@ RUN mkdir -p \
     ${AWS_CONFIG_FILE%/*} \
     ${AZURE_CONFIG_DIR} && \
     # Create and set permissions for environment files
-    touch ${WORKER_CONFIG_DIR}/environment ${WORKER_CONFIG_DIR}/secrets && \
-    chown ${USER}:${USER} \
-        ${WORKER_CONFIG_DIR}/environment \
-        ${WORKER_CONFIG_DIR}/secrets && \
-    chmod 644 ${WORKER_CONFIG_DIR}/environment && \
-    chmod 600 ${WORKER_CONFIG_DIR}/secrets
+    touch ${WORKER_CONFIG_DIR}/environment && \
+    chown ${USER}:${USER} ${WORKER_CONFIG_DIR}/environment && \
+    chmod 644 ${WORKER_CONFIG_DIR}/environment
 
 # Copy worker files
 COPY bin/entrypoint.sh ${WORKER_BIN_DIR}/
@@ -188,8 +185,6 @@ RUN \
         ${WORKER_LIB_DIR}/process_manager.sh && \
     # Set runtime directories permissions
     chmod 775 ${WORKER_APP_DIR} ${WORKER_DATA_DIR} && \
-    # Set sensitive file permissions
-    chmod 600 ${WORKER_CONFIG_DIR}/secrets && \
     # Set home directory executable
     chmod 755 ${HOME}
 

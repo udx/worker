@@ -2,6 +2,8 @@
 
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
+# shellcheck source=${WORKER_LIB_DIR}/env_handler.sh disable=SC1091
+source "${WORKER_LIB_DIR}/env_handler.sh"
 
 # Dynamically source the required provider-specific modules
 source_provider_module() {
@@ -35,49 +37,14 @@ fetch_secrets() {
         return 1
     fi
 
-    # Create a temporary file to store environment variables
-    local secrets_env_file
-    secrets_env_file=$(mktemp /tmp/secret_vars.XXXXXX)
-    echo "# Secrets environment variables" > "$secrets_env_file"
-
-    # Create a JSON object with the secrets in the format expected by resolve_secret_by_name
-    local config_json
-    config_json="{ \"config\": { \"secrets\": $secrets_json } }"
-
-    # Process each secret in the JSON object
-    echo "$secrets_json" | jq -c 'to_entries[]' | while IFS= read -r secret; do
-        local name value
-        name=$(echo "$secret" | jq -r '.key')
-
-        # Check if the secret has a valid name
-        if [[ -z "$name" ]]; then
-            log_error "Secrets" "Secret name is missing or empty."
-            continue
-        fi
-
-        # Resolve the secret value using resolve_secret_by_name
-        value=$(resolve_secret_by_name "$name" "$config_json")
-        if [[ $? -eq 0 && -n "$value" ]]; then
-            echo "export $name=\"$value\"" >> "$secrets_env_file"
-            log_success "Secrets" "Resolved secret for $name."
-        else
-            log_error "Secrets" "Failed to resolve secret for $name."
-        fi
-    done
-
-    # Source the environment file if it exists
-    if [[ -s "$secrets_env_file" ]]; then
-        set -a
-        # shellcheck disable=SC1090
-        source "$secrets_env_file"
-        set +a
-        log_info "Secrets environment variables sourced successfully."
-    else
-        log_error "Secrets" "No secrets were written to the environment file."
+    # Resolve secrets and append them to environment file
+    if ! append_resolved_secrets "$secrets_json"; then
+        log_error "Secrets" "Failed to resolve and append secrets"
         return 1
     fi
 
-    clean_up_files "$secrets_env_file"
+    # Source the environment file to update current session
+    load_environment
 }
 
 # Clean up temporary files

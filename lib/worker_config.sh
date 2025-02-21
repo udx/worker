@@ -82,13 +82,12 @@ load_and_parse_config() {
 export_variables_from_config() {
     local config_json="$1"
 
-    # Extract environment variables and secrets
-    local env_vars secrets
+    # Extract only environment variables
+    local env_vars
     env_vars=$(echo "$config_json" | jq -r '.config.env // empty')
-    secrets=$(echo "$config_json" | jq -r '.config.secrets // empty')
 
-    if [[ -z "$env_vars" && -z "$secrets" ]]; then
-        log_info "No variables or secrets found in the configuration."
+    if [[ -z "$env_vars" ]]; then
+        log_info "No environment variables found in the configuration."
         return 0
     fi
 
@@ -98,15 +97,8 @@ export_variables_from_config() {
         generate_env_file
     fi
 
-    # Generate secrets file
-    if [[ -n "$secrets" && "$secrets" != "null" ]]; then
-        log_success "Worker configuration" "Found secrets in the configuration."
-        generate_secrets_file
-    fi
-
-    # Load both environment and secrets
+    # Load environment variables
     load_environment
-    load_secrets
 }
 
 # Function to extract a specific section from the JSON configuration
