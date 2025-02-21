@@ -80,8 +80,7 @@ cleanup_cred_files() {
     # If the value is a file path and exists, remove it
     if [[ -f "$creds_value" ]]; then
         log_info "Removing credential file for $provider: $creds_value"
-        rm -f "$creds_value"
-        if [[ $? -eq 0 ]]; then
+        if rm -f "$creds_value"; then
             log_success "Cleanup" "Removed credential file for $provider"
             return 0
         else
