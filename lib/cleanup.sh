@@ -7,6 +7,9 @@ source "${WORKER_LIB_DIR}/worker_config.sh"
 # shellcheck source=/dev/null
 source "${WORKER_LIB_DIR}/utils.sh"
 
+# Enable actors cleanup by default
+ACTORS_CLEANUP=${ACTORS_CLEANUP:-true}
+
 # Generic function to clean up authentication for any provider
 cleanup_provider() {
     local provider=$1
@@ -63,8 +66,41 @@ cleanup_provider() {
     fi
 }
 
+# Function to clean up credential files
+cleanup_cred_files() {
+    local provider=$1
+    local env_var_name="${provider^^}_CREDS"  # Convert to uppercase
+    local creds_value="${!env_var_name}"
+    
+    # Skip if no credentials value found
+    if [[ -z "$creds_value" ]]; then
+        return 0
+    fi
+    
+    # If the value is a file path and exists, remove it
+    if [[ -f "$creds_value" ]]; then
+        log_info "Removing credential file for $provider: $creds_value"
+        rm -f "$creds_value"
+        if [[ $? -eq 0 ]]; then
+            log_success "Cleanup" "Removed credential file for $provider"
+            return 0
+        else
+            log_error "Cleanup" "Failed to remove credential file for $provider"
+            return 1
+        fi
+    fi
+    
+    return 0
+}
+
 # Function to clean up actors based on the providers configured during authentication
 cleanup_actors() {
+    # Check if cleanup is enabled
+    if [[ "${ACTORS_CLEANUP,,}" != "true" ]]; then
+        log_info "Actors cleanup is disabled via ACTORS_CLEANUP environment variable"
+        return 0
+    fi
+
     # Skip cleanup if no providers were configured during authentication
     if [[ ${#configured_providers[@]} -eq 0 ]]; then
         return 0
@@ -77,6 +113,12 @@ cleanup_actors() {
     
     # Only clean up providers that were actually configured
     for provider in "${configured_providers[@]}"; do
+        # First cleanup any credential files
+        if cleanup_cred_files "$provider"; then
+            any_cleanup=true
+        fi
+        
+        # Then cleanup provider sessions
         case "$provider" in
             azure)
                 if cleanup_provider "az" "az logout" "az account show" "Azure"; then
