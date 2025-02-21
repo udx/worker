@@ -33,9 +33,6 @@ FAILED=0
 TEST_DIR="/home/udx/tests"
 cd "$TEST_DIR"
 
-# Make all test files executable
-chmod +x modules/*.sh
-
 # Don't exit on test failures
 set +e
 
