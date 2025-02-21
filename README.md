@@ -4,7 +4,7 @@
 
 **Secure, containerized environment for DevSecOps automation**
 
-[Quick Start](#quick-start) • [Documentation](#documentation) • [Development](#development) • [Contributing](#contributing)
+[Quick Start](#-quick-start) • [Documentation](#-documentation) • [Development](#️-development) • [Contributing](#-contributing)
 
 ## 🚀 Overview
 
