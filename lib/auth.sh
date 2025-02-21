@@ -1,10 +1,68 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Array to track configured providers
 declare -a configured_providers=()
+
+# Function to get env var names for a provider from actors JSON
+get_provider_env_vars() {
+    local provider=$1
+    local actors_json=$2
+    
+    # Get all env var names from actor creds that match ${VAR} pattern
+    # shellcheck disable=SC2016
+    echo "$actors_json" | jq -r ".[].creds" 2>/dev/null | \
+        grep -o '\${[^}]*}' | sed 's/[\${}]//g' || true
+}
+
+# Function to check if a provider is configured
+is_provider_configured() {
+    local provider=$1
+    local actors_json=$2
+    
+    # Get provider's actors
+    local provider_actors
+    provider_actors=$(echo "$actors_json" | jq -r "[.[] | select(.type | startswith(\"$provider\"))]" 2>/dev/null)
+    
+    if [ -z "$provider_actors" ] || [ "$provider_actors" = "[]" ]; then
+        return 1
+    fi
+    
+    # Get all possible env var names from actors
+    local env_vars
+    mapfile -t env_vars < <(get_provider_env_vars "$provider" "$provider_actors")
+    
+    # Check all possible env vars
+    for env_var in "${env_vars[@]}"; do
+        if [ -n "${!env_var}" ]; then
+            return 0
+        fi
+    done
+    
+    # Check each actor's credentials
+    while IFS= read -r actor; do
+        [ -z "$actor" ] && continue
+        
+        local creds
+        creds=$(echo "$actor" | jq -r '.creds' 2>/dev/null)
+        [ "$creds" = "null" ] && continue
+        
+        # Evaluate creds as a reference to an environment variable
+        if [[ "$creds" =~ ^\$\{(.+)\}$ ]]; then
+            local env_var_name="${BASH_REMATCH[1]}"
+            creds="${!env_var_name}"
+        fi
+        
+        # If we find any valid credentials, return success
+        if [ -n "$creds" ]; then
+            return 0
+        fi
+    done <<< "$(echo "$provider_actors" | jq -r '.[]')"
+    
+    return 1
+}
 
 # Function to authenticate actors
 authenticate_actors() {
@@ -61,7 +119,7 @@ authenticate_actors() {
         # Proceed only if creds are valid JSON
         if echo "$creds" | jq empty &>/dev/null; then
             log_info "Processing credentials for $provider"
-            auth_script="/usr/local/lib/auth/${provider}.sh"
+            auth_script="${WORKER_LIB_DIR}/auth/${provider}.sh"
             auth_function="${provider}_authenticate"
             
             if [[ -f "$auth_script" ]]; then

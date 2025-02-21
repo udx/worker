@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Function to authenticate Bitwarden using API key or master password
 #

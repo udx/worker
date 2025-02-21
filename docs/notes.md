@@ -1,11 +1,91 @@
-Creating a Non-Root User: Creating a non-root user inside the container helps to improve security by avoiding running processes as the root user. This can limit the potential damage in case of a security breach.
+# Container Development Best Practices
 
-Consistency: Using ARG for these values allows you to parameterize the Dockerfile, making it easier to build images with different users or permissions as needed. You can override these defaults during the build process if necessary.
+## User Management
 
-Customization: By defining these as arguments, you provide flexibility. For example, if you want to build the image in different environments where different user IDs are required, you can pass different values for UID and GID when building the Docker image.
+### Non-Root User Benefits
+- 🛡️ **Enhanced Security**: Limits potential damage from security breaches
+- 🔒 **Reduced Privileges**: Prevents unauthorized system modifications
+- 🔄 **Best Practice**: Follows container security principles
 
-Security: Running containers as a non-root user enhances security by limiting the potential damage that a compromised application can do. This is a good practice for reducing risks.
+### User Configuration
 
-Permissions: The UID and GID are important for managing file permissions. If files created or modified by the container need to be accessed by the host or other containers, consistent UIDs and GIDs help avoid permission issues.
+```dockerfile
+ARG USER=udx
+ARG UID=500
+ARG GID=500
 
-Container Environment: Within a container, the application user is not a system user but rather a user that the containerized application runs as. This user doesn't perform system administration tasks but operates with limited privileges within the container.
+RUN groupadd -g $GID $USER && \
+    useradd -u $UID -g $GID -m $USER
+```
+
+## Dockerfile Arguments
+
+### Benefits of Using ARGs
+- 🔧 **Parameterization**: Easy to customize builds
+- 🎯 **Flexibility**: Adapt to different environments
+- 🏗️ **Reusability**: Same Dockerfile, different configurations
+
+### Common ARGs
+```dockerfile
+ARG USER=udx
+ARG UID=500
+ARG GID=500
+ARG HOME=/home/udx
+```
+
+## Permission Management
+
+### UID/GID Importance
+- 📁 **File Access**: Consistent access across host and containers
+- 🤝 **Shared Resources**: Proper permissions for mounted volumes
+- 🔐 **Security**: Controlled access to resources
+
+### Best Practices
+1. Use consistent UID/GID across environments
+2. Document required permissions
+3. Verify file ownership after operations
+
+## Container Security
+
+### Running as Non-Root
+- Prevents privileged access
+- Limits system modification capabilities
+- Follows principle of least privilege
+
+### Security Checklist
+- [ ] Use non-root user
+- [ ] Set appropriate file permissions
+- [ ] Limit mounted volumes
+- [ ] Use read-only filesystems where possible
+
+## Environment Setup
+
+### Container User Context
+- Application-specific user
+- Limited privileges
+- No system administration capabilities
+
+### Directory Permissions
+```bash
+chown -R $USER:$USER /app
+chmod -R 755 /app
+```
+
+## Tips and Tricks
+
+1. **Testing User Setup**:
+   ```bash
+   docker run --rm -it myimage whoami
+   docker run --rm -it myimage id
+   ```
+
+2. **Debugging Permissions**:
+   ```bash
+   docker run --rm -it myimage ls -la /app
+   docker run --rm -it myimage stat /app
+   ```
+
+3. **Volume Mounting**:
+   ```bash
+   docker run -v $(pwd):/app:ro myimage  # Read-only mount
+   ```

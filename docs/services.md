@@ -1,35 +1,125 @@
-## Services Configuration
+# Service Configuration
 
-The `services.yaml` file contains a list of services to be managed by the worker. Each service is defined using the following structure:
+## Overview
+
+The UDX Worker uses `services.yaml` to define and manage multiple services. Each service can be configured with its own runtime settings, environment variables, and behavior policies.
+
+## File Location
+
+```bash
+/home/udx/.config/worker/services.yaml
+```
+
+## Configuration Structure
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `kind` | string | Yes | - | Must be `workerService` |
+| `version` | string | Yes | - | Must be `udx.io/worker-v1/service` |
+| `services` | array | Yes | - | List of service definitions |
+
+### Service Definition Fields
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | Yes | - | Unique service identifier |
+| `command` | string | Yes | - | Command to execute |
+| `ignore` | boolean | No | `false` | Skip service management |
+| `autostart` | boolean | No | `true` | Start on worker launch |
+| `autorestart` | boolean | No | `false` | Restart on failure |
+| `envs` | array | No | `[]` | Environment variables |
+
+## Basic Example
 
 ```yaml
----
 kind: workerService
 version: udx.io/worker-v1/service
 services:
-  - name: "<service_name>"
-    ignore: "<true/false>"
-    command: "<command_to_run>"
-    autostart: "<true/false>"
-    autorestart: "<true/false>"
+  - name: "web-server"
+    command: "python app.py"
+    autostart: true
+    autorestart: true
     envs:
-      - "<ENV_VAR_NAME>=<value>"
+      - "PORT=8080"
+      - "DEBUG=true"
 ```
 
-### Service Fields Explanation
+## Advanced Examples
 
-* `name`: Unique identifier for the service. This is used to reference and manage the service within the system.
+### Multiple Services
 
-* `ignore`: Determines whether the service should be ignored. If set to "true", the service will not be managed by the worker. The default value is "false", which means the service is considered for management.
+```yaml
+kind: workerService
+version: udx.io/worker-v1/service
+services:
+  - name: "api-server"
+    command: "node api/server.js"
+    autostart: true
+    autorestart: true
+    envs:
+      - "PORT=3000"
+      - "NODE_ENV=production"
 
-* `command`: The command that the service will execute. This could be a shell script or any executable along with its arguments.
+  - name: "worker-queue"
+    command: "python worker.py"
+    autostart: true
+    envs:
+      - "QUEUE_URL=redis://localhost:6379"
 
-* `autostart`: Indicates whether the service should start automatically when the worker starts. The default is "true", meaning the service will start automatically.
+  - name: "monitoring"
+    command: "./monitor.sh"
+    ignore: true  # Temporarily disabled
+```
 
-* `autorestart`: Specifies whether the service should automatically restart if it stops. If "true", the service will restart according to the policy defined by the worker management system. The default value is "false", indicating the service will not restart automatically.
+### Service with Complex Command
 
-* `envs`: An array of environment variables passed to the service in the format `KEY=value`. These variables are made available to the service at runtime.
+```yaml
+services:
+  - name: "data-processor"
+    command: "bash -c 'source .env && python -m processor.main --config=prod.json'"
+    autostart: true
+    autorestart: true
+    envs:
+      - "PYTHONPATH=/app"
+      - "LOG_LEVEL=info"
+```
 
-## Usage
+## Best Practices
 
-To use this configuration file, make sure to mount it with your application under `/home/udx/`. It doesn't matter where you mount it, it could be autodetected in any subdirectory if it's mounted correctly and named `services.yaml`.
+1. **Service Naming**
+   - Use descriptive, lowercase names
+   - Separate words with hyphens
+   - Keep names concise but meaningful
+
+2. **Command Definition**
+   - Use absolute paths when possible
+   - Quote commands with spaces or special characters
+   - Consider using shell scripts for complex commands
+
+3. **Environment Variables**
+   - Use uppercase for variable names
+   - Group related variables together
+   - Document required variables
+
+4. **Restart Policies**
+   - Enable `autorestart` for critical services
+   - Use `ignore` for maintenance or debugging
+   - Consider dependencies between services
+
+## Monitoring and Management
+
+Use the following CLI commands to manage services:
+
+```bash
+# List all services
+worker service list
+
+# Check specific service status
+worker service status web-server
+
+# View service logs
+worker service logs web-server
+
+# Restart a service
+worker service restart web-server
+```

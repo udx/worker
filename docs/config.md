@@ -1,69 +1,104 @@
-## Worker Configuration
+# Worker Configuration
 
-The `worker.yaml` configuration file is a crucial component for customizing the environment of the UDX Worker. It allows users to specify both environment variables and secrets that are essential for the worker's operations.
+## Overview
 
-### Structure
+The UDX Worker uses `worker.yaml` as its primary configuration file, allowing you to:
+- Define environment variables
+- Reference secrets from various providers
+- Configure worker behavior
 
-- **env**: This section define various environment variables that your worker needs to function.
+## File Location
 
-```yaml
-env:
-  AZURE_CLIENT_ID: "your-azure-client-id"
-  AZURE_TENANT_ID: "your-azure-tenant-id"
-  AZURE_SUBSCRIPTION_ID: "your-azure-subscription-id"
-  ...
+```bash
+/home/udx/.config/worker/worker.yaml
 ```
 
-- **secrets**: This section allows to reference secrets stored in secure locations.
+## Configuration Structure
+
+| Section | Purpose | Required |
+|---------|----------|----------|
+| `kind` | Configuration type identifier | Yes |
+| `version` | Schema version | Yes |
+| `config.env` | Environment variables | No |
+| `config.secrets` | Secret references | No |
+
+## Basic Example
 
 ```yaml
-secrets:
-  DB_PASSWORD: "aws/secrets-manager/db_password"
-  API_KEY: "gcp/my-project/api_key"
-  ...
-```
-
-Supported Providers
-
-1. Azure Key Vault
-
-```yaml
-  AZURE_CLIENT_ID: "azure/{key_vault_name}/{secret_name}"
-```
-
-- AWS Secrets Manager
-
-```yaml
-  AWS_ACCESS_KEY_ID: "aws/{directory}/{secret_name}"
-```
-
-- GCP Secret Manager
-
-```yaml
-  GCP_CREDS: "gcp/{project_id}/{secret_name}"
-```
-
-- Bitwarden Vault
-
-```yaml
-  BITWARDEN_TOKEN: "bitwarden/{vault_name}/{secret_name}"
-```
-
-
-### Config Example
-
-```yaml
----
 kind: workerConfig
 version: udx.io/worker-v1/config
 config:
   env:
     AZURE_CLIENT_ID: "12345678-1234-1234-1234-1234567890ab"
-
+    AWS_REGION: "us-west-2"
   secrets:
-    APP_CLIENT_SECRET: "azure/kv-example/clientSecret"
+    DB_PASSWORD: "aws/prod/db_password"
+    API_KEY: "azure/kv-prod/api-key"
 ```
 
-### Usage
+## Secret Provider References
 
-To use this configuration file, make sure to mount it with your application under `/home/udx/`. It doesn't matter where you mount it, it could be autodetected in any subdirectory if it's mounted correctly and named `worker.yaml`.
+### Azure Key Vault
+
+```yaml
+secrets:
+  CLIENT_SECRET: "azure/{vault_name}/{secret_name}"
+  API_KEY: "azure/kv-prod/api-key"
+```
+
+### AWS Secrets Manager
+
+```yaml
+secrets:
+  DB_PASSWORD: "aws/{path}/{secret_name}"
+  ACCESS_KEY: "aws/prod/access-key"
+```
+
+### Google Cloud Secret Manager
+
+```yaml
+secrets:
+  SERVICE_KEY: "gcp/{project_id}/{secret_name}"
+  AUTH_TOKEN: "gcp/my-project/auth-token"
+```
+
+### Bitwarden Vault
+
+```yaml
+secrets:
+  MASTER_KEY: "bitwarden/{vault_name}/{secret_name}"
+  LICENSE_KEY: "bitwarden/prod/license-key"
+```
+
+## Environment Variables
+
+```yaml
+config:
+  env:
+    # Cloud Provider Settings
+    AZURE_TENANT_ID: "tenant-id"
+    AWS_REGION: "us-west-2"
+    GCP_PROJECT: "my-project"
+    
+    # Application Settings
+    LOG_LEVEL: "info"
+    MAX_WORKERS: "5"
+    ENABLE_METRICS: "true"
+```
+
+## Best Practices
+
+1. **Secret Management**
+   - Never store sensitive values directly in `env`
+   - Use `secrets` section for sensitive data
+   - Reference secrets from appropriate providers
+
+2. **Environment Variables**
+   - Use `env` for non-sensitive configuration
+   - Keep values consistent across environments
+   - Document any required variables
+
+3. **File Handling**
+   - Keep configuration in version control (without sensitive data)
+   - Use different files for different environments
+   - Validate configuration before deployment

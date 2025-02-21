@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
+# shellcheck source=${WORKER_LIB_DIR}/env_handler.sh disable=SC1091
+source "${WORKER_LIB_DIR}/env_handler.sh"
 
 # Paths for configurations
-BUILT_IN_CONFIG="/usr/local/configs/worker/default.yaml"
-# Dynamically find user configuration in any subfolder of $HOME
-# shellcheck disable=SC2227
-USER_CONFIG=$(find "$HOME" -name 'worker.yaml' 2>/dev/null -print | head -n 1)
-MERGED_CONFIG="/usr/local/configs/worker/merged_worker.yaml"
+BUILT_IN_CONFIG="${WORKER_CONFIG_DIR}/worker.yaml"  # Built-in default config
+USER_CONFIG="${HOME}/.config/worker/worker.yaml"    # Optional user config
+MERGED_CONFIG="${WORKER_CONFIG_DIR}/worker.merged.yaml"  # Result of merging both configs
 
 # Ensure `yq` is available
 if ! command -v yq >/dev/null 2>&1; then
@@ -32,23 +32,33 @@ merge_worker_configs() {
         touch "$MERGED_CONFIG" || { log_error "Worker configuration" "Failed to create merged configuration file at $MERGED_CONFIG"; return 1; }
     fi
 
-    # Ensure built-in config exists
-    ensure_config_exists "$BUILT_IN_CONFIG" || return 1
+    # Ensure built-in config exists and has actors section
+    if ! ensure_config_exists "$BUILT_IN_CONFIG"; then
+        log_error "Worker configuration" "Built-in configuration not found"
+        return 1
+    fi
 
-    # If a user-provided configuration exists (and path is not empty), merge it
-    if [[ -f "$USER_CONFIG" && -n "$USER_CONFIG" ]]; then
-        log_success "Worker configuration" "User configuration detected at $USER_CONFIG"
+    # First copy built-in config (with actors) to merged config
+    if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
+        log_error "Worker configuration" "Failed to copy built-in configuration"
+        return 1
+    fi
 
-        if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$BUILT_IN_CONFIG" "$USER_CONFIG" > "$MERGED_CONFIG"; then
-            log_error "Worker configuration" "Failed to merge configurations. yq returned an error."
+    # If user config exists, merge env and secrets sections
+    if [[ -f "$USER_CONFIG" && -s "$USER_CONFIG" ]]; then
+        # Use yq to merge configs, preserving actors from built-in
+        if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$MERGED_CONFIG" "$USER_CONFIG" > "${MERGED_CONFIG}.tmp"; then
+            log_error "Worker configuration" "Failed to merge configurations"
             return 1
         fi
-    else
-        log_info "No worker configuration provided."
 
-        # Copy the built-in configuration to the merged configuration
-        if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
-            log_error "Worker configuration" "Failed to copy built-in configuration to merged configuration."
+        # Check if merge was successful
+        if [ -s "${MERGED_CONFIG}.tmp" ]; then
+            mv "${MERGED_CONFIG}.tmp" "$MERGED_CONFIG"
+            return 0
+        else
+            rm -f "${MERGED_CONFIG}.tmp"
+            log_error "Worker configuration" "Failed to merge configurations - empty result"
             return 1
         fi
     fi
@@ -72,20 +82,23 @@ load_and_parse_config() {
 export_variables_from_config() {
     local config_json="$1"
 
-    # Extract the `variables` section
-    local variables
-    variables=$(echo "$config_json" | jq -r '.config.env // empty')
-    if [[ -z "$variables" || "$variables" == "null" ]]; then
-        log_info "No variables found in the configuration."
+    # Extract only environment variables
+    local env_vars
+    env_vars=$(echo "$config_json" | jq -r '.config.env // empty')
+
+    if [[ -z "$env_vars" ]]; then
+        log_info "No environment variables found in the configuration."
         return 0
-    else
-        log_success "Worker configuration" "Found variables in the configuration. Exporting..."
     fi
 
-    # Iterate over variables and export them into the main shell
-    while IFS="=" read -r key value; do
-        eval "export $key=\"$value\""
-    done < <(echo "$variables" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+    # Generate environment file
+    if [[ -n "$env_vars" && "$env_vars" != "null" ]]; then
+        log_success "Worker configuration" "Found environment variables in the configuration."
+        generate_env_file
+    fi
+
+    # Load environment variables
+    load_environment
 }
 
 # Function to extract a specific section from the JSON configuration

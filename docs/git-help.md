@@ -1,73 +1,159 @@
-## Git Commands
+# Git Quick Reference
 
-### 1. Clean Ignored Files from Git
+## 🧹 Cleanup Operations
 
-Sometimes you may need to remove all files that are listed in your .gitignore from the repository's index but keep them in your working directory. This command helps you do that:
+### Clean Ignored Files
+Remove files from Git index while keeping them in working directory:
 
-```shell
+```bash
+# Remove from index
 git rm -r --cached .
-```
 
-- `rm -r --cached .`: This removes all files from the Git index, including ignored files.
-- `.`: Refers to the current directory, so it applies the command recursively to all files and directories.
-
-After running this command, you need to commit the changes to update the repository:
-
-```shell
+# Commit the cleanup
 git add .
-git commit -m "Cleaned up ignored files"
+git commit -m "chore: clean ignored files"
 ```
 
-### 2. Override the Last Commit
+> 💡 Useful when `.gitignore` is updated but files are still tracked
 
-If you want to modify the last commit (e.g., change the commit message or add new changes), you can amend it:
+## 🔄 Commit Management
 
-```shell
-git commit --amend
+### Amend Last Commit
+
+```bash
+# Change commit message only
+git commit --amend -m "new message"
+
+# Add staged changes to last commit
+git add .
+git commit --amend --no-edit
 ```
 
-- `--amend`: This option allows you to modify the most recent commit.
-- You will be prompted to edit the commit message in your default text editor. You can either update the message or keep it as is.
+⚠️ **Warning**: Don't amend pushed commits unless working alone
 
-> Note: Use --amend with caution, especially if the commit has already been pushed to a shared repository, as it rewrites history.
+### Force Push Changes
 
-### 3. Force Push Amended Commit
+```bash
+# Force push with lease (safer than -f)
+git push --force-with-lease
 
-After amending a commit, if the changes have already been pushed to a remote repository, you'll need to force push the updated commit:
-
-```shell
+# Force push (use with extreme caution)
 git push -f
 ```
 
-- `-f` or `--force`: This option forces Git to push the amended commit to the remote repository, rewriting history.
+> 🛡️ Always prefer `--force-with-lease` over `-f` to prevent overwriting others' work
 
-> Note: Force pushing can overwrite changes in the remote repository, so use it carefully, especially when working in a shared environment.
+## 🌿 Branch Operations
 
-### 4. Moving Unpushed Commits Between Branches
+### Move Commits Between Branches
 
-If you need to move an unpushed commit from one branch to another, you can use git cherry-pick. Here's an example of moving a commit from branch `UAT-69` to branch `1629`:
+```bash
+# 1. Find unpushed commits
+git log branch-name --not --remotes --oneline
 
-1. First, identify the unpushed commit on the source branch:
-```shell
-git log UAT-69 --not --remotes --oneline
-```
+# 2. Save current work
+git stash
 
-2. Note the commit hash from the output (e.g., `4cff367`)
+# 3. Switch and apply
+git checkout target-branch
+git cherry-pick <commit-hash>
 
-3. Switch to the target branch and stash any current changes:
-```shell
-git checkout 1629
-git stash  # if you have uncommitted changes
-```
-
-4. Cherry-pick the commit:
-```shell
-git cherry-pick 4cff367
-```
-
-5. Restore your stashed changes if any:
-```shell
+# 4. Restore work
 git stash pop
 ```
 
-> Note: The cherry-pick command creates a new commit on the target branch with the same changes but a different commit hash.
+## 🚀 Common Workflows
+
+### Feature Branch Workflow
+
+```bash
+# 1. Create feature branch
+git checkout -b feature/name
+
+# 2. Make changes and commit
+git add .
+git commit -m "feat: add new feature"
+
+# 3. Update with main
+git fetch origin
+git rebase origin/main
+
+# 4. Push changes
+git push -u origin feature/name
+```
+
+### Commit Message Format
+
+```bash
+# Format
+<type>(<scope>): <subject>
+
+# Types
+feat:     New feature
+fix:      Bug fix
+docs:     Documentation
+style:    Formatting
+refactor: Code restructure
+test:     Tests
+chore:    Maintenance
+```
+
+## 🔍 Inspection Commands
+
+### View Changes
+
+```bash
+# Show staged changes
+git diff --staged
+
+# Show changes in last commit
+git show HEAD
+
+# Show file history
+git log -p filename
+```
+
+### Branch Information
+
+```bash
+# List all branches
+git branch -vv
+
+# Show merged branches
+git branch --merged
+
+# Show unmerged branches
+git branch --no-merged
+```
+
+## ⚡ Tips and Tricks
+
+1. **Stash Management**:
+   ```bash
+   # Named stash
+   git stash save "feature work in progress"
+   
+   # List stashes
+   git stash list
+   
+   # Apply specific stash
+   git stash apply stash@{n}
+   ```
+
+2. **Quick Fixes**:
+   ```bash
+   # Undo last commit but keep changes
+   git reset --soft HEAD^
+   
+   # Discard all local changes
+   git reset --hard HEAD
+   ```
+
+3. **Search History**:
+   ```bash
+   # Search commit messages
+   git log --grep="keyword"
+   
+   # Search code changes
+   git log -S"code string"
+   ```

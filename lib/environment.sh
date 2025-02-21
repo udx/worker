@@ -2,16 +2,16 @@
 
 # Include necessary modules
 # shellcheck disable=SC1091
-source /usr/local/lib/auth.sh
+source "${WORKER_LIB_DIR}/auth.sh"
 # shellcheck disable=SC1091
-source /usr/local/lib/secrets.sh
+source "${WORKER_LIB_DIR}/secrets.sh"
 # shellcheck disable=SC1091
-source /usr/local/lib/cleanup.sh
+source "${WORKER_LIB_DIR}/cleanup.sh"
 # shellcheck disable=SC1091
-source /usr/local/lib/worker_config.sh
+source "${WORKER_LIB_DIR}/worker_config.sh"
 
 # shellcheck disable=SC1091
-source /usr/local/lib/utils.sh
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Main function to coordinate environment setup
 configure_environment() {

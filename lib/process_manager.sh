@@ -1,19 +1,16 @@
 #!/bin/bash
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Define paths
-DEFAULT_CONFIG_FILE="/usr/local/configs/worker/services.yaml"
-# Define the user-specific configuration path search
-# shellcheck disable=SC2227
-USER_CONFIG_PATH=$(find "$HOME" -name 'services.yaml' 2>/dev/null -print | head -n 1)
+USER_CONFIG_PATH="${HOME}/.config/worker/services.yaml"
+CONFIG_FILE="${USER_CONFIG_PATH}"
 
-# Use the first user-specific config found; if none, use the default
-CONFIG_FILE="${USER_CONFIG_PATH:-$DEFAULT_CONFIG_FILE}"
-COMMON_TEMPLATE_FILE="/usr/local/configs/supervisor/common.conf"
-PROGRAM_TEMPLATE_FILE="/usr/local/configs/supervisor/program.conf"
-FINAL_CONFIG="/usr/local/configs/supervisor/supervisord.conf"
+# Supervisor configuration paths
+COMMON_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/common.conf"
+PROGRAM_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/program.conf"
+FINAL_CONFIG="${WORKER_CONFIG_DIR}/supervisor/supervisord.conf"
 
 # Set up signal handling
 trap 'handle_supervisor_signals SIGTERM' SIGTERM
@@ -21,10 +18,18 @@ trap 'handle_supervisor_signals SIGINT' SIGINT
 
 # Main execution
 main() {
+    # Check if user config exists
+    if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
+        log_info "No services configuration found at ${USER_CONFIG_PATH}."
+        log_info "Run 'worker service' for information about service configuration"
+        exit 0
+    fi
+
     log_info "Process Manager" "Starting process manager..."
     
     if ! configure_and_execute_services; then
         log_error "Process Manager" "Failed to configure and start services"
+        log_info "Run 'worker service' for information about service configuration"
         exit 1
     fi
 
@@ -157,8 +162,34 @@ handle_supervisor_signals() {
 start_supervisor() {
     log_info "Starting supervisord..."
     
-    # Start supervisord in non-daemon mode
-    exec supervisord -n
+    # Check if supervisor is already running
+    if pgrep -f "supervisord" >/dev/null; then
+        # Reload configuration
+        if supervisorctl reread && supervisorctl update; then
+            log_info "Supervisor configuration reloaded"
+            return 0
+        fi
+        log_error "Failed to reload supervisor configuration"
+        return 1
+    fi
+    
+    # Start supervisord in daemon mode
+    supervisord
+    
+    # Wait for supervisor to be ready
+    local max_attempts=10
+    local attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if supervisorctl status >/dev/null 2>&1; then
+            log_info "Supervisor is ready"
+            return 0
+        fi
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+    
+    log_error "Failed to start supervisord"
+    return 1
 }
 
 # Function to check for service configurations
@@ -215,5 +246,7 @@ configure_and_execute_services() {
     start_supervisor
 }
 
-# Execute main function
-main
+# Only run main if not in service mode
+if [ -z "$WORKER_SERVICE_MODE" ]; then
+    main
+fi

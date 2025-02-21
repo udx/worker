@@ -28,15 +28,28 @@ build:
 		printf "$(COLOR_BLUE)$(SYM_ARROW) Starting Docker build...$(COLOR_RESET)\n"; \
 		if [ "$(MULTIPLATFORM)" = "true" ]; then \
 			printf "$(COLOR_BLUE)$(SYM_ARROW) Building for multiple platforms: [linux/amd64, linux/arm64]$(COLOR_RESET)\n"; \
-			docker buildx build --progress=plain \
-				--platform linux/amd64,linux/arm64 \
-				-t $(DOCKER_IMAGE) \
-				--load . 2>&1 | grep -E "$$filter" || exit 1; \
+			if [ "$(DEBUG)" = "true" ]; then \
+				docker buildx build --progress=plain \
+					--platform linux/amd64,linux/arm64 \
+					-t $(DOCKER_IMAGE) \
+					--load .; \
+			else \
+				docker buildx build --progress=plain \
+					--platform linux/amd64,linux/arm64 \
+					-t $(DOCKER_IMAGE) \
+					--load . 2>&1 | grep -E "$$filter" || exit 1; \
+			fi; \
 		else \
 			printf "$(COLOR_BLUE)$(SYM_ARROW) Building for local platform$(COLOR_RESET)\n"; \
-			DOCKER_BUILDKIT=1 docker build \
-				--progress=plain \
-				-t $(DOCKER_IMAGE) . 2>&1 | grep -E "$$filter" || exit 1; \
+			if [ "$(DEBUG)" = "true" ]; then \
+				DOCKER_BUILDKIT=1 docker build \
+					--progress=plain \
+					-t $(DOCKER_IMAGE) .; \
+			else \
+				DOCKER_BUILDKIT=1 docker build \
+					--progress=plain \
+					-t $(DOCKER_IMAGE) . 2>&1 | grep -E "$$filter" || exit 1; \
+			fi; \
 		fi && \
 		printf "$(COLOR_GREEN)$(SYM_SUCCESS) Docker image build completed$(COLOR_RESET)\n" || \
 		{ printf "$(COLOR_RED)$(SYM_ERROR) Docker build failed$(COLOR_RESET)\n"; exit 1; }'
@@ -89,9 +102,13 @@ clean:
 test: clean
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Running tests...$(COLOR_RESET)\n"
 	@$(MAKE) run \
-		VOLUMES="$(TEST_WORKER_CONFIG):/home/$(USER)/worker.yaml:ro $(TEST_SERVICES_CONFIG):/home/$(USER)/services.yaml:ro $(TESTS_TASKS_DIR):/home/$(USER)/tasks:ro $(TESTS_MAIN_SCRIPT):/home/$(USER)/main.sh:ro" \
-		COMMAND="/home/$(USER)/main.sh" || exit 1
-	@$(MAKE) log FOLLOW_LOGS=true || exit 1
+		VOLUMES="$(PWD)/src/tests:/home/udx/tests $(PWD)/src/examples/simple-config/.config/worker/worker.yaml:/home/udx/.config/worker/worker.yaml $(PWD)/src/examples/simple-service/.config/worker/services.yaml:/home/udx/.config/worker/services.yaml $(PWD)/src/examples/simple-service/index.sh:/home/udx/index.sh" \
+		COMMAND="/home/udx/tests/main.sh"
+	@printf "$(COLOR_BLUE)$(SYM_ARROW) Following test output...$(COLOR_RESET)\n"
+	@docker logs -f $(CONTAINER_NAME) & LOGS_PID=$$!; \
+	docker wait $(CONTAINER_NAME) > /dev/null; EXIT_CODE=$$?; \
+	kill $$LOGS_PID 2>/dev/null || true; \
+	exit $$EXIT_CODE
 	@$(MAKE) clean || exit 1
 	@printf "$(COLOR_GREEN)$(SYM_SUCCESS) Tests completed successfully$(COLOR_RESET)\n"
 

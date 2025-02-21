@@ -5,8 +5,8 @@
 # Example usage of the function
 # azure_authenticate "/path/to/your/azure_creds.json"
 
-# shellcheck source=/usr/local/lib/utils.sh disable=SC1091
-source /usr/local/lib/utils.sh
+# shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
+source "${WORKER_LIB_DIR}/utils.sh"
 
 # Function to authenticate Azure accounts
 azure_authenticate() {
