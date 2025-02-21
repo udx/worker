@@ -39,7 +39,7 @@ RUN apt-get update && \
     tzdata=2025a-2ubuntu1 \
     curl=8.12.0+git20250209.89ed161+ds-1ubuntu1 \
     bash=5.2.37-1ubuntu1 \
-    apt-utils=2.9.30 \
+    apt-utils=2.9.30ubuntu1 \
     gettext=0.23.1-1 \
     gnupg=2.4.4-2ubuntu22 \
     ca-certificates=20241223 \
