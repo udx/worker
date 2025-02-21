@@ -1,86 +1,187 @@
-## UDX Worker
+# UDX Worker
 
-The UDX Worker simplifies DevSecOps by providing a secure, containerized environment for handling secrets and running automation tasks. This repository contains the UDX Worker Docker image, designed for secure and reliable automation tasks based on 12-factor methodology. UDX Worker environments are ephemeral and adhere to zero-trust principles and methodology, ensuring maximum security and reliability.
+[![Docker Pulls](https://img.shields.io/docker/pulls/usabilitydynamics/udx-worker.svg)](https://hub.docker.com/r/usabilitydynamics/udx-worker) [![License](https://img.shields.io/github/license/udx/worker.svg)](LICENSE) [![Documentation](https://img.shields.io/badge/docs-udx.dev-blue.svg)](https://udx.dev/worker)
 
-### Deployment
+**Secure, containerized environment for DevSecOps automation**
 
-1. Make sure Docker installed.
+[Quick Start](#quick-start) • [Documentation](#documentation) • [Development](#development) • [Contributing](#contributing)
 
-2. Pull the Docker image:
+## 🚀 Overview
 
-```shell
-docker pull usabilitydynamics/udx-worker:latest
-```
+UDX Worker is a containerized solution that simplifies DevSecOps by providing:
 
-3. Run the Docker container:
+- 🔒 **Secure Environment**: Built on zero-trust principles
+- 🤖 **Automation Support**: Streamlined task execution
+- 🔑 **Secret Management**: Secure handling of sensitive data
+- 📦 **12-Factor Compliance**: Modern application practices
+- ♾️ **CI/CD Ready**: Seamless pipeline integration
 
-```shell
+## 🏃 Quick Start
+
+### Prerequisites
+
+- Docker 20.10 or later
+- Make (for development)
+
+### Example 1: Simple Service
+
+```bash
+# Create project structure
+mkdir -p my-worker/.config/worker
+cd my-worker
+
+# Create a simple service script
+cat > index.sh <<'EOF'
+#!/bin/bash
+echo "Starting service..."
+trap 'echo "Shutting down..."; exit 0' SIGTERM
+while true; do
+    echo "[$(date)] Service running..."
+    sleep 5
+done
+EOF
+chmod +x index.sh
+
+# Create service configuration
+cat > .config/worker/services.yaml <<'EOF'
+kind: workerService
+version: udx.io/worker-v1/service
+services:
+  - name: "index"
+    command: "/home/udx/index.sh"
+    autostart: true
+    autorestart: true
+EOF
+
+# Run the worker
 docker run -d \
-  --name my-app \
-  -v $(pwd):/home/udx \
+  --name my-service \
+  -v "$(pwd):/home/udx" \
   usabilitydynamics/udx-worker:latest
+
+# View service logs
+docker logs -f my-service
 ```
 
-_Make sure to mount the current directory to `/home/udx` in the container._
+### Example 2: Secrets Management with Authorization
 
-### Development
+```bash
+# Define secrets configuration
+cat > .config/worker/worker.yaml <<'EOF'
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  secrets:
+    API_KEY: "azure/key-vault/api-key"
+    DB_PASS: "aws/secrets/database"
+EOF
 
-1. Clone the Repository
+# Create base64-encoded Azure credentials
+AZURE_CREDS=$(echo '{
+  "client_id": "your-client-id",
+  "client_secret": "your-client-secret",
+  "tenant_id": "your-tenant-id"
+}' | base64)
 
-```shell
+# Run with cloud provider credentials
+docker run -d \
+  --name my-secrets \
+  -v "$(pwd)/.config/worker:/home/udx/.config/worker" \
+  -e AZURE_CREDS="${AZURE_CREDS}" \
+  usabilitydynamics/udx-worker:latest
+
+# Verify authorization and secrets
+docker exec my-secrets worker auth verify
+docker exec my-secrets worker env get API_KEY
+```
+
+See [Authorization Guide](docs/authorization.md) for supported providers and credential formats (JSON, Base64, File Path).
+
+### Development Setup
+
+```bash
+# Clone and build
 git clone https://github.com/udx/worker.git
 cd worker
-```
-
-2. Build Image
-
-```shell
 make build
-```
 
-3. Start the container
+# Run example service
+make run VOLUMES="$(pwd)/src/examples/simple-service:/home/udx"
 
-```shell
-make run
-```
+# View logs
+make log FOLLOW_LOGS=true
 
-_Interactively_
-
-```shell
-make run-it
-```
-
-4. Run tests
-
-```shell
+# Run tests
 make test
 ```
 
-_For more details on available commands_
+More examples available in [src/examples](src/examples).
 
-```shell
-make
+## 📚 Documentation
+
+### Core Concepts
+- [Authorization](docs/authorization.md) - Credential management
+- [Configuration](docs/config.md) - Worker setup
+- [Services](docs/services.md) - Service management
+- [CLI Reference](docs/cli.md) - Command line usage
+
+### Additional Resources
+- [Container Structure](docs/container-structure.md) - Directory layout
+- [Development Notes](docs/notes.md) - Best practices
+- [Git Tips](docs/git-help.md) - Version control helpers
+
+## 🛠️ Development
+
+```bash
+# Clone repository
+git clone https://github.com/udx/worker.git
+cd worker
+
+# Build image
+make build
+
+# Run container
+make run      # Detached mode
+make run-it   # Interactive mode
+
+# Run tests
+make test
+
+# View all commands
+make help
 ```
 
-### Docs
+## 🤝 Contributing
 
-- [Authorization](/docs/authorization.md)
-- [CLI](/docs/cli.md)
-- [Config](/docs/config.md)
-- [Git Help](/docs/git.md)
-- [Notes](/docs/notes.md)
-- [Services](/docs/services.md)
+We welcome contributions! Here's how you can help:
 
-### Resources
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to your branch
+5. Open a Pull Request
+
+Please ensure your PR:
+- Follows our coding standards
+- Includes appropriate tests
+- Updates relevant documentation
+
+## 🔗 Resources
 
 - [Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker)
 - [Documentation](https://udx.dev/worker)
-- [Marketing Page](https://udx.io/products/udx-worker)
+- [Product Page](https://udx.io/products/udx-worker)
 
-### Contributing
+## 🎯 Custom Development
 
-Contributions are welcome! If you find any issues or have suggestions for improvements, please fork the repository and submit a pull request.
+Need specific features or customizations?
+[Contact our team](https://udx.io/) for professional development services.
 
-### Custom Development
+## 📄 License
 
-Looking for a unique feature for your next project? [Hire us!](https://udx.io/)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+<div align="center">
+Built with ❤️ by <a href="https://udx.io">UDX</a>
+</div>
