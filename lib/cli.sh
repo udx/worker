@@ -35,12 +35,17 @@ get_available_commands() {
             
             # Extract description from help function
             if grep -q "${name}_help()" "$module"; then
-                description=$(grep -A 5 "${name}_help()" "$module" | 
-                             grep -v "${name}_help()" | 
-                             grep -v "^{" |
-                             grep -v "cat << EOF" |
+                # Try to find description from comment before help function
+                description=$(grep -B 2 "${name}_help()" "$module" | 
+                             grep "^#" | 
+                             grep -v "Show help" | 
                              head -n 1 | 
-                             sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                             sed 's/^#[[:space:]]*//;s/[[:space:]]*$//')
+                
+                # If no description found, use a generic one
+                if [ -z "$description" ]; then
+                    description="Manage ${name} operations"
+                fi
                 commands[$name]="$description"
             fi
         fi

@@ -21,7 +21,7 @@ main() {
     # Check if user config exists
     if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
         log_info "No services configuration found at ${USER_CONFIG_PATH}."
-        log_info "Run 'worker help service' for information about service configuration"
+        log_info "Run 'worker service' for information about service configuration"
         exit 0
     fi
 
@@ -29,7 +29,7 @@ main() {
     
     if ! configure_and_execute_services; then
         log_error "Process Manager" "Failed to configure and start services"
-        log_info "Run 'worker help service' for information about service configuration"
+        log_info "Run 'worker service' for information about service configuration"
         exit 1
     fi
 

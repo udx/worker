@@ -70,7 +70,7 @@ service_handler() {
     if [ "$cmd" != "init" ]; then
         if [ ! -f "$SERVICES_CONFIG_FILE" ]; then
             log_warn "Service" "No services configuration found"
-            log_info "Service" "Run 'worker help service' for information about service configuration"
+            log_info "Service" "Run 'worker service' for information about service configuration"
             return 1
         fi
     fi
