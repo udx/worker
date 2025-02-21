@@ -101,11 +101,14 @@ clean:
 
 test: clean
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Running tests...$(COLOR_RESET)\n"
-	@chmod +x src/tests/*.sh
 	@$(MAKE) run \
-		INTERACTIVE=true \
 		VOLUMES="$(PWD)/src/tests:/home/udx/tests $(PWD)/src/examples/simple-config/.config/worker/worker.yaml:/home/udx/.config/worker/worker.yaml $(PWD)/src/examples/simple-service/.config/worker/services.yaml:/home/udx/.config/worker/services.yaml $(PWD)/src/examples/simple-service/index.sh:/home/udx/index.sh" \
-		COMMAND="/home/udx/tests/main.sh" || exit 1
+		COMMAND="/home/udx/tests/main.sh"
+	@printf "$(COLOR_BLUE)$(SYM_ARROW) Following test output...$(COLOR_RESET)\n"
+	@docker logs -f $(CONTAINER_NAME) & LOGS_PID=$$!; \
+	docker wait $(CONTAINER_NAME) > /dev/null; EXIT_CODE=$$?; \
+	kill $$LOGS_PID 2>/dev/null || true; \
+	exit $$EXIT_CODE
 	@$(MAKE) clean || exit 1
 	@printf "$(COLOR_GREEN)$(SYM_SUCCESS) Tests completed successfully$(COLOR_RESET)\n"
 
