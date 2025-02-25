@@ -3,6 +3,7 @@
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
 source "${WORKER_LIB_DIR}/worker_config.sh"
+source "${WORKER_LIB_DIR}/secrets.sh"
 
 # Show help for env command
 env_help() {
@@ -17,6 +18,7 @@ Available Commands:
   unset       Unset an environment variable
   reload      Reload environment and secrets from configuration
   status      Show environment status
+  resolve     Resolve a secret reference value
 
 Options:
   --format    Output format (text/json)
@@ -30,6 +32,7 @@ Examples:
   worker env set MY_VAR "my value"   # Set a new variable
   worker env unset MY_VAR           # Remove a variable
   worker env reload                 # Reload environment and secrets from config
+  worker env resolve gcp/my-project/secret # Resolve a secret reference
 EOF
 }
 
@@ -302,6 +305,48 @@ show_status() {
     esac
 }
 
+# Description: Resolve a secret reference value
+# Example: worker env resolve gcp/my-project/secret
+resolve_secret_ref() {
+    local secret_ref="$1"
+
+    if [[ -z "$secret_ref" ]]; then
+        log_error "Env" "Secret reference is required"
+        return 1
+    fi
+
+    # Extract provider and parts from URL
+    local provider key_vault_name secret_value
+    provider=$(echo "$secret_ref" | cut -d '/' -f 1)
+    key_vault_name=$(echo "$secret_ref" | cut -d '/' -f 2)
+    secret_value=$(echo "$secret_ref" | cut -d '/' -f 3)
+
+    if [[ -z "$provider" || -z "$key_vault_name" || -z "$secret_value" ]]; then
+        log_error "Env" "Invalid secret reference format. Expected: provider/vault/secret"
+        return 1
+    fi
+
+    # Source the provider module
+    source_provider_module "$provider"
+
+    # Resolve the secret
+    local resolve_function="resolve_${provider}_secret"
+    if command -v "$resolve_function" > /dev/null; then
+        local value
+        value=$("$resolve_function" "$key_vault_name" "$secret_value")
+        if [[ -n "$value" ]]; then
+            echo "$value"
+            return 0
+        else
+            log_error "Env" "Failed to resolve secret value"
+            return 1
+        fi
+    else
+        log_error "Env" "No resolver found for provider: $provider"
+        return 1
+    fi
+}
+
 # Handle environment commands
 env_handler() {
     local cmd=$1
@@ -396,6 +441,9 @@ env_handler() {
             ;;
         help)
             env_help
+            ;;
+        resolve)
+            resolve_secret_ref "$1"
             ;;
         *)
             log_error "Env" "Unknown command: $cmd"
