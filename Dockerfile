@@ -37,7 +37,7 @@ USER root
 RUN apt-get update && \
     apt-get install -y \
     tzdata=2025a-2ubuntu1 \
-    curl=8.12.0+git20250209.89ed161+ds-1ubuntu1 \
+    curl=8.12.1-2ubuntu1 \
     bash=5.2.37-1ubuntu1 \
     apt-utils=2.9.30ubuntu1 \
     gettext=0.23.1-1 \
@@ -48,7 +48,7 @@ RUN apt-get update && \
     zip=3.0-14ubuntu2 \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
-    vim=2:9.1.0861-1ubuntu1 \
+    vim=2:9.1.0967-1ubuntu3 \
     python3.12=3.12.9-1 \
     python3-pip=25.0+dfsg-1 \
     supervisor=4.2.5-3 && \
@@ -91,17 +91,8 @@ RUN ARCH=$(uname -m) && \
     ./aws/install && \
     rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
 
-# Install Azure CLI with manual GPG key retrieval as root
-ENV GNUPGHOME=/root/.gnupg
-ENV AZURE_CONFIG_DIR=/usr/local/configs/azure
-RUN mkdir -p $GNUPGHOME && \
-    chmod 700 $GNUPGHOME && \
-    gpg --keyserver keyserver.ubuntu.com --recv-keys EB3E94ADBE1229CF && \
-    gpg --export EB3E94ADBE1229CF | tee /usr/share/keyrings/microsoft-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ jammy main" | tee /etc/apt/sources.list.d/azure-cli.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=2.69.0-1~jammy && \
-    apt-get clean && \
+# Install Azure CLI using Microsoft's script
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Bitwarden CLI (architecture-aware)
