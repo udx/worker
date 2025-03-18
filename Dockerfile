@@ -57,7 +57,9 @@ RUN apt-get update && \
     /opt/az/bin/pip install --no-cache-dir azure-cli && \
     ln -s /opt/az/bin/az /usr/local/bin/az && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    rm -rf /tmp/* /var/tmp/* && \
+    mkdir -p /etc/apt/sources.list.d && \
+    chmod 755 /etc/apt/sources.list.d
 
 # Configure the timezone
 RUN echo $TZ > /etc/timezone && \
