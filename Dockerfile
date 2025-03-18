@@ -53,11 +53,16 @@ RUN apt-get update && \
     python3.13-venv=3.13.2-2 \
     python3-pip=25.0+dfsg-1 \
     supervisor=4.2.5-3 && \
+    # Install Azure CLI in venv with optimizations for scanning
     python3.13 -m venv /opt/az && \
-    /opt/az/bin/pip install --no-cache-dir azure-cli && \
+    /opt/az/bin/pip install --no-cache-dir azure-cli-core azure-cli && \
     ln -s /opt/az/bin/az /usr/local/bin/az && \
+    # Clean up pip cache and temp files
+    rm -rf /root/.cache/pip && \
+    find /opt/az -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
     apt-get clean && \
     rm -rf /tmp/* /var/tmp/* && \
+    # Set up sources.list.d for child images
     mkdir -p /etc/apt/sources.list.d && \
     chmod 755 /etc/apt/sources.list.d
 
