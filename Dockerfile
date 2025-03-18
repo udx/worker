@@ -37,9 +37,9 @@ USER root
 RUN apt-get update && \
     apt-get install -y \
     tzdata=2025a-2ubuntu1 \
-    curl=8.12.1-2ubuntu1 \
+    curl=8.12.1-3ubuntu1 \
     bash=5.2.37-1ubuntu1 \
-    apt-utils=2.9.30ubuntu1 \
+    apt-utils=2.9.33 \
     gettext=0.23.1-1 \
     gnupg=2.4.4-2ubuntu22 \
     ca-certificates=20241223 \
@@ -49,11 +49,22 @@ RUN apt-get update && \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
     vim=2:9.1.0967-1ubuntu3 \
-    python3.12=3.12.9-1 \
+    python3.13=3.13.2-2 \
+    python3.13-venv=3.13.2-2 \
     python3-pip=25.0+dfsg-1 \
     supervisor=4.2.5-3 && \
+    # Install Azure CLI in venv with optimizations for scanning
+    python3.13 -m venv /opt/az && \
+    /opt/az/bin/pip install --no-cache-dir azure-cli-core azure-cli && \
+    ln -s /opt/az/bin/az /usr/local/bin/az && \
+    # Clean up pip cache and temp files
+    rm -rf /root/.cache/pip && \
+    find /opt/az -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    rm -rf /tmp/* /var/tmp/* && \
+    # Set up sources.list.d for child images
+    mkdir -p /etc/apt/sources.list.d && \
+    chmod 755 /etc/apt/sources.list.d
 
 # Configure the timezone
 RUN echo $TZ > /etc/timezone && \
@@ -90,10 +101,6 @@ RUN ARCH=$(uname -m) && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
-
-# Install Azure CLI using Microsoft's script
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Bitwarden CLI (architecture-aware)
 RUN ARCH=$(uname -m) && \
@@ -163,7 +170,11 @@ RUN \
         ${HOME} \
         ${CLOUDSDK_CONFIG} \
         ${AWS_CONFIG_FILE%/*} \
-        ${AZURE_CONFIG_DIR} && \
+        ${AZURE_CONFIG_DIR} \
+        /opt/az && \
+    # Set Azure CLI permissions
+    chmod -R 755 /opt/az/bin && \
+    chmod -R 700 ${AZURE_CONFIG_DIR} && \
     # Set directory permissions
     find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
     # Set base file permissions
