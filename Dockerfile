@@ -36,21 +36,21 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y \
-    tzdata=2025a-2ubuntu1 \
+    tzdata=2025b-1ubuntu1 \
     curl=8.12.1-3ubuntu1 \
     bash=5.2.37-1ubuntu1 \
-    apt-utils=2.9.33 \
+    apt-utils=3.0.0 \
     gettext=0.23.1-1 \
-    gnupg=2.4.4-2ubuntu22 \
+    gnupg2=2.4.4-2ubuntu23 \
     ca-certificates=20241223 \
     lsb-release=12.1-1 \
     jq=1.7.1-3build1 \
     zip=3.0-14ubuntu2 \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
-    vim=2:9.1.0967-1ubuntu3 \
-    python3.13=3.13.2-2 \
-    python3.13-venv=3.13.2-2 \
+    vim=2:9.1.0967-1ubuntu4 \
+    python3.13=3.13.2-3	\
+    python3.13-venv=3.13.2-3 \
     python3-pip=25.0+dfsg-1 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
