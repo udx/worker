@@ -7,6 +7,7 @@
 
 echo "Starting task..."
 # Intentional syntax error
+# shellcheck disable=SC1073,SC1072
 if then
   echo "This will not run"
 fi
