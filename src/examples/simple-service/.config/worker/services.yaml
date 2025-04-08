@@ -3,7 +3,32 @@ kind: workerService
 version: udx.io/worker-v1/service
 
 services:
-  - name: "index"
-    command: "/home/udx/index.sh"
+  # Example 1: Long-running service
+  - name: "10-long-running"
+    command: "/home/udx/10_long_running.sh"
     autostart: true
-    autorestart: true
+    autorestart: true   # Keeps running (✅ RUNNING)
+
+  # Example 2: One-shot task with clean exit
+  - name: "20-clean-exit"
+    command: "/home/udx/20_clean_exit.sh"
+    autostart: true
+    autorestart: false  # Uses worker service stop (⛔ STOPPED)
+
+  # Example 3: Task with error, no retry
+  - name: "30-syntax-error"
+    command: "/home/udx/30_syntax_error.sh"
+    autostart: true
+    autorestart: false  # Exits with error (💀 FATAL)
+
+  # Example 4: Service with retries
+  - name: "40-connection-error"
+    command: "/home/udx/40_connection_error.sh"
+    autostart: true
+    autorestart: true   # Retries on error (🔄 RETRY → 💀 FATAL)
+
+  # Example 5: Task with retries
+  - name: "50-rapid-exit"
+    command: "/home/udx/50_rapid_exit.sh"
+    autostart: true
+    autorestart: true   # Retries on any exit (🔄 RETRY → 💀 FATAL)

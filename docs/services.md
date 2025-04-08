@@ -106,6 +106,55 @@ services:
    - Use `ignore` for maintenance or debugging
    - Consider dependencies between services
 
+## Service Status
+
+When running `worker service list`, services show the following status indicators:
+
+| Symbol | Status | Description |
+|--------|---------|-------------|
+| ✅ | RUNNING | Service is running normally |
+| ⛔ | STOPPED | Service was stopped with `worker service stop` |
+| 💀 | FATAL | Service exited (any exit code) |
+| 🔄 | RETRY | Service is retrying (with autorestart: true) |
+| ⚠️ | STARTING | Service is starting up |
+
+### Service Types
+
+1. **Long-running Services**
+   ```yaml
+   - name: "web-server"
+     command: "python server.py"
+     autorestart: true    # Restarts on exit
+   ```
+   - Shows as RUNNING (✅) while active
+   - Shows as RETRY (🔄) then FATAL (💀) if it keeps failing
+
+2. **One-shot Tasks**
+   ```yaml
+   - name: "setup"
+     command: "./setup.sh"
+     autorestart: false   # Runs once
+   ```
+   - Use `worker service stop` for clean completion (⛔)
+   - Otherwise shows as FATAL (💀) after exit
+
+Note: Exit codes (0 or non-zero) don't affect the final status. What matters is:
+- Whether the service keeps running (RUNNING ✅)
+- How it stops (STOPPED ⛔ vs FATAL 💀)
+
+Example:
+```bash
+# Long-running service and one-shot task
+$ worker service list
+✅ service1    RUNNING   pid 123   0:01:23
+⛔ service2    STOPPED   Apr 08    11:30 AM
+
+# Long-running service and failed task
+$ worker service list
+✅ service1    RUNNING   pid 123   0:01:23
+💀 service2    FATAL    Apr 08    11:30 AM
+```
+
 ## Monitoring and Management
 
 Use the following CLI commands to manage services:
