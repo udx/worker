@@ -124,7 +124,8 @@ list_services() {
     # Get supervisor status and running services
     local supervisor_status
     local supervisor_running=false
-    if supervisor_status=$(supervisorctl status 2>&1); then
+    supervisor_status=$(supervisorctl status 2>&1)
+    if ! echo "$supervisor_status" | grep -q "unix:///var/run/supervisor.sock no such file"; then
         supervisor_running=true
     fi
 
@@ -167,23 +168,44 @@ list_services() {
                         local name status pid uptime
                         read -r name status pid uptime <<< "$line"
                         
-                        # Use different symbols based on status
+                        # Use different symbols based on supervisor status
                         local symbol="⚠️"
+                        local display_status="$status"
                         case "$status" in
-                            RUNNING) symbol="✅";;
-                            STOPPED) symbol="⛔";;
-                            FATAL)   symbol="💀";;
-                            *)       symbol="⚠️";;
+                            RUNNING) 
+                                symbol="✅"
+                                ;;
+                            STOPPED) 
+                                symbol="⛔"
+                                display_status="STOPPED"
+                                ;;
+                            FATAL)   
+                                symbol="💀"
+                                display_status="FATAL"
+                                ;;
+                            BACKOFF)
+                                symbol="🔄"
+                                display_status="RETRY"
+                                ;;
+                            *)       
+                                symbol="⚠️"
+                                ;;
                         esac
-                        printf "%-2s %-15s %-8s %-6s %-12s\n" "$symbol" "$name" "$status" "$pid" "$uptime"
+                        printf "%-2s %-15s %-8s %-6s %-12s\n" "$symbol" "$name" "$display_status" "$pid" "$uptime"
                     fi
                 done <<< "$supervisor_status"
             else
                 log_info "Service" "No running services"
             fi
         else
-            log_info "Service" "Supervisor is not running"
-            log_info "Service" "Use 'worker service start <name>' to start a service"
+            # Check if we have any error messages that indicate service failures
+            if echo "$supervisor_status" | grep -q "error\|FATAL\|BACKOFF\|UNKNOWN"; then
+                log_warn "Service" "Some services have failed:"
+                echo "$supervisor_status"
+            else
+                log_info "Service" "Supervisor is not running"
+                log_info "Service" "Use 'worker service start <name>' to start a service"
+            fi
         fi
         log_info "Service" "Use 'worker service config' to view service configuration"
     fi

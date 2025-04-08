@@ -79,6 +79,14 @@ parse_service_info() {
         return
     fi
 
+    # Set startretries based on autorestart
+    local startretries
+    if [ "$autorestart" = "true" ]; then
+        startretries=3  # Default supervisor behavior
+    else
+        startretries=0  # Don't retry if autorestart is false
+    fi
+
     # Add an additional newline for better separation and readability
     echo -e "\n" >> "$FINAL_CONFIG"
     
@@ -86,6 +94,7 @@ parse_service_info() {
         s|\${command}|$command|g; \
         s|\${autostart}|$autostart|g; \
         s|\${autorestart}|$autorestart|g; \
+        s|\${startretries}|$startretries|g; \
         s|\${envs}|$envs|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
 }
 
