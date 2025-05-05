@@ -3,7 +3,8 @@ name: Build and Test Docker Image
 
 on:
   push:
-    branches-ignore: latest
+    branches-ignore:
+      - latest
     paths:
       - '.github/workflows/build-and-test.yml'
       - 'Dockerfile'
