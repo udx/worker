@@ -35,22 +35,22 @@ USER root
 # Install necessary packages
 # hadolint ignore=DL3015
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
     tzdata=2025b-1ubuntu1 \
     curl=8.12.1-3ubuntu1 \
-    bash=5.2.37-1ubuntu1 \
+    bash=5.2.37-1.1ubuntu1 \
     apt-utils=3.0.0 \
     gettext=0.23.1-1 \
     gnupg2=2.4.4-2ubuntu23 \
     ca-certificates=20241223 \
     lsb-release=12.1-1 \
-    jq=1.7.1-3build1 \
+    jq=1.7.1-3ubuntu1 \
     zip=3.0-14ubuntu2 \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
     vim=2:9.1.0967-1ubuntu4 \
-    python3.13=3.13.2-3	\
-    python3.13-venv=3.13.2-3 \
+    python3.13=3.13.3-1	\
+    python3.13-venv=3.13.3-1 \
     python3-pip=25.0+dfsg-1 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
@@ -75,7 +75,7 @@ RUN echo $TZ > /etc/timezone && \
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v4.45.1/yq_linux_${ARCH}.tar.gz | tar xz && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v4.45.2/yq_linux_${ARCH}.tar.gz | tar xz && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
@@ -83,9 +83,9 @@ RUN ARCH=$(uname -m) && \
 ENV CLOUDSDK_CONFIG=/usr/local/configs/gcloud
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-510.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-520.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-510.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-520.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
@@ -192,6 +192,9 @@ RUN \
 
 # Set up supervisor configuration
 RUN ln -sf ${WORKER_CONFIG_DIR}/supervisor/supervisord.conf /etc/supervisord.conf
+
+# Copy .bashrc directly to user's home
+COPY etc/home/.bashrc "/home/${USER}/.bashrc"
 
 # Switch to the user directory
 WORKDIR ${HOME}
