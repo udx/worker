@@ -8,6 +8,7 @@
 .idea/
 .vscode/
 *.iml
+.cache
 
 # Environment secrets
 .udx

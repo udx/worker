@@ -15,13 +15,38 @@ generate_env_file() {
         log_error "Environment" "Failed to load configuration"
         return 1
     fi
+
+    log_info "Environment" "Loading environment variables from configuration"
     
-    # Extract and evaluate environment variables
-    {
-        # Extract environment variables
-        echo "$config" | yq eval '.config.env | to_entries | .[] | "export " + .key + "=\"" + .value + "\""' -
-    } > "$WORKER_ENV_FILE"
+    # Create the environment file
+    touch "$WORKER_ENV_FILE"
     
+    # Process each environment variable
+    while IFS= read -r entry; do
+        # Extract key and value using string manipulation instead of regex
+        if [[ $entry == export* ]]; then
+            # Remove 'export ' prefix
+            local kv_pair=${entry#export }
+            # Extract key (everything before =)
+            local key=${kv_pair%%=*}
+            # Extract value (everything after = and remove quotes)
+            local value=${kv_pair#*=}
+            value=${value//\"/}
+            value=${value#\"}
+            value=${value%\"}
+            
+            # Check if the environment variable already exists
+            if [[ -z "${!key+x}" ]]; then
+                # Variable doesn't exist in environment, add it from config
+                echo "export $key=\"$value\"" >> "$WORKER_ENV_FILE"
+            else
+                # Variable exists in environment, use that value instead
+                local env_value="${!key}"
+                echo "export $key=\"$env_value\"" >> "$WORKER_ENV_FILE"
+                log_info "Environment" "Detected [$key] in container environment - using runtime value instead of config value"
+            fi
+        fi
+    done < <(echo "$config" | yq eval '.config.env | to_entries | .[] | "export " + .key + "=\"" + .value + "\""' -)
 }
 
 # Append resolved secrets to environment file
