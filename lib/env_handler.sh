@@ -42,7 +42,8 @@ generate_env_file() {
                 echo "export $key=\"$value\"" >> "$WORKER_ENV_FILE"
             else
                 # Variable exists in environment, use that value instead
-                local env_value="$(printenv "$key")"
+                local env_value
+                env_value="$(printenv "$key")"
                 echo "export $key=\"$env_value\"" >> "$WORKER_ENV_FILE"
                 log_info "Environment" "Detected [$key] in container environment - using runtime value instead of config value"
             fi
