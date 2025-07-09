@@ -39,16 +39,16 @@ jobs:
           driver: docker-container
 
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3.1.11
+        uses: gittools/actions/gitversion/setup@v4.0.0
         with:
-          versionSpec: "6.0.0"
+          versionSpec: "6.1.0"
 
       - name: Clear GitVersion Cache
         run: rm -rf .git/gitversion_cache
 
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v3.1.11
+        uses: gittools/actions/gitversion/execute@v4.0.0
         with:
           useConfigFile: true
           configFilePath: ci/git-version.yml
