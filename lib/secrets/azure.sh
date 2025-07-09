@@ -10,20 +10,20 @@ resolve_azure_secret() {
     local secret_value
     
     if [ -z "$key_vault_name" ] || [ -z "$secret_name" ]; then
-        log_error "Azure" "Invalid Azure Key Vault name or secret name"
+        log_error "Azure" "Invalid Azure Key Vault name or secret name" >&2
         return 1
     fi
     
     # Retrieve the secret value using Azure CLI with detailed logging
-    log_info "Azure" "Retrieving secret from Azure Key Vault: vault_name=$key_vault_name, secret_name=$secret_name"
+    log_info "Azure" "Retrieving secret from Azure Key Vault: vault_name=$key_vault_name, secret_name=$secret_name" >&2
     if ! secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query value -o tsv 2>&1); then
-        log_error "Azure" "Failed to retrieve secret from Azure Key Vault: vault_name=$key_vault_name, secret_name=$secret_name"
+        log_error "Azure" "Failed to retrieve secret from Azure Key Vault: vault_name=$key_vault_name, secret_name=$secret_name" >&2
         log_error "Azure" "Azure CLI output: $secret_value"
         return 1
     fi
     
     if [ -z "$secret_value" ]; then
-        log_error "Azure" "Secret value is empty for $key_vault_name/$secret_name"
+        log_error "Azure" "Secret value is empty for $key_vault_name/$secret_name" >&2
         return 1
     fi
     
