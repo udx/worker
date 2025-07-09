@@ -35,13 +35,14 @@ generate_env_file() {
             value=${value#\"}
             value=${value%\"}
             
-            # Check if the environment variable already exists
-            if [[ -z "${!key+x}" ]]; then
+            # Check if the environment variable is exported (available in the environment)
+            # We use printenv to check if it's truly in the environment, not just a shell variable
+            if ! printenv "$key" > /dev/null 2>&1; then
                 # Variable doesn't exist in environment, add it from config
                 echo "export $key=\"$value\"" >> "$WORKER_ENV_FILE"
             else
                 # Variable exists in environment, use that value instead
-                local env_value="${!key}"
+                local env_value="$(printenv "$key")"
                 echo "export $key=\"$env_value\"" >> "$WORKER_ENV_FILE"
                 log_info "Environment" "Detected [$key] in container environment - using runtime value instead of config value"
             fi
