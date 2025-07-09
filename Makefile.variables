@@ -1,6 +1,6 @@
 # Variables
 IMAGE_NAME ?= usabilitydynamics/udx-worker
-TAG ?= latest
+TAG ?= test
 DOCKER_IMAGE := $(IMAGE_NAME):$(TAG)
 CONTAINER_NAME ?= udx-worker-container
 ENV_FILE ?= .env
