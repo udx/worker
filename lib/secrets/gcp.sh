@@ -11,7 +11,7 @@ resolve_gcp_secret() {
 
     # Validate input arguments
     if [[ -z "$project_id" || -z "$secret_name" ]]; then
-        log_error "GCP Secret Manager" "Invalid GCP project ID or secret name. project_id: $project_id, secret_name: $secret_name"
+        log_error "GCP Secret Manager" "Invalid GCP project ID or secret name. project_id: $project_id, secret_name: $secret_name" >&2
         return 1
     fi
 
@@ -19,14 +19,14 @@ resolve_gcp_secret() {
 
     # Retrieve the latest version of the secret
     if ! secret_value=$(gcloud secrets versions access latest --secret="$secret_name" --project="$project_id" 2>/tmp/gcp_secret_error.log); then
-        log_error "GCP Secret Manager" "Failed to retrieve secret from GCP Secret Manager for secret: $secret_name"
-        log_error "GCP CLI output: $(cat /tmp/gcp_secret_error.log)"
+        log_error "GCP Secret Manager" "Failed to retrieve secret from GCP Secret Manager for secret: $secret_name" >&2
+        log_error "GCP CLI output: $(cat /tmp/gcp_secret_error.log)" >&2
         return 1
     fi
 
     # Check if the secret value is empty
     if [[ -z "$secret_value" ]]; then
-        log_error "GCP Secret Manager" "Secret value is empty for secret: $secret_name in project: $project_id"
+        log_error "GCP Secret Manager" "Secret value is empty for secret: $secret_name in project: $project_id" >&2
         return 1
     fi
 

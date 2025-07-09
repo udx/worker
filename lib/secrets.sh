@@ -11,9 +11,14 @@ source_provider_module() {
     local module_path="${WORKER_LIB_DIR}/secrets/${provider}.sh"
 
     if [[ -f "$module_path" ]]; then
-        # shellcheck source=${WORKER_LIB_DIR}/secrets/${provider}.sh disable=SC1091
-        source "$module_path"
-        log_info "Loaded module for provider: $provider"
+        # Redirect all output to /dev/null during sourcing
+        {
+            # shellcheck source=${WORKER_LIB_DIR}/secrets/${provider}.sh disable=SC1091
+            source "$module_path"
+            # Log after sourcing, but don't let it contaminate stdout during secret resolution
+            # The > /dev/null ensures no output goes to stdout from this block
+            log_info "Loaded module for provider: $provider"
+        } > /dev/null
     else
         log_warn "No module found for provider: $provider"
     fi
