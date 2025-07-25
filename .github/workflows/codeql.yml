@@ -3,11 +3,9 @@ name: "CodeQL and Linter Analysis"
 
 "on":
   push:
-    branches: [ "main" ]
+    branches: [ "latest" ]
   pull_request:
-    branches: [ "main" ]
-  schedule:
-    - cron: '30 1 * * 0'
+    branches: [ "latest" ]
 
 permissions:
   actions: read
