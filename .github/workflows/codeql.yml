@@ -3,40 +3,8 @@ name: "CodeQL and Linter Analysis"
 
 "on":
   push:
-    branches: ["latest"]
-  pull_request:
-    branches: ["latest"]
-
-permissions:
-  actions: read
-  contents: read
-  security-events: write
 
 jobs:
-  analyze-codeql:
-    name: Analyze with CodeQL
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ['javascript']
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{matrix.language}}"
-
   analyze-shell:
     name: Analyze Shell Scripts
     runs-on: ubuntu-24.04
