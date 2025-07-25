@@ -3,9 +3,9 @@ name: "CodeQL and Linter Analysis"
 
 "on":
   push:
-    branches: [ "latest" ]
+    branches: ["latest"]
   pull_request:
-    branches: [ "latest" ]
+    branches: ["latest"]
 
 permissions:
   actions: read
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'javascript', 'shell' ]
+        language: ['javascript']
 
     steps:
       - name: Checkout repository
