@@ -44,7 +44,7 @@ RUN apt-get update && \
     gnupg2=2.4.4-2ubuntu23 \
     ca-certificates=20241223 \
     lsb-release=12.1-1 \
-    jq=1.7.1-3ubuntu1 \
+    jq=1.7.1-3ubuntu1.1 \
     zip=3.0-14ubuntu2 \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
@@ -68,7 +68,7 @@ RUN apt-get update && \
 
 # Configure the timezone
 RUN echo $TZ > /etc/timezone && \
-    # rm /etc/localtime && \
+    rm /etc/localtime && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
