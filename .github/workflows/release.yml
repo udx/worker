@@ -141,7 +141,7 @@ jobs:
           git config --global user.name "UDX Worker"
 
       - name: Download SBOM Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sbom
 
