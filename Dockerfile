@@ -20,7 +20,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WORKER_BIN_DIR=/usr/local/worker/bin \
     WORKER_ETC_DIR=/usr/local/worker/etc \
     # Add worker bin to PATH
-    PATH=/usr/local/worker/bin:${PATH} 
+    PATH=/usr/local/worker/bin:${PATH} \
+    # Default envs
+    ACTORS_CLEANUP=false
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
