@@ -43,6 +43,19 @@ gcp_authenticate() {
     # Use jq to create a valid JSON with the modified privateKey
     jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
     '{client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$temp_creds_file"
+
+    # Set GOOGLE_APPLICATION_CREDENTIALS only if ACTORS_CLEANUP is disabled
+    if [ "$ACTORS_CLEANUP" = false ]; then
+        if [ -f "$GCP_CREDS" ]; then
+            # If GCP_CREDS is a file path and exists, use it directly
+            export GOOGLE_APPLICATION_CREDENTIALS="$GCP_CREDS"
+        else
+            # Otherwise create and use a local copy
+            mkdir -p "$HOME/creds"
+            cat "$creds_json" > "$HOME/creds/gcp_creds.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$HOME/creds/gcp_creds.json"
+        fi
+    fi
     
     log_info "GCP Authentication" "Authenticating GCP service account..."
     if ! gcloud auth activate-service-account "$clientEmail" --key-file="$temp_creds_file" >/dev/null 2>&1; then

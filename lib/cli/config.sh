@@ -52,8 +52,6 @@ config_show() {
         esac
         i=$((i + 1))
     done
-
-    log_info "Config" "Current configuration:"
     
     # Check if user config exists
     if [ ! -f "$USER_CONFIG" ] || [ ! -s "$USER_CONFIG" ]; then
