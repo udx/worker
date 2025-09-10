@@ -44,8 +44,12 @@ gcp_authenticate() {
     jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
     '{client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$temp_creds_file"
 
-    # Set GOOGLE_APPLICATION_CREDENTIALS if ACTORS_CLEANUP is false
-    if [ "$ACTORS_CLEANUP" = false ]; then
+    # Set GOOGLE_APPLICATION_CREDENTIALS based on conditions
+    if [ -f "$GCP_CREDS" ]; then
+        # If GCP_CREDS is a file path and exists, use it directly
+        export GOOGLE_APPLICATION_CREDENTIALS="$GCP_CREDS"
+    elif [ "$ACTORS_CLEANUP" = false ]; then
+        # Otherwise, if ACTORS_CLEANUP is false, create and use a local copy
         mkdir -p "$HOME/creds"
         cat "$creds_json" > "$HOME/creds/gcp_creds.json"
         export GOOGLE_APPLICATION_CREDENTIALS="$HOME/creds/gcp_creds.json"
