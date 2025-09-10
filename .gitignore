@@ -24,3 +24,6 @@ dist/
 
 # Ignore Prettier configuration overrides for development
 .prettierignore
+
+# Configuration files
+.config

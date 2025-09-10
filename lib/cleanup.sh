@@ -7,9 +7,6 @@ source "${WORKER_LIB_DIR}/worker_config.sh"
 # shellcheck source=/dev/null
 source "${WORKER_LIB_DIR}/utils.sh"
 
-# Enable actors cleanup by default
-ACTORS_CLEANUP=${ACTORS_CLEANUP:-true}
-
 # Generic function to clean up authentication for any provider
 cleanup_provider() {
     local provider=$1

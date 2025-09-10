@@ -31,6 +31,11 @@ configure_environment() {
         return 1
     fi
 
+    # Set default envs
+    if [[ -z "${ACTORS_CLEANUP:-}" ]]; then
+        export ACTORS_CLEANUP=true
+    fi
+
     # Extract and authenticate actors
     local actors
     actors=$(get_config_section "$resolved_config" "actors")

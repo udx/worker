@@ -20,17 +20,18 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WORKER_BIN_DIR=/usr/local/worker/bin \
     WORKER_ETC_DIR=/usr/local/worker/etc \
     # Add worker bin to PATH
-    PATH=/usr/local/worker/bin:${PATH} \
-    # Cloud SDK configurations
-    CLOUDSDK_CONFIG=/usr/local/configs/gcloud \
-    AWS_CONFIG_FILE=/usr/local/configs/aws \
-    AZURE_CONFIG_DIR=/usr/local/configs/azure
+    PATH=/usr/local/worker/bin:${PATH}
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Set user to root for installation
 USER root
+
+# Set config paths
+ENV AWS_CONFIG_FILE=${HOME}/.config/aws
+ENV AZURE_CONFIG_DIR=${HOME}/.config/azure
+ENV CLOUDSDK_CONFIG=${HOME}/.config/gcloud
 
 # Install necessary packages
 # hadolint ignore=DL3015
@@ -49,8 +50,8 @@ RUN apt-get update && \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
     vim=2:9.1.0967-1ubuntu4 \
-    python3.13=3.13.3-1ubuntu0.2 \
-    python3.13-venv=3.13.3-1ubuntu0.2 \
+    python3.13=3.13.3-1ubuntu0.3 \
+    python3.13-venv=3.13.3-1ubuntu0.3 \
     python3-pip=25.0+dfsg-1ubuntu0.1 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
@@ -75,12 +76,11 @@ RUN echo $TZ > /etc/timezone && \
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_${ARCH}.tar.gz | tar xz && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_${ARCH}.tar.gz | tar xz && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
-ENV CLOUDSDK_CONFIG=/usr/local/configs/gcloud
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
     curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-532.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
@@ -95,7 +95,6 @@ RUN ARCH=$(uname -m) && \
 ENV PATH=$PATH:/google-cloud-sdk/bin
 
 # Install AWS CLI (architecture-aware)
-ENV AWS_CONFIG_FILE=/usr/local/configs/aws
 RUN ARCH=$(uname -m) && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
@@ -136,9 +135,10 @@ RUN mkdir -p \
     # User and config directories
     ${HOME}/.config/worker \
     # Cloud SDK config directories
-    ${CLOUDSDK_CONFIG} \
-    ${AWS_CONFIG_FILE%/*} \
-    ${AZURE_CONFIG_DIR} && \
+    ${HOME}/.config/gcloud \
+    ${HOME}/.config/gcloud/credentials \
+    ${HOME}/.config/aws \
+    ${HOME}/.config/azure && \
     # Create and set permissions for environment files
     touch ${WORKER_CONFIG_DIR}/environment && \
     chown ${USER}:${USER} ${WORKER_CONFIG_DIR}/environment && \
@@ -168,13 +168,12 @@ RUN \
         ${WORKER_LIB_DIR} \
         ${WORKER_BIN_DIR} \
         ${HOME} \
-        ${CLOUDSDK_CONFIG} \
-        ${AWS_CONFIG_FILE%/*} \
-        ${AZURE_CONFIG_DIR} \
         /opt/az && \
     # Set Azure CLI permissions
     chmod -R 755 /opt/az/bin && \
-    chmod -R 700 ${AZURE_CONFIG_DIR} && \
+    # Set cloud config directory permissions
+    chmod -R 700 ${HOME}/.config/gcloud/credentials && \
+    chmod -R 700 ${HOME}/.config/azure && \
     # Set directory permissions
     find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
     # Set base file permissions
