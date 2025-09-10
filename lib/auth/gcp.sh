@@ -47,7 +47,7 @@ gcp_authenticate() {
     # Set GOOGLE_APPLICATION_CREDENTIALS if ACTORS_CLEANUP is false
     if [ "$ACTORS_CLEANUP" = false ]; then
         mkdir -p "$HOME/creds"
-        echo $creds_content > "$HOME/creds/gcp_creds.json"
+        cat "$creds_json" > "$HOME/creds/gcp_creds.json"
         export GOOGLE_APPLICATION_CREDENTIALS="$HOME/creds/gcp_creds.json"
     fi
     
