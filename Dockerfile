@@ -137,6 +137,7 @@ RUN mkdir -p \
     # Cloud SDK config directories
     ${HOME}/.config/gcloud \
     ${HOME}/.config/gcloud/credentials \
+    ${HOME}/.config/gcloud/logs \
     ${HOME}/.config/aws \
     ${HOME}/.config/azure && \
     # Create and set permissions for environment files
@@ -173,6 +174,7 @@ RUN \
     chmod -R 755 /opt/az/bin && \
     # Set cloud config directory permissions
     chmod -R 700 ${HOME}/.config/gcloud/credentials && \
+    chmod -R 755 ${HOME}/.config/gcloud/logs && \
     chmod -R 700 ${HOME}/.config/azure && \
     # Set directory permissions
     find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
