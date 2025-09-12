@@ -20,18 +20,18 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WORKER_BIN_DIR=/usr/local/worker/bin \
     WORKER_ETC_DIR=/usr/local/worker/etc \
     # Add worker bin to PATH
-    PATH=/usr/local/worker/bin:${PATH}
+    PATH=/usr/local/worker/bin:${PATH} \
+    # Config paths
+    AWS_CONFIG_FILE=/usr/local/configs/aws \
+    AZURE_CONFIG_DIR=/usr/local/configs/azure \
+    CLOUDSDK_CONFIG=/usr/local/configs/gcloud \
+    CLOUDSDK_CORE_DISABLE_FILE_LOGGING=true
 
 # Set the shell with pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Set user to root for installation
 USER root
-
-# Set config paths
-ENV AWS_CONFIG_FILE=${HOME}/.config/aws
-ENV AZURE_CONFIG_DIR=${HOME}/.config/azure
-ENV CLOUDSDK_CONFIG=${HOME}/.config/gcloud
 
 # Install necessary packages
 # hadolint ignore=DL3015
@@ -135,11 +135,11 @@ RUN mkdir -p \
     # User and config directories
     ${HOME}/.config/worker \
     # Cloud SDK config directories
-    ${HOME}/.config/gcloud \
-    ${HOME}/.config/gcloud/credentials \
-    ${HOME}/.config/gcloud/logs \
-    ${HOME}/.config/aws \
-    ${HOME}/.config/azure && \
+    ${CLOUDSDK_CONFIG} \
+    ${CLOUDSDK_CONFIG}/credentials \
+    ${CLOUDSDK_CONFIG}/logs \
+    ${AWS_CONFIG_FILE%/*} \
+    ${AZURE_CONFIG_DIR} && \
     # Create and set permissions for environment files
     touch ${WORKER_CONFIG_DIR}/environment && \
     chown ${USER}:${USER} ${WORKER_CONFIG_DIR}/environment && \
@@ -169,13 +169,18 @@ RUN \
         ${WORKER_LIB_DIR} \
         ${WORKER_BIN_DIR} \
         ${HOME} \
+        # Set cloud config directory permissions
+        ${CLOUDSDK_CONFIG} \
+        ${AWS_CONFIG_FILE%/*} \
+        ${AZURE_CONFIG_DIR} \
+        # Set az permissions
         /opt/az && \
     # Set Azure CLI permissions
     chmod -R 755 /opt/az/bin && \
-    # Set cloud config directory permissions
-    chmod -R 700 ${HOME}/.config/gcloud/credentials && \
-    chmod -R 755 ${HOME}/.config/gcloud/logs && \
-    chmod -R 700 ${HOME}/.config/azure && \
+    chmod -R 700 ${AZURE_CONFIG_DIR} && \
+    # Set gcloud permissions
+    chmod -R 700 ${CLOUDSDK_CONFIG}/credentials && \
+    chmod -R 755 ${CLOUDSDK_CONFIG}/logs && \
     # Set directory permissions
     find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
     # Set base file permissions
