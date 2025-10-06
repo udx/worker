@@ -49,10 +49,10 @@ RUN apt-get update && \
     zip=3.0-14ubuntu2 \
     unzip=6.0-28ubuntu6 \
     nano=8.3-1 \
-    vim=2:9.1.0967-1ubuntu4 \
+    vim=2:9.1.0967-1ubuntu4.1 \
     python3.13=3.13.3-1ubuntu0.3 \
     python3.13-venv=3.13.3-1ubuntu0.3 \
-    python3-pip=25.0+dfsg-1ubuntu0.1 \
+    python3-pip=25.0+dfsg-1ubuntu0.2 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
     python3.13 -m venv /opt/az && \
@@ -83,9 +83,9 @@ RUN ARCH=$(uname -m) && \
 # Install Google Cloud SDK (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-532.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-541.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-532.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-541.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
