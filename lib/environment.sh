@@ -36,6 +36,10 @@ configure_environment() {
         export ACTORS_CLEANUP=true
     fi
 
+    if [[ -z "${LOCAL_CREDS_DIR:-}" ]]; then
+        export LOCAL_CREDS_DIR="$HOME/.config/worker/creds"
+    fi
+
     # Extract and authenticate actors
     local actors
     actors=$(get_config_section "$resolved_config" "actors")

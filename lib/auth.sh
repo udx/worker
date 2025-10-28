@@ -79,6 +79,10 @@ authenticate_actors() {
     
     mapfile -t actors_array < "$actors_file"
     rm -f "$actors_file"
+
+    # Create local creds dir
+    log_info "Pre-creating local creds dir"
+    mkdir -p "$LOCAL_CREDS_DIR"
     
     for actor in "${actors_array[@]}"; do
         local type provider creds auth_script auth_function

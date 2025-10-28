@@ -3,13 +3,14 @@
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
 
-# Function to authenticate GCP service accounts
+# Function to set ADC credentials
 #
 # Example usage of the function
 # gcp_authenticate "/path/to/your/gcp_creds.json"
+# gcp_authenticate "${GCP_CREDS}"
 #
 
-# Function to authenticate GCP service accounts
+# Function to set ADC credentials
 gcp_authenticate() {
     local creds_json="$1"
     
@@ -20,6 +21,12 @@ gcp_authenticate() {
     if [[ -z "$creds_content" ]]; then
         log_error "GCP Authentication" "No GCP credentials provided."
         return 1
+    fi
+    
+    # If GOOGLE_APPLICATION_CREDENTIALS already set, do not override
+    if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+        log_info "GCP Authentication" "GOOGLE_APPLICATION_CREDENTIALS already set, skipping authentication."
+        return 0
     fi
     
     # Extract necessary fields from the JSON credentials
@@ -34,44 +41,31 @@ gcp_authenticate() {
         return 1
     fi
     
-    # Adjust privateKey formatting
-    # Replace "\\n" with actual new line, handle BEGIN and END markers
-    privateKey=$(echo "$privateKey" | sed 's/\\n/\n/g' | sed 's/- /\n-/g' | sed 's/ -/-\n/g')
-    
-    # Create a temporary credentials file for gcloud authentication
-    local temp_creds_file="/tmp/gcp_creds.json"
-    # Use jq to create a valid JSON with the modified privateKey
-    jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
-    '{client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$temp_creds_file"
-
-    # Set GOOGLE_APPLICATION_CREDENTIALS only if ACTORS_CLEANUP is disabled
-    if [ "$ACTORS_CLEANUP" = false ]; then
-        if [ -f "$GCP_CREDS" ]; then
-            # If GCP_CREDS is a file path and exists, use it directly
-            export GOOGLE_APPLICATION_CREDENTIALS="$GCP_CREDS"
-        else
-            # Otherwise create and use a local copy
-            mkdir -p "$HOME/creds"
-            cat "$creds_json" > "$HOME/creds/gcp_creds.json"
-            export GOOGLE_APPLICATION_CREDENTIALS="$HOME/creds/gcp_creds.json"
-        fi
+    if [ -f "$GCP_CREDS" ]; then
+        # If GCP_CREDS is a file path and exists, use it directly
+        export GOOGLE_APPLICATION_CREDENTIALS="$GCP_CREDS"
+    else
+        
+        # Adjust privateKey formatting
+        # Replace "\\n" with actual new line, handle BEGIN and END markers
+        privateKey=$(echo "$privateKey" | sed 's/\\n/\n/g' | sed 's/- /\n-/g' | sed 's/ -/-\n/g')
+        
+        jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
+        '{type: "service_account", client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$LOCAL_CREDS_DIR/gcp_creds.json"
+        
+        export GOOGLE_APPLICATION_CREDENTIALS="$LOCAL_CREDS_DIR/gcp_creds.json"
     fi
     
-    log_info "GCP Authentication" "Authenticating GCP service account..."
-    if ! gcloud auth activate-service-account "$clientEmail" --key-file="$temp_creds_file" >/dev/null 2>&1; then
-        log_error "GCP Authentication" "GCP service account authentication failed."
-        rm -f "$temp_creds_file"
-        return 1
+    # If GOOGLE_APPLICATION_CREDENTIALS is set, authorize environment with provided credentials
+    if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+        log_info "GCP Authentication" "Authorizing environment with provided credentials."
+        gcloud auth login --cred-file="$GOOGLE_APPLICATION_CREDENTIALS" > /dev/null 2>&1
     fi
     
     if ! gcloud config set project "$projectId" >/dev/null 2>&1; then
         log_error "GCP Authentication" "Failed to set GCP project."
-        rm -f "$temp_creds_file"
         return 1
     fi
     
     log_success "GCP Authentication" "GCP service account authenticated and project set."
-    
-    # Clean up temporary credentials file
-    rm -f "$temp_creds_file"
 }
