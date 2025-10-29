@@ -100,7 +100,7 @@ jobs:
           jq -r '.packages[] | select(.versionInfo != null) | "\(.name) | \(.versionInfo)"' sbom.json | sort | uniq | head -n 20 | column -t -s '|'
 
       - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom
           path: sbom.json

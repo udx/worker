@@ -122,7 +122,7 @@ cleanup_actors() {
                 fi
                 ;;
             gcp)
-                if cleanup_provider "gcloud" "gcloud auth revoke --all" "gcloud auth list" "GCP"; then
+                if cleanup_provider "gcloud" "gcloud auth revoke --all && unset GOOGLE_APPLICATION_CREDENTIALS" "gcloud auth list" "GCP"; then
                     any_cleanup=true
                 fi
                 ;;
@@ -145,6 +145,12 @@ cleanup_actors() {
     # Log a summary if no cleanup actions were needed
     if [[ "$any_cleanup" == false ]]; then
         log_info "No active sessions found for any configured providers."
+    fi
+
+    # Remove local copy creds dir
+    if [ -d "$LOCAL_CREDS_DIR" ]; then
+        log_info "Removing local copy creds dir"
+        rm -rf "$LOCAL_CREDS_DIR"
     fi
     
     # Clear the configured providers array
