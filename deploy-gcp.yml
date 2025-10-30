@@ -1,0 +1,14 @@
+# npm install -g @udx/worker-deployment
+# worker-run --config=deploy-gcp.yml
+
+---
+kind: workerDeployConfig
+version: udx.io/worker-v1/deploy
+config:
+  # Docker image
+  image: "usabilitydynamics/udx-worker:latest"
+
+  env:
+    ACTORS_CLEANUP: "false"
+
+  command: "gcloud auth list"
