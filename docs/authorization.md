@@ -13,6 +13,8 @@ The UDX Worker supports multiple cloud providers and services through environmen
 | GCP       | `GCP_CREDS`          | Google Cloud Platform credentials        |
 | Bitwarden | `BITWARDEN_CREDS`    | Bitwarden secrets management credentials |
 
+> **💡 Tip**: For simplified deployment with automatic credential detection, use the [`@udx/worker-deployment`](https://www.npmjs.com/package/@udx/worker-deployment) CLI tool.
+
 ## Credential Formats
 
 Credentials can be provided in three formats:
@@ -73,6 +75,15 @@ AZURE_CREDS="/path/to/azure_credentials.json"
 ```
 
 > **Note**: Always use absolute paths in production environments to avoid path resolution issues.
+
+## Provider-Specific Authentication
+
+For detailed authentication guides for each provider, see:
+
+- **[GCP Authentication](auth/gcp.md)** - Service account keys, workload identity, impersonation
+- **[Azure Authentication](auth/azure.md)** - Coming soon
+- **[AWS Authentication](auth/aws.md)** - Coming soon
+- **[Bitwarden Authentication](auth/bitwarden.md)** - Coming soon
 
 ## Credential Management
 

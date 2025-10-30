@@ -18,6 +18,7 @@ dist/
 
 # Azure credentials file
 *_creds.json
+*-key.json
 
 # Environment variables file
 .env
