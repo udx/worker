@@ -3,14 +3,18 @@
 # shellcheck source=${WORKER_LIB_DIR}/utils.sh disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
 
-# Function to set ADC credentials
+# GCP Authentication Module
+# Supports: Service Account Keys, Workload Identity Tokens
+# All methods use: gcloud auth login --cred-file="$GOOGLE_APPLICATION_CREDENTIALS"
 #
-# Example usage of the function
-# gcp_authenticate "/path/to/your/gcp_creds.json"
-# gcp_authenticate "${GCP_CREDS}"
+# Note: Impersonation is handled externally by setting GOOGLE_APPLICATION_CREDENTIALS
+# and CLOUDSDK_AUTH_ACCESS_TOKEN directly, bypassing this module.
 #
+# Example usage:
+#   gcp_authenticate "/path/to/gcp_creds.json"
+#   gcp_authenticate "${GCP_CREDS}"
 
-# Function to set ADC credentials
+# Function to authenticate with GCP
 gcp_authenticate() {
     local creds_json="$1"
     
@@ -29,43 +33,52 @@ gcp_authenticate() {
         return 0
     fi
     
-    # Extract necessary fields from the JSON credentials
-    local clientEmail privateKey projectId
+    local creds_file="$LOCAL_CREDS_DIR/gcp_creds.json"
     
-    clientEmail=$(echo "$creds_content" | jq -r '.client_email')
-    privateKey=$(echo "$creds_content" | jq -r '.private_key' | sed 's/- /-\n/g' | sed 's/ -/\n-/g')
-    projectId=$(echo "$creds_content" | jq -r '.project_id')
-    
-    if [[ -z "$clientEmail" || -z "$privateKey" || -z "$projectId" ]]; then
-        log_error "GCP Authentication" "Missing required GCP credentials."
-        return 1
-    fi
-    
-    if [ -f "$GCP_CREDS" ]; then
-        # If GCP_CREDS is a file path and exists, use it directly
-        export GOOGLE_APPLICATION_CREDENTIALS="$GCP_CREDS"
-    else
+    # Check if this is a service account key that needs private_key normalization
+    if echo "$creds_content" | jq -e '.private_key' >/dev/null 2>&1; then
+        # Service account key - normalize private_key field
+        local clientEmail privateKey projectId
         
-        # Adjust privateKey formatting
-        # Replace "\\n" with actual new line, handle BEGIN and END markers
+        clientEmail=$(echo "$creds_content" | jq -r '.client_email')
+        privateKey=$(echo "$creds_content" | jq -r '.private_key')
+        projectId=$(echo "$creds_content" | jq -r '.project_id')
+        
+        # Normalize private_key: handle escaped newlines and spacing issues
         privateKey=$(echo "$privateKey" | sed 's/\\n/\n/g' | sed 's/- /\n-/g' | sed 's/ -/-\n/g')
         
+        # Create normalized JSON file
         jq -n --arg clientEmail "$clientEmail" --arg privateKey "$privateKey" --arg projectId "$projectId" \
-        '{type: "service_account", client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$LOCAL_CREDS_DIR/gcp_creds.json"
-        
-        export GOOGLE_APPLICATION_CREDENTIALS="$LOCAL_CREDS_DIR/gcp_creds.json"
+        '{type: "service_account", client_email: $clientEmail, private_key: $privateKey, project_id: $projectId}' > "$creds_file"
+    else
+        # Other credential types (workload identity, impersonation) - use as-is
+        echo "$creds_content" > "$creds_file"
     fi
     
-    # If GOOGLE_APPLICATION_CREDENTIALS is set, authorize environment with provided credentials
-    if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-        log_info "GCP Authentication" "Authorizing environment with provided credentials."
-        gcloud auth login --cred-file="$GOOGLE_APPLICATION_CREDENTIALS" > /dev/null 2>&1
-    fi
+    # Set GOOGLE_APPLICATION_CREDENTIALS for all methods
+    export GOOGLE_APPLICATION_CREDENTIALS="$creds_file"
     
-    if ! gcloud config set project "$projectId" >/dev/null 2>&1; then
-        log_error "GCP Authentication" "Failed to set GCP project."
+    # Set GCP_CREDS for backward compatibility
+    export GCP_CREDS="$creds_file"
+    
+    # Authenticate with gcloud (works for all credential types)
+    log_info "GCP Authentication" "Authenticating with gcloud..."
+    if ! gcloud auth login --cred-file="$GOOGLE_APPLICATION_CREDENTIALS" >/dev/null 2>&1; then
+        log_error "GCP Authentication" "Failed to authenticate with gcloud."
         return 1
     fi
     
-    log_success "GCP Authentication" "GCP service account authenticated and project set."
+    # Extract and set project ID if available
+    local projectId
+    projectId=$(echo "$creds_content" | jq -r '.project_id // empty' 2>/dev/null)
+    
+    if [[ -n "$projectId" && "$projectId" != "null" ]]; then
+        if ! gcloud config set project "$projectId" >/dev/null 2>&1; then
+            log_error "GCP Authentication" "Failed to set GCP project: $projectId"
+            return 1
+        fi
+        log_success "GCP Authentication" "Authenticated successfully. Project: $projectId"
+    else
+        log_success "GCP Authentication" "Authenticated successfully."
+    fi
 }
