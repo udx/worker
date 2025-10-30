@@ -97,6 +97,27 @@ docker exec my-secrets worker env get API_KEY
 
 See [Authorization Guide](docs/authorization.md) for supported providers and credential formats (JSON, Base64, File Path).
 
+### 💡 Simplified Deployment
+
+For easier deployment with automatic credential detection, use the [`@udx/worker-deployment`](https://www.npmjs.com/package/@udx/worker-deployment) CLI:
+
+```bash
+# Install
+npm install -g @udx/worker-deployment
+
+# Generate config
+worker-config
+
+# Run with automatic GCP authentication
+worker-run
+```
+
+Features:
+- ✅ Auto-detects GCP credentials (service account keys, impersonation, workload identity)
+- ✅ Zero-config for default file names
+- ✅ Secure read-only mounts
+- ✅ Interactive debugging mode
+
 ### Development Setup
 
 ```bash
