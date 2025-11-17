@@ -55,7 +55,7 @@ kind: workerService
 version: udx.io/worker-v1/service
 services:
   - name: "api-server"
-    command: "node api/server.js"
+    command: "npm start"
     autostart: true
     autorestart: true
     stopasgroup: true
