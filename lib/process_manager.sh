@@ -61,6 +61,11 @@ parse_service_info() {
     autorestart=$(echo "$service_json" | jq -r '.autorestart // "false"')
     # Ensure 'envs' defaults to an empty array if not specified
     envs=$(echo "$service_json" | jq -r '.envs // [] | join(",")')
+
+    # Use 'false' as default for 'stopasgroup' if not specified
+    stopasgroup=$(echo "$service_json" | jq -r '.stopasgroup // "false"')
+    # Use 'false' as default for 'killasgroup' if not specified
+    killasgroup=$(echo "$service_json" | jq -r '.killasgroup // "false"')
     
     # Ignore the service if 'ignore' is set to "true"
     if [[ "$ignore" == "true" ]]; then
@@ -95,7 +100,9 @@ parse_service_info() {
         s|\${autostart}|$autostart|g; \
         s|\${autorestart}|$autorestart|g; \
         s|\${startretries}|$startretries|g; \
-        s|\${envs}|$envs|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
+        s|\${envs}|$envs|g; \
+        s|\${stopasgroup}|$stopasgroup|g; \
+        s|\${killasgroup}|$killasgroup|g" "$PROGRAM_TEMPLATE_FILE" >> "$FINAL_CONFIG"
 }
 
 # Function to check if services are active
