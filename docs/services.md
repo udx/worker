@@ -12,22 +12,24 @@ The UDX Worker uses `services.yaml` to define and manage multiple services. Each
 
 ## Configuration Structure
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `kind` | string | Yes | - | Must be `workerService` |
-| `version` | string | Yes | - | Must be `udx.io/worker-v1/service` |
-| `services` | array | Yes | - | List of service definitions |
+| Field      | Type   | Required | Default | Description                        |
+| ---------- | ------ | -------- | ------- | ---------------------------------- |
+| `kind`     | string | Yes      | -       | Must be `workerService`            |
+| `version`  | string | Yes      | -       | Must be `udx.io/worker-v1/service` |
+| `services` | array  | Yes      | -       | List of service definitions        |
 
 ### Service Definition Fields
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | Yes | - | Unique service identifier |
-| `command` | string | Yes | - | Command to execute |
-| `ignore` | boolean | No | `false` | Skip service management |
-| `autostart` | boolean | No | `true` | Start on worker launch |
-| `autorestart` | boolean | No | `false` | Restart on failure |
-| `envs` | array | No | `[]` | Environment variables |
+| Field         | Type    | Required | Default | Description               |
+| ------------- | ------- | -------- | ------- | ------------------------- |
+| `name`        | string  | Yes      | -       | Unique service identifier |
+| `command`     | string  | Yes      | -       | Command to execute        |
+| `ignore`      | boolean | No       | `false` | Skip service management   |
+| `autostart`   | boolean | No       | `true`  | Start on worker launch    |
+| `autorestart` | boolean | No       | `false` | Restart on failure        |
+| `envs`        | array   | No       | `[]`    | Environment variables     |
+| `stopasgroup` | boolean | No       | `false` | Stop process group        |
+| `killasgroup` | boolean | No       | `false` | Kill process group        |
 
 ## Basic Example
 
@@ -53,9 +55,11 @@ kind: workerService
 version: udx.io/worker-v1/service
 services:
   - name: "api-server"
-    command: "node api/server.js"
+    command: "npm start"
     autostart: true
     autorestart: true
+    stopasgroup: true
+    killasgroup: true
     envs:
       - "PORT=3000"
       - "NODE_ENV=production"
@@ -68,7 +72,7 @@ services:
 
   - name: "monitoring"
     command: "./monitor.sh"
-    ignore: true  # Temporarily disabled
+    ignore: true # Temporarily disabled
 ```
 
 ### Service with Complex Command
@@ -87,16 +91,19 @@ services:
 ## Best Practices
 
 1. **Service Naming**
+
    - Use descriptive, lowercase names
    - Separate words with hyphens
    - Keep names concise but meaningful
 
 2. **Command Definition**
+
    - Use absolute paths when possible
    - Quote commands with spaces or special characters
    - Consider using shell scripts for complex commands
 
 3. **Environment Variables**
+
    - Use uppercase for variable names
    - Group related variables together
    - Document required variables
@@ -110,22 +117,24 @@ services:
 
 When running `worker service list`, services show the following status indicators:
 
-| Symbol | Status | Description |
-|--------|---------|-------------|
-| ✅ | RUNNING | Service is running normally |
-| ⛔ | STOPPED | Service was stopped with `worker service stop` |
-| 💀 | FATAL | Service exited (any exit code) |
-| 🔄 | RETRY | Service is retrying (with autorestart: true) |
-| ⚠️ | STARTING | Service is starting up |
+| Symbol | Status   | Description                                    |
+| ------ | -------- | ---------------------------------------------- |
+| ✅     | RUNNING  | Service is running normally                    |
+| ⛔     | STOPPED  | Service was stopped with `worker service stop` |
+| 💀     | FATAL    | Service exited (any exit code)                 |
+| 🔄     | RETRY    | Service is retrying (with autorestart: true)   |
+| ⚠️     | STARTING | Service is starting up                         |
 
 ### Service Types
 
 1. **Long-running Services**
+
    ```yaml
    - name: "web-server"
      command: "python server.py"
-     autorestart: true    # Restarts on exit
+     autorestart: true # Restarts on exit
    ```
+
    - Shows as RUNNING (✅) while active
    - Shows as RETRY (🔄) then FATAL (💀) if it keeps failing
 
@@ -133,16 +142,18 @@ When running `worker service list`, services show the following status indicator
    ```yaml
    - name: "setup"
      command: "./setup.sh"
-     autorestart: false   # Runs once
+     autorestart: false # Runs once
    ```
    - Use `worker service stop` for clean completion (⛔)
    - Otherwise shows as FATAL (💀) after exit
 
 Note: Exit codes (0 or non-zero) don't affect the final status. What matters is:
+
 - Whether the service keeps running (RUNNING ✅)
 - How it stops (STOPPED ⛔ vs FATAL 💀)
 
 Example:
+
 ```bash
 # Long-running service and one-shot task
 $ worker service list
