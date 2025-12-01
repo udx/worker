@@ -66,6 +66,13 @@ configure_environment() {
         log_info "No secrets defined in the configuration."
     fi
 
+    # Fetch secrets from environment variables with provider prefixes
+    log_info "Checking for secret references in environment variables..."
+    if ! fetch_secrets_from_env_vars; then
+        log_error "Environment" "Failed to fetch secrets from environment variables."
+        return 1
+    fi
+
     # Perform cleanup
     log_info "Cleaning up sensitive data..."
     if ! cleanup_actors; then
