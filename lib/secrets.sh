@@ -191,7 +191,14 @@ fetch_secrets_from_env_vars() {
     # 2. Process deployment environment variables (from container environment)
     while IFS='=' read -r key value; do
         # Skip if already processed from worker config
-        if [[ " ${processed_vars[*]} " =~ " ${key} " ]]; then
+        local already_processed=false
+        for processed_var in "${processed_vars[@]}"; do
+            if [[ "$key" == "$processed_var" ]]; then
+                already_processed=true
+                break
+            fi
+        done
+        if [[ "$already_processed" == "true" ]]; then
             continue
         fi
         
