@@ -5,6 +5,33 @@ source "${WORKER_LIB_DIR}/utils.sh"
 # shellcheck source=${WORKER_LIB_DIR}/env_handler.sh disable=SC1091
 source "${WORKER_LIB_DIR}/env_handler.sh"
 
+# System variables to skip when scanning for secret references
+# Only declare if not already defined (prevents errors when sourced multiple times)
+if [[ -z "${SYSTEM_VARS+x}" ]]; then
+    readonly SYSTEM_VARS=(
+        "HOME" "USER" "PATH" "SHELL" "TERM" "LANG" "PWD" "SHLVL" "_"
+        "PS1" "HOSTNAME" "UID" "GID" "OLDPWD" "LS_COLORS" "DEBIAN_FRONTEND"
+        "LOGNAME" "MAIL" "TMPDIR" "SSH_CONNECTION" "SSH_CLIENT" "SSH_TTY"
+    )
+fi
+
+# Worker internal variables to skip (exact matches and prefixes)
+if [[ -z "${WORKER_INTERNAL_VARS+x}" ]]; then
+    readonly WORKER_INTERNAL_VARS=(
+        "AZURE_CONFIG_DIR"
+        "AWS_CONFIG_FILE"
+        "GCP_CREDS"
+        "TZ"
+    )
+fi
+
+if [[ -z "${WORKER_INTERNAL_PREFIXES+x}" ]]; then
+    readonly WORKER_INTERNAL_PREFIXES=(
+        "WORKER_"
+        "CLOUDSDK_"
+    )
+fi
+
 # Dynamically source the required provider-specific modules
 source_provider_module() {
     local provider="$1"
@@ -141,11 +168,42 @@ is_secret_reference() {
     return 1
 }
 
+# Function to check if a variable should be skipped
+should_skip_variable() {
+    local var_name="$1"
+    
+    # Check against system variables
+    for sys_var in "${SYSTEM_VARS[@]}"; do
+        if [[ "$var_name" == "$sys_var" ]]; then
+            return 0
+        fi
+    done
+    
+    # Check against worker internal variables
+    for internal_var in "${WORKER_INTERNAL_VARS[@]}"; do
+        if [[ "$var_name" == "$internal_var" ]]; then
+            return 0
+        fi
+    done
+    
+    # Check against worker internal prefixes
+    for prefix in "${WORKER_INTERNAL_PREFIXES[@]}"; do
+        if [[ "$var_name" == ${prefix}* ]]; then
+            return 0
+        fi
+    done
+    
+    return 1
+}
+
 # Function to fetch secrets from environment variables
 fetch_secrets_from_env_vars() {
     local processed_vars=()
-    local secrets_json="{"
-    local first=true
+    local temp_secrets_file
+    temp_secrets_file=$(mktemp)
+    
+    # Initialize empty JSON object
+    echo '{}' > "$temp_secrets_file"
     
     # Helper function to add a secret reference to JSON
     add_secret_to_json() {
@@ -159,13 +217,9 @@ fetch_secrets_from_env_vars() {
         
         log_info "Found secret reference in $var_name: $var_value"
         
-        # Add to JSON
-        if [ "$first" = true ]; then
-            first=false
-        else
-            secrets_json="$secrets_json,"
-        fi
-        secrets_json="$secrets_json\"$var_name\":\"$var_value\""
+        # Add to JSON using jq for safe construction
+        jq --arg key "$var_name" --arg val "$var_value" '. + {($key): $val}' "$temp_secrets_file" > "${temp_secrets_file}.tmp"
+        mv "${temp_secrets_file}.tmp" "$temp_secrets_file"
     }
     
     # 1. Process environment variables from worker.yaml (in WORKER_ENV_FILE)
@@ -202,13 +256,8 @@ fetch_secrets_from_env_vars() {
             continue
         fi
         
-        # Skip system/shell variables
-        if [[ "$key" =~ ^(HOME|USER|PATH|SHELL|TERM|LANG|PWD|SHLVL|_|PS1|HOSTNAME|UID|GID|OLDPWD|LS_COLORS|DEBIAN_FRONTEND)$ ]]; then
-            continue
-        fi
-        
-        # Skip worker internal variables
-        if [[ "$key" =~ ^(WORKER_|AZURE_CONFIG_DIR|CLOUDSDK_|AWS_CONFIG_FILE|GCP_CREDS|TZ)$ ]]; then
+        # Skip system and worker internal variables
+        if should_skip_variable "$key"; then
             continue
         fi
         
@@ -216,8 +265,12 @@ fetch_secrets_from_env_vars() {
         add_secret_to_json "$key" "$value"
     done < <(env)
     
-    # Close JSON
-    secrets_json="$secrets_json}"
+    # Read the constructed JSON
+    local secrets_json
+    secrets_json=$(cat "$temp_secrets_file")
+    
+    # Clean up temp file
+    rm -f "$temp_secrets_file"
     
     # If no secrets found, return early
     if [[ "$secrets_json" == "{}" ]]; then
@@ -225,7 +278,7 @@ fetch_secrets_from_env_vars() {
         return 0
     fi
     
-    # Validate JSON
+    # Validate JSON (should always be valid since jq built it)
     if ! echo "$secrets_json" | jq empty > /dev/null 2>&1; then
         log_error "Secrets" "Invalid JSON format for collected secrets"
         return 1
