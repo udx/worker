@@ -199,14 +199,11 @@ should_skip_variable() {
 # Function to fetch secrets from environment variables
 fetch_secrets_from_env_vars() {
     local processed_vars=()
-    local temp_secrets_file
-    temp_secrets_file=$(mktemp)
+    local -a secret_keys=()
+    local -a secret_values=()
     
-    # Initialize empty JSON object
-    echo '{}' > "$temp_secrets_file"
-    
-    # Helper function to add a secret reference to JSON
-    add_secret_to_json() {
+    # Helper function to collect a secret reference
+    collect_secret() {
         local var_name="$1"
         local var_value="$2"
         
@@ -217,9 +214,9 @@ fetch_secrets_from_env_vars() {
         
         log_info "Found secret reference in $var_name: $var_value"
         
-        # Add to JSON using jq for safe construction
-        jq --arg key "$var_name" --arg val "$var_value" '. + {($key): $val}' "$temp_secrets_file" > "${temp_secrets_file}.tmp"
-        mv "${temp_secrets_file}.tmp" "$temp_secrets_file"
+        # Collect key-value pair
+        secret_keys+=("$var_name")
+        secret_values+=("$var_value")
     }
     
     # 1. Process environment variables from worker.yaml (in WORKER_ENV_FILE)
@@ -236,8 +233,8 @@ fetch_secrets_from_env_vars() {
                 # Track that we've processed this variable
                 processed_vars+=("$var_name")
                 
-                # Add if it's a secret reference
-                add_secret_to_json "$var_name" "$var_value"
+                # Collect if it's a secret reference
+                collect_secret "$var_name" "$var_value"
             fi
         done < "$WORKER_ENV_FILE"
     fi
@@ -261,16 +258,28 @@ fetch_secrets_from_env_vars() {
             continue
         fi
         
-        # Add if it's a secret reference
-        add_secret_to_json "$key" "$value"
+        # Collect if it's a secret reference
+        collect_secret "$key" "$value"
     done < <(env)
     
-    # Read the constructed JSON
-    local secrets_json
-    secrets_json=$(cat "$temp_secrets_file")
-    
-    # Clean up temp file
-    rm -f "$temp_secrets_file"
+    # Build JSON from collected secrets in a single jq invocation
+    local secrets_json="{}"
+    if [[ ${#secret_keys[@]} -gt 0 ]]; then
+        # Build jq arguments for all key-value pairs
+        local jq_args=()
+        for i in "${!secret_keys[@]}"; do
+            jq_args+=(--arg "key$i" "${secret_keys[$i]}" --arg "val$i" "${secret_values[$i]}")
+        done
+        
+        # Build jq filter to construct object with all pairs
+        local jq_filter="."
+        for i in "${!secret_keys[@]}"; do
+            jq_filter="$jq_filter | . + {\$key$i: \$val$i}"
+        done
+        
+        # Construct JSON in single jq invocation
+        secrets_json=$(echo '{}' | jq "${jq_args[@]}" "$jq_filter")
+    fi
     
     # If no secrets found, return early
     if [[ "$secrets_json" == "{}" ]]; then
