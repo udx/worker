@@ -1,0 +1,27 @@
+# npm install -g @udx/worker-deployment
+# gcloud auth login
+# gcloud auth application-default login
+# worker-run
+
+---
+kind: workerDeployConfig
+version: udx.io/worker-v1/deploy
+config:
+  # Docker image
+  image: "usabilitydynamics/udx-worker:latest"
+
+  env:
+    TEST_ENV_SECRET: "gcp/rabbit-ci-dev/worker-secret-test"
+
+  # Mount volumes
+  # volumes:
+  #   - "./src/scripts:/var/www"
+
+  # ports:
+  #   - "80:80"
+
+  # Command to run
+  # command: "/usr/local/bin/init.sh"
+
+  service_account:
+    email: "worker-site@rabbit-ci-dev.iam.gserviceaccount.com"

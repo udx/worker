@@ -3,6 +3,7 @@
 ## Overview
 
 The UDX Worker uses `worker.yaml` as its primary configuration file, allowing you to:
+
 - Define environment variables
 - Reference secrets from various providers
 - Configure worker behavior
@@ -15,12 +16,12 @@ The UDX Worker uses `worker.yaml` as its primary configuration file, allowing yo
 
 ## Configuration Structure
 
-| Section | Purpose | Required |
-|---------|----------|----------|
-| `kind` | Configuration type identifier | Yes |
-| `version` | Schema version | Yes |
-| `config.env` | Environment variables | No |
-| `config.secrets` | Secret references | No |
+| Section          | Purpose                       | Required |
+| ---------------- | ----------------------------- | -------- |
+| `kind`           | Configuration type identifier | Yes      |
+| `version`        | Schema version                | Yes      |
+| `config.env`     | Environment variables         | No       |
+| `config.secrets` | Secret references             | No       |
 
 ## Basic Example
 
@@ -72,6 +73,10 @@ secrets:
 
 ## Environment Variables
 
+Environment variables can be defined in two ways:
+
+### 1. Direct Values
+
 ```yaml
 config:
   env:
@@ -79,22 +84,46 @@ config:
     AZURE_TENANT_ID: "tenant-id"
     AWS_REGION: "us-west-2"
     GCP_PROJECT: "my-project"
-    
+
     # Application Settings
     LOG_LEVEL: "info"
     MAX_WORKERS: "5"
     ENABLE_METRICS: "true"
 ```
 
+### 2. Secret References
+
+Environment variables can also reference secrets using the same provider format as the `secrets` section:
+
+```yaml
+config:
+  env:
+    # Reference secrets directly in env variables
+    DATABASE_URL: "gcp/my-project/db-connection-string"
+    API_TOKEN: "azure/kv-prod/api-token"
+    AWS_SECRET_KEY: "aws/prod/secret-access-key"
+    VAULT_PASSWORD: "bitwarden/prod/vault-pass"
+
+    # Mix with regular values
+    LOG_LEVEL: "info"
+```
+
+The worker will automatically detect secret references (format: `provider/vault/secret`) in environment variables and resolve them at runtime.
+
 ## Best Practices
 
 1. **Secret Management**
-   - Never store sensitive values directly in `env`
-   - Use `secrets` section for sensitive data
-   - Reference secrets from appropriate providers
+
+   - Never store sensitive values as plain text
+   - Use either `config.secrets` section OR secret references in `config.env`
+   - Both methods support the same provider format: `provider/vault/secret`
+   - Choose based on your preference:
+     - `config.secrets`: Explicit separation of secrets
+     - `config.env` with references: Unified configuration
 
 2. **Environment Variables**
-   - Use `env` for non-sensitive configuration
+
+   - Use `env` for non-sensitive configuration OR secret references
    - Keep values consistent across environments
    - Document any required variables
 
