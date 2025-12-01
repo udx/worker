@@ -1,8 +1,0 @@
----
-kind: workerConfig
-version: udx.io/worker-v1/config
-config:
-  env:
-    CREATED: "2025-02-21T07:57:59Z"
-  secrets:
-    TEST_ENV: "gcp/rabbit-ci-dev/worker-secret-test"

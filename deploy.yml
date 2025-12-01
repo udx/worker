@@ -14,8 +14,8 @@ config:
     TEST_ENV_SECRET: "gcp/rabbit-ci-dev/worker-secret-test"
 
   # Mount volumes
-  volumes:
-    - "./worker.yaml:/home/udx/.config/worker/worker.yaml"
+  # volumes:
+  #   - "./worker.yaml:/home/udx/.config/worker/worker.yaml"
 
   # ports:
   #   - "80:80"
