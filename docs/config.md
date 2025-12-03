@@ -110,24 +110,88 @@ config:
 
 The worker will automatically detect secret references (format: `provider/vault/secret`) in environment variables and resolve them at runtime.
 
+## Deployment Environment Variables
+
+Environment variables can also be set at the deployment level (e.g., Kubernetes, Docker Compose) and will **take priority** over `worker.yaml` configuration.
+
+### Priority Order
+
+1. **Deployment environment variables** (highest priority)
+2. `worker.yaml` config.secrets
+3. `worker.yaml` config.env
+
+### Example: Environment Override
+
+```yaml
+# worker.yaml (production defaults)
+config:
+  secrets:
+    ES_PASSWORD: "gcp/prod-project/es-password"
+```
+
+```yaml
+# Kubernetes deployment (staging override)
+spec:
+  containers:
+    - name: worker
+      env:
+        - name: ES_PASSWORD
+          value: "gcp/staging-project/es-password"
+```
+
+**Result**: The staging secret reference from Kubernetes will be used, not the production one from `worker.yaml`.
+
+### Use Cases
+
+- **Environment-specific overrides**: Different secrets per environment (dev/staging/prod)
+- **Sensitive values**: Keep secrets out of config files entirely
+- **Dynamic configuration**: Runtime values that change per deployment
+- **Testing**: Override config values without modifying files
+
+### Behavior
+
+- Deployment env vars with secret references are automatically detected and resolved
+- Deployment env vars with static values are used as-is
+- If a deployment env var exists, the corresponding `worker.yaml` entry is skipped
+
 ## Best Practices
 
 1. **Secret Management**
 
    - Never store sensitive values as plain text
-   - Use either `config.secrets` section OR secret references in `config.env`
-   - Both methods support the same provider format: `provider/vault/secret`
-   - Choose based on your preference:
+   - Use secret references in any of these locations:
      - `config.secrets`: Explicit separation of secrets
-     - `config.env` with references: Unified configuration
+     - `config.env`: Unified configuration with secret references
+     - Deployment env vars: Runtime overrides (highest priority)
+   - All methods support the same provider format: `provider/vault/secret`
 
-2. **Environment Variables**
+2. **Environment-Specific Configuration**
 
-   - Use `env` for non-sensitive configuration OR secret references
-   - Keep values consistent across environments
+   - Use `worker.yaml` for shared/default configuration
+   - Use deployment env vars for environment-specific overrides
+   - Example pattern:
+     ```yaml
+     # worker.yaml: production defaults
+     config:
+       secrets:
+         DB_PASSWORD: "gcp/prod/db-pass"
+     
+     # K8s staging: override with deployment env
+     env:
+       - name: DB_PASSWORD
+         value: "gcp/staging/db-pass"
+     ```
+
+3. **Environment Variables**
+
+   - Use `config.env` for non-sensitive configuration OR secret references
+   - Use deployment env vars to override per environment
    - Document any required variables
+   - Remember: deployment env vars always win
 
-3. **File Handling**
-   - Keep configuration in version control (without sensitive data)
-   - Use different files for different environments
+4. **File Handling**
+
+   - Keep `worker.yaml` in version control (without sensitive data)
+   - Use secret references instead of plain text values
    - Validate configuration before deployment
+   - Use deployment env vars for truly sensitive overrides

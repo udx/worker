@@ -12,9 +12,9 @@ UDX Worker is a containerized solution that simplifies DevSecOps by providing:
 
 - 🔒 **Secure Environment**: Built on zero-trust principles
 - 🤖 **Automation Support**: Streamlined task execution
-- 🔑 **Secret Management**: Secure handling of sensitive data
+- 🔑 **Secret Management**: Automatic detection and resolution from multiple providers
 - 📦 **12-Factor Compliance**: Modern application practices
-- ♾️ **CI/CD Ready**: Seamless pipeline integration
+- ♾️ **CI/CD Ready**: Seamless pipeline integration with environment-based overrides
 
 ## 🏃 Quick Start
 

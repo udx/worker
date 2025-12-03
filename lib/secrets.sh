@@ -161,8 +161,7 @@ is_secret_reference() {
     local value="$1"
     
     # Check if value matches pattern: provider/vault/secret
-    # Supported providers: gcp, azure, aws, bitwarden
-    if [[ "$value" =~ ^(gcp|azure|aws|bitwarden)/.+/.+ ]]; then
+    if [[ "$value" =~ ^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+ ]]; then
         return 0
     fi
     return 1
@@ -198,7 +197,6 @@ should_skip_variable() {
 
 # Function to fetch secrets from environment variables
 fetch_secrets_from_env_vars() {
-    local processed_vars=()
     local -a secret_keys=()
     local -a secret_values=()
     
@@ -219,40 +217,9 @@ fetch_secrets_from_env_vars() {
         secret_values+=("$var_value")
     }
     
-    # 1. Process environment variables from worker.yaml (in WORKER_ENV_FILE)
-    if [[ -f "$WORKER_ENV_FILE" ]]; then
-        while IFS= read -r line; do
-            # Skip comments and empty lines
-            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-            
-            # Extract variable name and value
-            if [[ "$line" =~ ^export[[:space:]]+([^=]+)=\"([^\"]*)\" ]]; then
-                local var_name="${BASH_REMATCH[1]}"
-                local var_value="${BASH_REMATCH[2]}"
-                
-                # Track that we've processed this variable
-                processed_vars+=("$var_name")
-                
-                # Collect if it's a secret reference
-                collect_secret "$var_name" "$var_value"
-            fi
-        done < "$WORKER_ENV_FILE"
-    fi
-    
-    # 2. Process deployment environment variables (from container environment)
+    # Scan all environment variables for secret references
+    # This includes both worker.yaml config.env and deployment env vars
     while IFS='=' read -r key value; do
-        # Skip if already processed from worker config
-        local already_processed=false
-        for processed_var in "${processed_vars[@]}"; do
-            if [[ "$key" == "$processed_var" ]]; then
-                already_processed=true
-                break
-            fi
-        done
-        if [[ "$already_processed" == "true" ]]; then
-            continue
-        fi
-        
         # Skip system and worker internal variables
         if should_skip_variable "$key"; then
             continue
@@ -264,7 +231,10 @@ fetch_secrets_from_env_vars() {
     
     # Build JSON from collected secrets in a single jq invocation
     local secrets_json="{}"
+    local secret_count=0
     if [[ ${#secret_keys[@]} -gt 0 ]]; then
+        secret_count=${#secret_keys[@]}
+        
         # Build jq arguments for all key-value pairs
         local jq_args=()
         for i in "${!secret_keys[@]}"; do
@@ -287,14 +257,16 @@ fetch_secrets_from_env_vars() {
         return 0
     fi
     
+    log_info "Found $secret_count secret reference(s) in environment variables"
+    
     # Validate JSON (should always be valid since jq built it)
     if ! echo "$secrets_json" | jq empty > /dev/null 2>&1; then
         log_error "Secrets" "Invalid JSON format for collected secrets"
         return 1
     fi
     
-    # Use existing append_resolved_secrets function to resolve and append
-    if ! append_resolved_secrets "$secrets_json"; then
+    # Resolve secrets from environment variables (always resolves, no skipping)
+    if ! resolve_env_var_secrets "$secrets_json"; then
         log_error "Secrets" "Failed to resolve secrets from environment variables"
         return 1
     fi

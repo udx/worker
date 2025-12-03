@@ -51,9 +51,13 @@ generate_env_file() {
     done < <(echo "$config" | yq eval '.config.env | to_entries | .[] | "export " + .key + "=\"" + .value + "\""' -)
 }
 
-# Append resolved secrets to environment file
-append_resolved_secrets() {
+# Internal function to resolve and append secrets
+# Parameters:
+#   $1 - secrets_json: JSON object of secrets to resolve
+#   $2 - respect_deployment_env: if "true", skip secrets that exist in deployment environment
+_resolve_and_append_secrets() {
     local secrets_json="$1"
+    local respect_deployment_env="${2:-false}"
     local has_failures=false
     
     if [ -z "$secrets_json" ]; then
@@ -77,6 +81,18 @@ append_resolved_secrets() {
     while IFS= read -r secret; do
         local name value
         name=$(echo "$secret" | jq -r '.key')
+        
+        # Check if variable exists in deployment environment (only if respect_deployment_env is true)
+        if [[ "$respect_deployment_env" == "true" ]] && printenv "$name" > /dev/null 2>&1; then
+            local deploy_value
+            deploy_value="$(printenv "$name")"
+            if [[ "$deploy_value" =~ ^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+ ]]; then
+                log_info "Environment" "Skipping [$name] from config.secrets - will be resolved from deployment environment secret reference"
+            else
+                log_info "Environment" "Skipping [$name] from config.secrets - using deployment environment static value"
+            fi
+            continue
+        fi
         
         # Create config JSON for resolve_secret_by_name
         local config_json
@@ -103,6 +119,18 @@ append_resolved_secrets() {
     cat "$temp_file" >> "$WORKER_ENV_FILE"
     log_success "Environment" "Added all resolved secrets to environment file"
     rm -f "$temp_file"
+}
+
+# Resolve secrets from worker.yaml config.secrets section
+# Respects deployment environment - skips secrets that exist in deployment env
+append_resolved_secrets() {
+    _resolve_and_append_secrets "$1" "true"
+}
+
+# Resolve secrets detected in environment variables
+# Always resolves - deployment env vars take precedence by being processed here
+resolve_env_var_secrets() {
+    _resolve_and_append_secrets "$1" "false"
 }
 
 # Load environment variables and secrets
