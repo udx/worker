@@ -1,5 +1,5 @@
 # Use the latest version of the Ubuntu image with a specific tag for stability
-FROM ubuntu:25.04
+FROM ubuntu:25.10
 
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
