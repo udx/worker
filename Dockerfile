@@ -37,9 +37,9 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2025b-5ubuntu1  \
-    curl=8.17.0-1ubuntu1  \
-    bash=5.3-1ubuntu1  \
+    tzdata=2025b-3ubuntu1  \
+    curl=8.14.1-2ubuntu1  \
+    bash=5.2.37-2ubuntu5  \
     apt-utils=3.1.6ubuntu2 \
     gettext=0.23.1-2build2 \
     gnupg2=2.4.8-2ubuntu2 \
