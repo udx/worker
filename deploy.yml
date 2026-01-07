@@ -12,6 +12,7 @@ config:
 
   env:
     TEST_ENV_SECRET: "gcp/rabbit-ci-dev/worker-secret-test"
+    TEST_ENV_JSON_KEY: "gcp/rabbit-ci-dev/worker-secret-json-key"
 
   # Mount volumes
   # volumes:
