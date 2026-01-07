@@ -76,16 +76,16 @@ RUN echo $TZ > /etc/timezone && \
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v4.49.2/yq_linux_${ARCH}.tar.gz | tar xz && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v4.50.1/yq_linux_${ARCH}.tar.gz | tar xz && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-549.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-551.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-549.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-551.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
