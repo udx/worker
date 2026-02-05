@@ -106,10 +106,10 @@ For easier deployment with automatic credential detection, use the [`@udx/worker
 npm install -g @udx/worker-deployment
 
 # Generate config
-worker-config
+worker config
 
 # Run with automatic GCP authentication
-worker-run
+worker run
 ```
 
 Features:

@@ -120,7 +120,7 @@ config:
 
 ```bash
 # Run with automatic impersonation
-worker-run --config=deploy.yml
+worker run --config=deploy.yml
 ```
 
 **Manual Docker Usage:**
@@ -172,12 +172,12 @@ npm install -g @udx/worker-deployment
 **Quick Start:**
 ```bash
 # Generate config template
-worker-config
+worker config
 
 # Edit deploy.yml with your settings
 
 # Run with automatic credential detection
-worker-run
+worker run
 ```
 
 **Features:**
