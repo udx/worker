@@ -50,8 +50,8 @@ RUN apt-get update && \
     unzip=6.0-28ubuntu7 \
     nano=8.4-1 \
     vim=2:9.1.0967-1ubuntu6 \
-    python3.13=3.13.7-1ubuntu0.1 \
-    python3.13-venv=3.13.7-1ubuntu0.1 \
+    python3.13=3.13.7-1ubuntu0.3 \
+    python3.13-venv=3.13.7-1ubuntu0.3 \
     python3-pip=25.1.1+dfsg-1ubuntu2 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
