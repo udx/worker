@@ -102,7 +102,7 @@ clean:
 test: clean
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Running tests...$(COLOR_RESET)\n"
 	@$(MAKE) run \
-		VOLUMES="$(PWD)/src/tests:/home/udx/tests $(PWD)/src/examples/simple-config/.config/worker/worker.yaml:/home/udx/.config/worker/worker.yaml $(PWD)/src/examples/simple-service/.config/worker/services.yaml:/home/udx/.config/worker/services.yaml $(PWD)/src/examples/simple-service/index.sh:/home/udx/index.sh" \
+		VOLUMES="$(PWD)/src/tests:/home/udx/tests $(PWD)/src/examples/simple-config/.config/worker/worker.yaml:/home/udx/.config/worker/worker.yaml $(PWD)/src/examples/simple-service/.config/worker/services.yaml:/home/udx/.config/worker/services.yaml" \
 		COMMAND="/home/udx/tests/main.sh"
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Following test output...$(COLOR_RESET)\n"
 	@docker logs -f $(CONTAINER_NAME) & LOGS_PID=$$!; \
