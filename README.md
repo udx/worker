@@ -1,4 +1,4 @@
-# UDX Worker
+<img src="assets/logo.svg" alt="UDX Worker">
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/usabilitydynamics/udx-worker.svg)](https://hub.docker.com/r/usabilitydynamics/udx-worker) [![License](https://img.shields.io/github/license/udx/worker.svg)](LICENSE) [![Documentation](https://img.shields.io/badge/docs-udx.dev-blue.svg)](https://udx.dev/worker)
 
