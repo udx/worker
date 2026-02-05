@@ -106,10 +106,10 @@ For easier deployment with automatic credential detection, use the [`@udx/worker
 npm install -g @udx/worker-deployment
 
 # Generate config
-worker-config
+worker config
 
 # Run with automatic GCP authentication
-worker-run
+worker run
 ```
 
 Features:
@@ -136,20 +136,22 @@ make log FOLLOW_LOGS=true
 make test
 ```
 
-More examples available in [src/examples](src/examples).
+More examples available in [src/examples/README.md](src/examples/README.md).
 
 ## 📚 Documentation
 
 ### Core Concepts
+- [Docs Index](docs/index.md) - Start here
+- [Runtime: Services](docs/runtime/services.md) - `services.yaml`
+- [Runtime: Config](docs/runtime/config.md) - `worker.yaml`
+- [Deployment](docs/deploy/README.md) - `deploy.yml` and `worker-deployment`
 - [Authorization](docs/authorization.md) - Credential management
-- [Configuration](docs/config.md) - Worker setup
-- [Services](docs/services.md) - Service management
-- [CLI Reference](docs/cli.md) - Command line usage
+- [CLI Reference](docs/reference/cli.md) - Command line usage
 
 ### Additional Resources
-- [Container Structure](docs/container-structure.md) - Directory layout
-- [Development Notes](docs/notes.md) - Best practices
-- [Git Tips](docs/git-help.md) - Version control helpers
+- [Container Structure](docs/reference/container-structure.md) - Directory layout
+- [Development](docs/development/README.md) - Build, run, test, child images
+- [Examples](src/examples/README.md) - Runnable samples
 
 ## 🛠️ Development
 

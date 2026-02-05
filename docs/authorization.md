@@ -4,30 +4,29 @@
 
 The UDX Worker supports multiple cloud providers and services through environment-based credential management.
 
-## Supported Providers
+## When To Use
 
-| Provider  | Environment Variable | Description                              |
-| --------- | -------------------- | ---------------------------------------- |
-| Azure     | `AZURE_CREDS`        | Azure cloud credentials                  |
-| AWS       | `AWS_CREDS`          | Amazon Web Services credentials          |
-| GCP       | `GCP_CREDS`          | Google Cloud Platform credentials        |
-| Bitwarden | `BITWARDEN_CREDS`    | Bitwarden secrets management credentials |
+Use this when you need to:
 
-> **💡 Tip**: For simplified deployment with automatic credential detection, use the [`@udx/worker-deployment`](https://www.npmjs.com/package/@udx/worker-deployment) CLI tool.
+- Provide credentials to the worker container.
+- Understand supported providers and formats.
 
-## Credential Formats
+## Key Concepts
 
-Credentials can be provided in three formats:
+- Credentials can be provided via env vars.
+- Secrets can be JSON, Base64, or file paths.
 
-| Format    | Description         | Use Case                     |
-| --------- | ------------------- | ---------------------------- |
-| JSON      | Plain JSON string   | Direct configuration         |
-| Base64    | Base64-encoded JSON | Secure environment variables |
-| File Path | Path to JSON file   | Local development            |
+## Examples
 
-## Format Examples
+### Supported Providers
 
-### 1. JSON Format
+| Provider | Environment Variable | Description                       |
+| -------- | -------------------- | --------------------------------- |
+| Azure    | `AZURE_CREDS`        | Azure cloud credentials           |
+| AWS      | `AWS_CREDS`          | Amazon Web Services credentials   |
+| GCP      | `GCP_CREDS`          | Google Cloud Platform credentials |
+
+### JSON Format
 
 ```json
 {
@@ -38,60 +37,25 @@ Credentials can be provided in three formats:
 }
 ```
 
-### 2. Base64 Encoded Format
-
-```bash
-# Original JSON
-{
-    "client_id": "CLIENT_ID",
-    "client_secret": "CLIENT_SECRET",
-    "tenant_id": "TENANT_ID",
-    "subscription_id": "SUBSCRIPTION_ID"
-}
-
-# Base64 encoded value
-ewogICAgImNsaWVudF9pZCI6ICJDTElFTlRfSUQiLAogICAgImNsaWVudF9zZWNyZXQiOiAiQ0xJRU5UX1NFQ1JFVCIsCiAgICAidGVuYW50X2lkIjogIlRFTkFOVF9JRCIsCiAgICAic3Vic2NyaXB0aW9uX2lkIjogIlNVQlNDUklQVElPTl9JRCIKfQ==
-```
-
-**Generate Base64 Format:**
+### Base64 Format
 
 ```bash
 echo -n '{"client_id":"CLIENT_ID","client_secret":"CLIENT_SECRET","tenant_id":"TENANT_ID","subscription_id":"SUBSCRIPTION_ID"}' | base64
 ```
 
-### 3. File Path Format
+### File Path
 
 ```bash
-# Environment variable value
 AZURE_CREDS="/path/to/azure_credentials.json"
-
-# Credential file content (azure_credentials.json)
-{
-    "client_id": "CLIENT_ID",
-    "client_secret": "CLIENT_SECRET",
-    "tenant_id": "TENANT_ID",
-    "subscription_id": "SUBSCRIPTION_ID"
-}
 ```
 
-> **Note**: Always use absolute paths in production environments to avoid path resolution issues.
+## Common Pitfalls
 
-## Provider-Specific Authentication
+- Using relative credential paths in production.
+- Storing secrets in version control.
 
-For detailed authentication guides for each provider, see:
+## Related Docs
 
-- **[GCP Authentication](auth/gcp.md)** - Service account keys, workload identity, impersonation
-- **[Azure Authentication](auth/azure.md)** - Coming soon
-- **[AWS Authentication](auth/aws.md)** - Coming soon
-- **[Bitwarden Authentication](auth/bitwarden.md)** - Coming soon
-
-## Credential Management
-
-| Flag             | Default | Description                                                               |
-| ---------------- | ------- | ------------------------------------------------------------------------- |
-| `ACTORS_CLEANUP` | `true`  | Controls how cloud provider credentials are handled after authentication: |
-
-- When `true` (default): All temporary credentials and login sessions are cleaned up after use, improving security by not leaving credentials on disk
-- When `false`: Credentials are preserved on disk for reuse (e.g., GCP credentials are stored at `$HOME/creds/gcp_creds.json` and `GOOGLE_APPLICATION_CREDENTIALS` is set)
-
-This flag is particularly useful for long-running processes or development environments where frequent re-authentication would be inefficient.
+- `docs/runtime/config.md`
+- `docs/deploy/README.md`
+- `docs/auth/README.md`

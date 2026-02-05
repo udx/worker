@@ -1,0 +1,36 @@
+---
+name: Docker Ops
+
+"on":
+  push:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/docker-ops.yml"
+      - "Dockerfile"
+      - "bin/**"
+      - "lib/**"
+      - "src/**"
+      - "etc/**"
+      - "tests/**"
+      - "Makefile"
+      - "Makefile.variables"
+      - "ci/**"
+  workflow_dispatch:
+
+jobs:
+  docker-ops:
+    permissions:
+      contents: write
+      security-events: write
+      id-token: write
+    uses: udx/reusable-workflows/.github/workflows/docker-ops.yml@master
+    with:
+      image_name: usabilitydynamics/udx-worker
+      docker_login: usabilitydynamics
+      docker_org: usabilitydynamics
+      docker_repo: udx-worker
+      release_branch: latest
+      version_config_path: ci/git-version.yml
+    secrets:
+      docker_token: ${{ secrets.DOCKER_TOKEN }}

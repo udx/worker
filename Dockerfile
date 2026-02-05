@@ -50,8 +50,8 @@ RUN apt-get update && \
     unzip=6.0-28ubuntu7 \
     nano=8.4-1 \
     vim=2:9.1.0967-1ubuntu6 \
-    python3.13=3.13.7-1ubuntu0.1 \
-    python3.13-venv=3.13.7-1ubuntu0.1 \
+    python3.13=3.13.7-1ubuntu0.3 \
+    python3.13-venv=3.13.7-1ubuntu0.3 \
     python3-pip=25.1.1+dfsg-1ubuntu2 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
@@ -100,18 +100,6 @@ RUN ARCH=$(uname -m) && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
-
-# Install Bitwarden CLI (architecture-aware)
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
-    else \
-    echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    chmod +x /usr/local/bin/bw && \
-    rm -rf /tmp/* /var/tmp/*
 
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \

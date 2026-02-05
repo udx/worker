@@ -9,5 +9,3 @@ config:
       creds: "${AZURE_CREDS}"
     - type: aws
       creds: "${AWS_CREDS}"
-    - type: bitwarden
-      creds: "${BITWARDEN_CREDS}"

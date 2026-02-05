@@ -34,10 +34,16 @@ if [ -z "$CONFIG_OUTPUT" ]; then
     print_error "service config produced no output"
     exit 1
 fi
-if echo "$STATUS_OUTPUT" | grep -q "Simple service is running"; then
-    print_error "service should be stopped"
-    exit 1
-fi
+
+# Validate expected service names exist in JSON output
+EXPECTED_SERVICES="10-long-running 20-clean-exit 30-syntax-error 40-connection-error 50-rapid-exit"
+CONFIG_JSON=$(worker service config --format json 2>&1)
+for svc in $EXPECTED_SERVICES; do
+    if ! echo "$CONFIG_JSON" | jq -e --arg svc "$svc" '.content.services[] | select(.name == $svc) | .name' > /dev/null; then
+        print_error "service config missing expected service: $svc"
+        exit 1
+    fi
+done
 
 # All tests passed
 print_success "All service tests passed"
