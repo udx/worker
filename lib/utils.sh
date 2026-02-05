@@ -3,7 +3,7 @@
 # Supported secret providers (used for secret reference detection)
 # Only declare if not already defined (prevents errors when sourced multiple times)
 if [[ -z "${SUPPORTED_SECRET_PROVIDERS+x}" ]]; then
-    readonly SUPPORTED_SECRET_PROVIDERS="gcp|azure|aws|bitwarden"
+readonly SUPPORTED_SECRET_PROVIDERS="gcp|azure|aws"
 fi
 
 # Function to resolve placeholders with environment variables

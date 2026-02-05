@@ -101,18 +101,6 @@ RUN ARCH=$(uname -m) && \
     ./aws/install && \
     rm -rf awscliv2.zip aws /tmp/* /var/tmp/*
 
-# Install Bitwarden CLI (architecture-aware)
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/amd64/bw"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-    curl -Lso /usr/local/bin/bw "https://vault.bitwarden.com/download/linux/arm64/bw"; \
-    else \
-    echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    chmod +x /usr/local/bin/bw && \
-    rm -rf /tmp/* /var/tmp/*
-
 # Create a new user and group with specific UID and GID, and set permissions
 RUN groupadd -g ${GID} ${USER} && \
     useradd -l -m -u ${UID} -g ${GID} -s /bin/bash ${USER}

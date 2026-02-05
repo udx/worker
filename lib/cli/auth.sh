@@ -105,7 +105,7 @@ show_auth_status() {
         check_provider_status "aws"
         check_provider_status "gcp"
         check_provider_status "azure"
-        check_provider_status "bitwarden"
+        
     fi
     
     # Close JSON array if json format
@@ -171,16 +171,13 @@ logout_provider() {
             gcp)
                 cleanup_provider "gcloud" "gcloud auth revoke --all" "gcloud auth list" "GCP"
                 ;;
-            bitwarden)
-                cleanup_provider "bw" "bw logout --force" "bw status" "Bitwarden"
-                ;;
         esac
     }
     
     if [ -n "$target_provider" ]; then
         do_provider_logout "$target_provider"
     else
-        for provider in aws gcp azure bitwarden; do
+        for provider in aws gcp azure; do
             do_provider_logout "$provider"
         done
     fi
@@ -207,11 +204,6 @@ check_provider_auth() {
             ;;
         gcp)
             if gcloud auth list --format="value(account)" 2>/dev/null | grep -q .; then
-                return 0
-            fi
-            ;;
-        bitwarden)
-            if bw status | grep -q "unlocked"; then
                 return 0
             fi
             ;;

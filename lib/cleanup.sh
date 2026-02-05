@@ -131,11 +131,6 @@ cleanup_actors() {
                     any_cleanup=true
                 fi
                 ;;
-            bitwarden)
-                if cleanup_provider "bw" "bw logout --force" "bw status" "Bitwarden"; then
-                    any_cleanup=true
-                fi
-                ;;
             *)
                 log_warn "Unsupported or unavailable actor type for cleanup: $provider"
                 ;;

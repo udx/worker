@@ -1,34 +1,31 @@
 # Provider Authentication Guides
 
+## Overview
+
 This directory contains detailed authentication documentation for each supported cloud provider.
 
-## Available Guides
+## When To Use
 
-- **[GCP Authentication](gcp.md)** - Complete guide for Google Cloud Platform
-  - Service Account Keys
-  - Workload Identity Tokens
-  - Service Account Impersonation
-  - worker-deployment CLI integration
+Use these guides when you need provider-specific setup, credential formats, or CLI integration details.
 
-- **[Azure Authentication](azure.md)** - Coming soon
-- **[AWS Authentication](aws.md)** - Coming soon
-- **[Bitwarden Authentication](bitwarden.md)** - Coming soon
+## Key Concepts
 
-## Quick Links
+- Each provider has its own auth flow and credential structure.
+- Worker-deployment CLI can simplify authentication setup.
 
-- [Main Authorization Guide](../authorization.md) - Overview and general credential formats
-- [Worker Configuration](../config.md) - Worker configuration reference
-- [CLI Documentation](../CLI.md) - Worker CLI commands
+## Examples
 
-## Contributing
+- `docs/auth/gcp.md` - GCP authentication guide
+- `docs/auth/azure.md` - Azure authentication guide (coming soon)
+- `docs/auth/aws.md` - AWS authentication guide (coming soon)
 
-When adding a new provider authentication guide, please follow this structure:
+## Common Pitfalls
 
-1. **Authentication Methods** - List all supported authentication methods
-2. **JSON Format Examples** - Show credential structure
-3. **Usage Examples** - Provide practical examples (env vars, file paths, base64)
-4. **Features** - Highlight key features and capabilities
-5. **Best Practices** - Security and operational recommendations
-6. **CLI Integration** - If applicable, show worker-deployment CLI usage
+- Mixing provider-specific formats.
+- Passing plain secrets directly in config files.
 
-See [gcp.md](gcp.md) as a reference template.
+## Related Docs
+
+- `docs/authorization.md`
+- `docs/runtime/config.md`
+- `docs/reference/cli.md`
