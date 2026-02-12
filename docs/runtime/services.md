@@ -15,6 +15,7 @@ Use this when you need to:
 
 - Runtime-only: it lives inside the container at `/home/udx/.config/worker/`.
 - Image selection happens at deployment time (see `docs/deploy/README.md`).
+- Each service is configured with a single `command` string (there is no `args` field in `services.yaml`).
 
 ## Examples
 
@@ -40,7 +41,9 @@ kind: workerService
 version: udx.io/worker-v1/service
 services:
   - name: "logger"
-    command: "bash -c 'echo "[startup] logger"; while true; do echo "[tick] $(date)"; sleep 5; done'"
+    command: >-
+      bash -lc 'echo "[startup] logger";
+      while true; do echo "[tick] $(date)"; sleep 5; done'
     autostart: true
     autorestart: true
 ```
@@ -48,42 +51,74 @@ services:
 Then view output:
 
 ```bash
-worker service logs logger
+worker service logs logger --tail 100 --follow
+worker service errors logger --tail 100 --follow
 ```
 
 Example scripts: `src/examples/simple-service/`
 
-### Multiple Services
+### Two Independent Services (Concurrent)
 
 ```yaml
 kind: workerService
 version: udx.io/worker-v1/service
 services:
-  - name: "api-server"
-    command: "npm start"
+  - name: "serviceA"
+    command: >-
+      bash -lc 'echo "starting $SERVICE_NAME"; exec /home/udx/bin/service_a.sh'
     autostart: true
     autorestart: true
-    stopasgroup: true
-    killasgroup: true
     envs:
-      - "PORT=3000"
-      - "NODE_ENV=production"
+      - "SERVICE_NAME=serviceA"
+      - "LOG_LEVEL=info"
 
-  - name: "worker-queue"
-    command: "python worker.py"
+  - name: "serviceB"
+    command: >-
+      bash -lc 'echo "starting $SERVICE_NAME"; exec /home/udx/bin/service_b.sh'
     autostart: true
+    autorestart: true
     envs:
-      - "QUEUE_URL=redis://localhost:6379"
+      - "SERVICE_NAME=serviceB"
+      - "LOG_LEVEL=warn"
+```
 
-  - name: "monitoring"
-    command: "./monitor.sh"
-    ignore: true
+### Passing Command-Line Arguments to a Script
+
+```yaml
+kind: workerService
+version: udx.io/worker-v1/service
+services:
+  - name: "job-runner"
+    command: >-
+      /home/udx/bin/job-runner.sh
+      --config-path=/etc/app/config.json
+      --mode=sync
+      --retry=3
+    autostart: true
+    autorestart: true
+```
+
+### Reading Environment Variables in the Executed Command
+
+```yaml
+kind: workerService
+version: udx.io/worker-v1/service
+services:
+  - name: "print-service-name"
+    command: >-
+      bash -lc 'echo "SERVICE_NAME=$SERVICE_NAME"; exec /home/udx/bin/start.sh'
+    autostart: true
+    autorestart: true
+    envs:
+      - "SERVICE_NAME=worker-api"
 ```
 
 ## Common Pitfalls
 
 - Using `services.yaml` to select the image (use `deploy.yml` instead).
 - Forgetting to mount `services.yaml` into the container.
+- Expecting an `args` field in `services.yaml` (put arguments directly in `command`).
+- Putting provider references (for example `azure/...`) in `services.yaml` `envs`.
 
 ## Related Docs
 
