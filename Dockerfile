@@ -96,9 +96,11 @@ RUN ARCH=$(uname -m) && \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
+    if [ -x ./google-cloud-sdk/platform/bundledpythonunix/bin/python3 ]; then \
     ./google-cloud-sdk/platform/bundledpythonunix/bin/python3 -m pip install --no-cache-dir --upgrade \
         cryptography==${GCLOUD_PYTHON_CRYPTOGRAPHY_VERSION} \
-        wheel==${GCLOUD_PYTHON_WHEEL_VERSION} && \
+        wheel==${GCLOUD_PYTHON_WHEEL_VERSION}; \
+    fi && \
     rm -f \
         ./google-cloud-sdk/platform/gsutil/third_party/urllib3/dummyserver/certs/server.key \
         ./google-cloud-sdk/platform/gsutil/third_party/urllib3/dummyserver/certs/cacert.key && \
