@@ -4,6 +4,13 @@ FROM ubuntu:25.10
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
+ARG AZURE_CLI_VERSION=2.84.0
+ARG PIP_VERSION=25.3
+ARG YQ_VERSION=4.52.4
+ARG GCLOUD_VERSION=561.0.0
+ARG GCLOUD_PYTHON_CRYPTOGRAPHY_VERSION=46.0.5
+ARG GCLOUD_PYTHON_WHEEL_VERSION=0.46.2
+
 # Set base environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC \
@@ -37,26 +44,26 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2025b-3ubuntu1  \
-    curl=8.14.1-2ubuntu1  \
+    tzdata=2025b-3ubuntu1.1  \
+    curl=8.14.1-2ubuntu1.2  \
     bash=5.2.37-2ubuntu5  \
     apt-utils=3.1.6ubuntu2 \
     gettext=0.23.1-2build2 \
-    gnupg2=2.4.8-2ubuntu2 \
+    gnupg2=2.4.8-2ubuntu2.1 \
     ca-certificates=20250419 \
     lsb-release=12.1-1 \
     jq=1.8.1-3ubuntu1 \
     zip=3.0-15ubuntu2 \
     unzip=6.0-28ubuntu7 \
     nano=8.4-1 \
-    vim=2:9.1.0967-1ubuntu6 \
-    python3.13=3.13.7-1ubuntu0.3 \
-    python3.13-venv=3.13.7-1ubuntu0.3 \
-    python3-pip=25.1.1+dfsg-1ubuntu2 \
+    vim=2:9.1.0967-1ubuntu6.1 \
+    python3.13=3.13.7-1ubuntu0.4 \
+    python3.13-venv=3.13.7-1ubuntu0.4 \
     supervisor=4.2.5-3 && \
     # Install Azure CLI in venv with optimizations for scanning
     python3.13 -m venv /opt/az && \
-    /opt/az/bin/pip install --no-cache-dir azure-cli-core azure-cli && \
+    /opt/az/bin/pip install --no-cache-dir --upgrade pip==${PIP_VERSION} && \
+    /opt/az/bin/pip install --no-cache-dir azure-cli==${AZURE_CLI_VERSION} && \
     ln -s /opt/az/bin/az /usr/local/bin/az && \
     # Clean up pip cache and temp files
     rm -rf /root/.cache/pip && \
@@ -76,19 +83,25 @@ RUN echo $TZ > /etc/timezone && \
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v4.52.2/yq_linux_${ARCH}.tar.gz | tar xz && \
+    curl -sL https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_${ARCH}.tar.gz | tar xz && \
     mv yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-556.0.0-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-x86_64.tar.gz" -o google-cloud-sdk.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
-    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-556.0.0-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
+    curl -sSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_VERSION}-linux-arm.tar.gz" -o google-cloud-sdk.tar.gz; \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
+    ./google-cloud-sdk/platform/bundledpythonunix/bin/python3 -m pip install --no-cache-dir --upgrade \
+        cryptography==${GCLOUD_PYTHON_CRYPTOGRAPHY_VERSION} \
+        wheel==${GCLOUD_PYTHON_WHEEL_VERSION} && \
+    rm -f \
+        ./google-cloud-sdk/platform/gsutil/third_party/urllib3/dummyserver/certs/server.key \
+        ./google-cloud-sdk/platform/gsutil/third_party/urllib3/dummyserver/certs/cacert.key && \
     rm -rf google-cloud-sdk.tar.gz /tmp/* /var/tmp/*
 
 # Add Google Cloud SDK to PATH
