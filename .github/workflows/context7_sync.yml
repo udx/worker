@@ -1,0 +1,15 @@
+name: Context7 Sync
+
+on:
+  push:
+    branches: [latest]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    uses: udx/reusable-workflows/.github/workflows/context7-ops.yml@master
+    secrets:
+      context7_api_key: ${{ secrets.CONTEXT7_API_KEY }}
