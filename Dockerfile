@@ -8,8 +8,6 @@ ARG AZURE_CLI_VERSION=2.84.0
 ARG PIP_VERSION=25.3
 ARG YQ_VERSION=4.52.4
 ARG GCLOUD_VERSION=561.0.0
-ARG GCLOUD_PYTHON_CRYPTOGRAPHY_VERSION=46.0.5
-ARG GCLOUD_PYTHON_WHEEL_VERSION=0.46.2
 
 # Set base environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -96,11 +94,6 @@ RUN ARCH=$(uname -m) && \
     fi && \
     tar -xzf google-cloud-sdk.tar.gz && \
     ./google-cloud-sdk/install.sh -q && \
-    if [ -x ./google-cloud-sdk/platform/bundledpythonunix/bin/python3 ]; then \
-    ./google-cloud-sdk/platform/bundledpythonunix/bin/python3 -m pip install --no-cache-dir --upgrade \
-        cryptography==${GCLOUD_PYTHON_CRYPTOGRAPHY_VERSION} \
-        wheel==${GCLOUD_PYTHON_WHEEL_VERSION}; \
-    fi && \
     rm -f \
         ./google-cloud-sdk/platform/gsutil/third_party/urllib3/dummyserver/certs/server.key \
         ./google-cloud-sdk/platform/gsutil/third_party/urllib3/dummyserver/certs/cacert.key && \
