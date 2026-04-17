@@ -24,7 +24,7 @@ jobs:
       contents: write
       security-events: write
       id-token: write
-    uses: udx/reusable-workflows/.github/workflows/docker-ops.yml@master
+    uses: udx/reusable-workflows/.github/workflows/docker-ops.yml@fix/docker-ops-nonrelease-auth-guard
     with:
       image_name: usabilitydynamics/udx-worker
       docker_login: usabilitydynamics
