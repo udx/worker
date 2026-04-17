@@ -4,10 +4,10 @@ FROM ubuntu:25.10
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
-ARG AZURE_CLI_VERSION=2.84.0
-ARG PIP_VERSION=25.3
-ARG YQ_VERSION=4.52.4
-ARG GCLOUD_VERSION=561.0.0
+ARG AZURE_CLI_VERSION=2.85.0
+ARG PIP_VERSION=26.0.1
+ARG YQ_VERSION=4.53.2
+ARG GCLOUD_VERSION=565.0.0
 
 # Set base environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -42,7 +42,7 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2025b-3ubuntu1.1  \
+    tzdata=2026a-0ubuntu0.25.10.1  \
     curl=8.14.1-2ubuntu1.2  \
     bash=5.2.37-2ubuntu5  \
     apt-utils=3.1.6ubuntu2 \
@@ -54,7 +54,7 @@ RUN apt-get update && \
     zip=3.0-15ubuntu2 \
     unzip=6.0-28ubuntu7 \
     nano=8.4-1 \
-    vim=2:9.1.0967-1ubuntu6.1 \
+    vim=2:9.1.0967-1ubuntu6.2 \
     python3.13=3.13.7-1ubuntu0.4 \
     python3.13-venv=3.13.7-1ubuntu0.4 \
     supervisor=4.2.5-3 && \
