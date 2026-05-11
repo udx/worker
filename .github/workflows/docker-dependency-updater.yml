@@ -61,11 +61,14 @@ jobs:
           update_arg "PIP_VERSION" "${latest_pip_version}"
           update_arg "GCLOUD_VERSION" "${latest_gcloud_version}"
 
+          dockerfile_uses_aws_cli_arg=false
+          grep -q '\${AWS_CLI_VERSION}' "${dockerfile}" && dockerfile_uses_aws_cli_arg=true
+
           aws_cli_assets_available=true
           curl -fsI "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${latest_aws_cli_version}.zip" >/dev/null || aws_cli_assets_available=false
           curl -fsI "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-${latest_aws_cli_version}.zip" >/dev/null || aws_cli_assets_available=false
 
-          if ${aws_cli_assets_available} || grep -q '\${AWS_CLI_VERSION}' "${dockerfile}"; then
+          if ${aws_cli_assets_available}; then
             if grep -q '^ARG AWS_CLI_VERSION=' "${dockerfile}"; then
               update_arg "AWS_CLI_VERSION" "${latest_aws_cli_version}"
             else
@@ -80,11 +83,13 @@ jobs:
               mv "${dockerfile}.tmp" "${dockerfile}"
             fi
 
-            sed -i -E \
-              's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' \
-              "${dockerfile}"
+            if ! ${dockerfile_uses_aws_cli_arg}; then
+              sed -i -E \
+                's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' \
+                "${dockerfile}"
+            fi
           else
-            echo "::warning::Skipping AWS CLI URL pinning because versioned AWS CLI assets were not available."
+            echo "::warning::Skipping AWS CLI update because versioned AWS CLI assets were not available."
           fi
 
           mapfile -t apt_packages < <(
