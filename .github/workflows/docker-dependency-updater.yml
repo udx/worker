@@ -1,5 +1,5 @@
 ---
-name: Docker Dependency Updater
+name: Docker APT Dependency Updater
 
 "on":
   schedule:
@@ -11,86 +11,21 @@ permissions:
   pull-requests: write
 
 jobs:
-  update-docker-dependencies:
+  update-docker-apt-dependencies:
     runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Update Docker dependencies
+      - name: Update apt package pins in Dockerfile
         id: update
         shell: bash
         run: |
           set -euo pipefail
 
           dockerfile="Dockerfile"
-
-          update_arg() {
-            local arg_name="$1"
-            local new_value="$2"
-            sed -i -E "s|^ARG ${arg_name}=.*$|ARG ${arg_name}=${new_value}|" "${dockerfile}"
-          }
-
-          require_value() {
-            local value_name="$1"
-            local value="$2"
-            if [ -z "${value}" ] || [ "${value}" = "null" ]; then
-              echo "::error::Unable to determine ${value_name}"
-              exit 1
-            fi
-          }
-
-          latest_yq_version="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r '.tag_name | ltrimstr("v")')"
-          latest_azure_cli_version="$(curl -fsSL https://pypi.org/pypi/azure-cli/json | jq -r '.info.version')"
-          latest_pip_version="$(curl -fsSL https://pypi.org/pypi/pip/json | jq -r '.info.version')"
-          latest_gcloud_version="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r '.version')"
-          latest_aws_cli_version="$(curl -fsSL https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst | awk '/^[0-9]+\.[0-9]+\.[0-9]+/ { print $1; exit }')"
-
-          require_value "YQ_VERSION" "${latest_yq_version}"
-          require_value "AZURE_CLI_VERSION" "${latest_azure_cli_version}"
-          require_value "PIP_VERSION" "${latest_pip_version}"
-          require_value "GCLOUD_VERSION" "${latest_gcloud_version}"
-          require_value "AWS_CLI_VERSION" "${latest_aws_cli_version}"
-
-          update_arg "YQ_VERSION" "${latest_yq_version}"
-          update_arg "AZURE_CLI_VERSION" "${latest_azure_cli_version}"
-          update_arg "PIP_VERSION" "${latest_pip_version}"
-          update_arg "GCLOUD_VERSION" "${latest_gcloud_version}"
-
-          dockerfile_uses_aws_cli_arg=false
-          grep -q '\${AWS_CLI_VERSION}' "${dockerfile}" && dockerfile_uses_aws_cli_arg=true
-
-          aws_cli_assets_available=true
-          curl -fsI "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${latest_aws_cli_version}.zip" >/dev/null || aws_cli_assets_available=false
-          curl -fsI "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-${latest_aws_cli_version}.zip" >/dev/null || aws_cli_assets_available=false
-
-          if ${aws_cli_assets_available}; then
-            if grep -q '^ARG AWS_CLI_VERSION=' "${dockerfile}"; then
-              update_arg "AWS_CLI_VERSION" "${latest_aws_cli_version}"
-            else
-              awk -v version="${latest_aws_cli_version}" '
-                /^ARG GCLOUD_VERSION=/ {
-                  print $0
-                  print "ARG AWS_CLI_VERSION=" version
-                  next
-                }
-                { print }
-              ' "${dockerfile}" > "${dockerfile}.tmp"
-              mv "${dockerfile}.tmp" "${dockerfile}"
-            fi
-
-            if ! ${dockerfile_uses_aws_cli_arg}; then
-              sed -i -E \
-                's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' \
-                "${dockerfile}"
-            fi
-          else
-            echo "::warning::Skipping AWS CLI update because versioned AWS CLI assets were not available."
-          fi
+          base_image="$(awk '/^FROM / { print $2; exit }' "${dockerfile}")"
 
           mapfile -t apt_packages < <(
             awk '
@@ -109,7 +44,7 @@ jobs:
 
           if [ "${#apt_packages[@]}" -gt 0 ]; then
             apt_versions="$(
-              docker run --rm ubuntu:25.10 bash -s -- "${apt_packages[@]}" <<'EOF'
+              docker run --rm "${base_image}" bash -s -- "${apt_packages[@]}" <<'EOF'
           set -euo pipefail
           apt-get update >/dev/null
           for pkg in "$@"; do
@@ -133,22 +68,22 @@ jobs:
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           fi
 
+      - name: Validate Docker build
+        if: steps.update.outputs.changed == 'true'
+        run: docker build --progress=plain -t udx-worker-dependency-update-check .
+
       - name: Create pull request
         if: steps.update.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: "chore(deps): update docker dependencies"
-          title: "chore(deps): update Docker dependencies"
+          commit-message: "chore(deps): update Docker apt package pins"
+          title: "chore(deps): update Docker apt package pins"
           body: |
             ## Summary
 
-            Automated update of Docker dependencies in `Dockerfile`, including:
+            Automated update of Docker apt package version pins in `Dockerfile`.
 
-            - Ubuntu apt package version pins
-            - yq version
-            - Azure CLI version
-            - AWS CLI version
-            - Google Cloud SDK version
-            - pip version used by Azure CLI virtual environment
-          branch: automation/docker-dependency-updates
+            Dependabot remains the primary updater for supported ecosystems (Docker base image and GitHub Actions).
+            This workflow handles apt package pins, which Dependabot does not update.
+          branch: automation/docker-apt-dependency-updates
           delete-branch: true
