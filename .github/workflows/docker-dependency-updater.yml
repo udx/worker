@@ -177,7 +177,7 @@ jobs:
           fi
 
       - name: Validate Docker build
-        if: github.event_name == 'push' || steps.update.outputs.changed == 'true'
+        if: github.event_name == 'workflow_dispatch' && steps.update.outputs.changed == 'true'
         run: docker build --progress=plain -t dependency-update-validation .
 
       - name: Create pull request
