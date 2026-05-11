@@ -9,9 +9,52 @@ name: Docker Dependency Updater
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
+  schedule-copilot-session:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create scheduled Copilot issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = "chore: scheduled dependency upgrade session";
+
+            const existing = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              creator: "github-actions[bot]",
+              per_page: 100
+            });
+
+            const alreadyOpen = existing.data.some((issue) => issue.title === title);
+            if (alreadyOpen) {
+              core.info("Scheduled Copilot issue is already open. Skipping.");
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body: [
+                "@copilot please run this workflow in `workflow_dispatch` mode and apply dynamic dependency upgrades.",
+                "",
+                "Scope:",
+                "- Check Dockerfile dependency pins and ARG versions for available updates",
+                "- Update versions when available",
+                "- Validate with the repository build/tests",
+                "- Open or update a PR with the changes"
+              ].join("\n")
+            });
+
   update-docker-dependencies:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
 
     steps:
@@ -93,7 +136,7 @@ jobs:
 
             if [ -z "${latest_value}" ]; then
               github_repo="$(
-                grep -m1 -E "github.com/.+/releases/download/.+\\$\\{${arg_name}\\}" "${dockerfile}" \
+                grep -m1 -E "github\\.com/[^/]+/[^/]+/releases/download/.+\\$\\{${arg_name}\\}" "${dockerfile}" \
                   | sed -nE 's#.*github\.com/([^/]+/[^/]+)/releases/download/.*#\1#p' || true
               )"
               if [ -n "${github_repo}" ]; then
@@ -104,14 +147,14 @@ jobs:
               fi
             fi
 
-            if [ -z "${latest_value}" ] && grep -q "google-cloud-sdk-\${${arg_name}}" "${dockerfile}"; then
+            if [ -z "${latest_value}" ] && grep -Eq "google-cloud-sdk-(\\$\\{${arg_name}\\}|\\$${arg_name})" "${dockerfile}"; then
               latest_value="$(
                 curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json 2>/dev/null \
                   | jq -r '.version // empty' 2>/dev/null || true
               )"
             fi
 
-            if [ -z "${latest_value}" ] && grep -q "awscli-exe-linux-.*\${${arg_name}}" "${dockerfile}"; then
+            if [ -z "${latest_value}" ] && grep -Eq "awscli-exe-linux-.*(\\$\\{${arg_name}\\}|\\$${arg_name})" "${dockerfile}"; then
               latest_value="$(
                 curl -fsSL https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst 2>/dev/null \
                   | awk '/^[0-9]+\.[0-9]+\.[0-9]+/ { print $1; exit }' || true
