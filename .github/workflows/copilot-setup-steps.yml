@@ -23,4 +23,4 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq make
-          python3 -m pip install --user yamllint
+          python3 -m pip install --user yamllint==1.38.0

@@ -25,7 +25,7 @@ jobs:
           set -euo pipefail
 
           dockerfile="Dockerfile"
-          base_image="$(awk '/^FROM / { print $2; exit }' "${dockerfile}")"
+          base_image="$(awk '$1 == "FROM" { print $2; exit }' "${dockerfile}")"
 
           mapfile -t apt_packages < <(
             awk '
@@ -34,7 +34,7 @@ jobs:
               in_block {
                 gsub(/\\/, "", $0)
                 gsub(/^[[:space:]]+/, "", $0)
-                if ($0 ~ /^[[:alnum:].:+-]+=/) {
+                if ($0 ~ /^[[:alnum:].+-]+=/) {
                   split($0, parts, "=")
                   print parts[1]
                 }
@@ -58,7 +58,7 @@ jobs:
 
             while IFS='=' read -r pkg version; do
               [ -z "${pkg}" ] && continue
-              PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[^\s\\]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
+              PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[0-9A-Za-z.+:~_-]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
             done <<< "${apt_versions}"
           fi
 
