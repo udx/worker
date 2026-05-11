@@ -153,12 +153,12 @@ jobs:
           fi
 
       - name: Validate Docker build
-        if: github.event_name != 'push' && steps.update.outputs.changed == 'true'
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.update.outputs.changed == 'true'
         run: docker build --progress=plain -t dependency-update-validation .
 
       - name: Create pull request
         id: create_pr
-        if: github.event_name != 'push' && steps.update.outputs.changed == 'true'
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.update.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore(deps): update Docker dependency pins"
@@ -200,6 +200,7 @@ jobs:
             const repo = context.repo.repo;
             const maxAttempts = 30;
             const waitMs = 20_000;
+            const timeoutMinutes = Math.floor((maxAttempts * waitMs) / 60_000);
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
               const runs = await github.rest.actions.listWorkflowRuns({
@@ -211,7 +212,7 @@ jobs:
                 per_page: 20
               });
 
-              const run = runs.data.workflow_runs.find((candidate) => candidate.head_branch === branch);
+              const run = runs.data.workflow_runs[0];
 
               if (!run) {
                 core.info(`Attempt ${attempt}/${maxAttempts}: docker-ops run not found yet for ${branch}.`);
@@ -229,4 +230,4 @@ jobs:
               await new Promise((resolve) => setTimeout(resolve, waitMs));
             }
 
-            core.setFailed(`Timed out waiting for docker-ops workflow on branch ${branch}.`);
+            core.setFailed(`Timed out after ${timeoutMinutes} minutes waiting for docker-ops workflow on branch ${branch}.`);
