@@ -4,6 +4,10 @@ name: Docker Dependency Updater
 "on":
   schedule:
     - cron: "0 5 * * 1"
+  push:
+    paths:
+      - Dockerfile
+      - .github/workflows/docker-dependency-updater.yml
   workflow_dispatch:
 
 permissions:
@@ -54,7 +58,7 @@ jobs:
             });
 
   update-docker-dependencies:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-24.04
 
     steps:
@@ -173,11 +177,11 @@ jobs:
           fi
 
       - name: Validate Docker build
-        if: steps.update.outputs.changed == 'true'
+        if: github.event_name == 'push' || steps.update.outputs.changed == 'true'
         run: docker build --progress=plain -t dependency-update-validation .
 
       - name: Create pull request
-        if: steps.update.outputs.changed == 'true'
+        if: github.event_name == 'workflow_dispatch' && steps.update.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore(deps): update Docker dependency pins"
