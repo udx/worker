@@ -6,60 +6,22 @@ name: Docker Dependency Updater
     - cron: "0 5 * * 1"
   push:
     paths:
-      - Dockerfile
+      - "**/Dockerfile*"
       - .github/workflows/docker-dependency-updater.yml
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
   pull-requests: write
-  issues: write
 
 jobs:
-  schedule-copilot-session:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Create scheduled Copilot issue
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const title = "chore: scheduled dependency upgrade session";
-
-            const existing = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: "open",
-              creator: "github-actions[bot]",
-              per_page: 100
-            });
-
-            const alreadyOpen = existing.data.some((issue) => issue.title === title);
-            if (alreadyOpen) {
-              core.info("Scheduled Copilot issue is already open. Skipping.");
-              return;
-            }
-
-            await github.rest.issues.create({
-              owner,
-              repo,
-              title,
-              body: [
-                "@copilot please run this workflow in `workflow_dispatch` mode and apply dynamic dependency upgrades.",
-                "",
-                "Scope:",
-                "- Check Dockerfile dependency pins and ARG versions for available updates",
-                "- Update versions when available",
-                "- Validate with the repository build/tests",
-                "- Open or update a PR with the changes"
-              ].join("\n")
-            });
-
   update-docker-dependencies:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+      pr_branch: ${{ steps.create_pr.outputs.pull-request-branch }}
+      pr_number: ${{ steps.create_pr.outputs.pull-request-number }}
 
     steps:
       - name: Checkout repository
@@ -71,32 +33,45 @@ jobs:
         run: |
           set -euo pipefail
 
-          dockerfile="Dockerfile"
-          base_image="$(awk '$1 == "FROM" { print $2; exit }' "${dockerfile}")"
+          mapfile -t dockerfiles < <(find . -type f \( -name "Dockerfile" -o -name "Dockerfile.*" \) | sort)
+          if [ "${#dockerfiles[@]}" -eq 0 ]; then
+            echo "No Dockerfiles discovered. Exiting."
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
           update_arg() {
-            local arg_name="$1"
-            local new_value="$2"
+            local dockerfile="$1"
+            local arg_name="$2"
+            local new_value="$3"
             sed -i -E "s|^ARG ${arg_name}=.*$|ARG ${arg_name}=${new_value}|" "${dockerfile}"
           }
 
-          mapfile -t apt_packages < <(
-            awk '
-              /apt-get install -y --no-install-recommends/ { in_block=1; next }
-              in_block && /&&/ { in_block=0 }
-              in_block {
-                gsub(/\\/, "", $0)
-                gsub(/^[[:space:]]+/, "", $0)
-                if ($0 ~ /^[[:alnum:].+-]+=/) {
-                  split($0, parts, "=")
-                  print parts[1]
-                }
-              }
-            ' "${dockerfile}"
-          )
+          for dockerfile in "${dockerfiles[@]}"; do
+            base_image="$(awk '$1 == "FROM" { print $2; exit }' "${dockerfile}")"
+            if [ -z "${base_image}" ]; then
+              echo "Skipping ${dockerfile}: no base image found."
+              continue
+            fi
 
-          if [ "${#apt_packages[@]}" -gt 0 ]; then
-            apt_versions="$(
-              docker run --rm "${base_image}" bash -s -- "${apt_packages[@]}" <<'EOF'
+            mapfile -t apt_packages < <(
+              awk '
+                /apt-get install -y --no-install-recommends/ { in_block=1; next }
+                in_block && /&&/ { in_block=0 }
+                in_block {
+                  gsub(/\\/, "", $0)
+                  gsub(/^[[:space:]]+/, "", $0)
+                  if ($0 ~ /^[[:alnum:].+-]+=/) {
+                    split($0, parts, "=")
+                    print parts[1]
+                  }
+                }
+              ' "${dockerfile}"
+            )
+
+            if [ "${#apt_packages[@]}" -gt 0 ]; then
+              apt_versions="$(
+                docker run --rm "${base_image}" bash -s -- "${apt_packages[@]}" <<'APT_VERSIONS_EOF'
           set -euo pipefail
           apt-get update >/dev/null
           for pkg in "$@"; do
@@ -105,83 +80,85 @@ jobs:
               printf '%s=%s\n' "${pkg}" "${version}"
             fi
           done
-          EOF
-            )"
-
-            while IFS='=' read -r pkg version; do
-              [ -z "${pkg}" ] && continue
-              PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[0-9A-Za-z.+~:-]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
-            done <<< "${apt_versions}"
-          fi
-
-          while IFS='=' read -r arg_name current_value; do
-            [ -z "${arg_name}" ] && continue
-            latest_value=""
-
-            pip_package="$(
-              awk -v arg="${arg_name}" '
-                $0 ~ "==\\$\\{" arg "\\}" {
-                  match($0, /[A-Za-z0-9_.-]+==\$\{[A-Za-z0-9_]+\}/)
-                  if (RSTART > 0) {
-                    token=substr($0, RSTART, RLENGTH)
-                    split(token, parts, "==")
-                    print parts[1]
-                    exit
-                  }
-                }
-              ' "${dockerfile}"
-            )"
-            if [ -n "${pip_package}" ]; then
-              latest_value="$(
-                curl -fsSL "https://pypi.org/pypi/${pip_package}/json" 2>/dev/null \
-                  | jq -r '.info.version // empty' 2>/dev/null || true
+          APT_VERSIONS_EOF
               )"
+
+              while IFS='=' read -r pkg version; do
+                [ -z "${pkg}" ] && continue
+                PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[0-9A-Za-z.+~:-]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
+              done <<< "${apt_versions}"
             fi
 
-            if [ -z "${latest_value}" ]; then
-              github_repo="$(
-                grep -m1 -E "github\\.com/[^/]+/[^/]+/releases/download/.+\\$\\{${arg_name}\\}" "${dockerfile}" \
-                  | sed -nE 's#.*github\.com/([^/]+/[^/]+)/releases/download/.*#\1#p' || true
+            while IFS='=' read -r arg_name current_value; do
+              [ -z "${arg_name}" ] && continue
+              latest_value=""
+
+              pip_package="$(
+                awk -v arg="${arg_name}" '
+                  $0 ~ "==\\$\\{" arg "\\}" {
+                    match($0, /[A-Za-z0-9_.-]+==\$\{[A-Za-z0-9_]+\}/)
+                    if (RSTART > 0) {
+                      token=substr($0, RSTART, RLENGTH)
+                      split(token, parts, "==")
+                      print parts[1]
+                      exit
+                    }
+                  }
+                ' "${dockerfile}"
               )"
-              if [ -n "${github_repo}" ]; then
+              if [ -n "${pip_package}" ]; then
                 latest_value="$(
-                  curl -fsSL "https://api.github.com/repos/${github_repo}/releases/latest" 2>/dev/null \
-                    | jq -r '.tag_name // empty | ltrimstr("v")' 2>/dev/null || true
+                  curl -fsSL "https://pypi.org/pypi/${pip_package}/json" 2>/dev/null \
+                    | jq -r '.info.version // empty' 2>/dev/null || true
                 )"
               fi
-            fi
 
-            if [ -z "${latest_value}" ] && grep -Eq "google-cloud-sdk-(\\$\\{${arg_name}\\}|\\$${arg_name})" "${dockerfile}"; then
-              latest_value="$(
-                curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json 2>/dev/null \
-                  | jq -r '.version // empty' 2>/dev/null || true
-              )"
-            fi
+              if [ -z "${latest_value}" ]; then
+                github_repo="$(
+                  grep -m1 -E "github\\.com/[^/]+/[^/]+/releases/download/.+\\$\\{${arg_name}\\}" "${dockerfile}" \
+                    | sed -nE 's#.*github\.com/([^/]+/[^/]+)/releases/download/.*#\1#p' || true
+                )"
+                if [ -n "${github_repo}" ]; then
+                  latest_value="$(
+                    curl -fsSL "https://api.github.com/repos/${github_repo}/releases/latest" 2>/dev/null \
+                      | jq -r '.tag_name // empty | ltrimstr("v")' 2>/dev/null || true
+                  )"
+                fi
+              fi
 
-            if [ -z "${latest_value}" ] && grep -Eq "awscli-exe-linux-.*(\\$\\{${arg_name}\\}|\\$${arg_name})" "${dockerfile}"; then
-              latest_value="$(
-                curl -fsSL https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst 2>/dev/null \
-                  | awk '/^[0-9]+\.[0-9]+\.[0-9]+/ { print $1; exit }' || true
-              )"
-            fi
+              if [ -z "${latest_value}" ] && grep -Eq "google-cloud-sdk-(\\$\\{${arg_name}\\}|\\$${arg_name})" "${dockerfile}"; then
+                latest_value="$(
+                  curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json 2>/dev/null \
+                    | jq -r '.version // empty' 2>/dev/null || true
+                )"
+              fi
 
-            if [ -n "${latest_value}" ] && [ "${latest_value}" != "${current_value}" ]; then
-              update_arg "${arg_name}" "${latest_value}"
-            fi
-          done < <(awk '/^ARG [A-Z0-9_]+=/ { split($2, kv, "="); print kv[1] "=" kv[2] }' "${dockerfile}")
+              if [ -z "${latest_value}" ] && grep -Eq "awscli-exe-linux-.*(\\$\\{${arg_name}\\}|\\$${arg_name})" "${dockerfile}"; then
+                latest_value="$(
+                  curl -fsSL https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst 2>/dev/null \
+                    | awk '/^[0-9]+\.[0-9]+\.[0-9]+/ { print $1; exit }' || true
+                )"
+              fi
 
-          if git diff --quiet -- "${dockerfile}"; then
+              if [ -n "${latest_value}" ] && [ "${latest_value}" != "${current_value}" ]; then
+                update_arg "${dockerfile}" "${arg_name}" "${latest_value}"
+              fi
+            done < <(awk '/^ARG [A-Z0-9_]+=/ { split($2, kv, "="); print kv[1] "=" kv[2] }' "${dockerfile}")
+          done
+
+          if git diff --quiet -- "${dockerfiles[@]}"; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           fi
 
       - name: Validate Docker build
-        if: github.event_name == 'workflow_dispatch' && steps.update.outputs.changed == 'true'
+        if: github.event_name != 'push' && steps.update.outputs.changed == 'true'
         run: docker build --progress=plain -t dependency-update-validation .
 
       - name: Create pull request
-        if: github.event_name == 'workflow_dispatch' && steps.update.outputs.changed == 'true'
+        id: create_pr
+        if: github.event_name != 'push' && steps.update.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore(deps): update Docker dependency pins"
@@ -189,12 +166,67 @@ jobs:
           body: |
             ## Summary
 
-            Automated update of Docker dependency pins in `Dockerfile`, including:
+            Automated update of Docker dependency pins discovered across all `Dockerfile*` files, including:
 
             - apt package version pins
             - ARG-based tool versions discoverable from Dockerfile usage patterns
 
-            Dependabot remains the primary updater for supported ecosystems (Docker base image and GitHub Actions).
+            Dependabot remains the primary updater for supported ecosystems (Docker base images and GitHub Actions).
             This workflow handles Dockerfile dependency pins that Dependabot does not update.
           branch: automation/docker-dependency-updates
           delete-branch: true
+
+  verify-docker-ops:
+    if: needs.update-docker-dependencies.outputs.changed == 'true' && needs.update-docker-dependencies.outputs.pr_number != ''
+    runs-on: ubuntu-24.04
+    needs:
+      - update-docker-dependencies
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for Docker Ops workflow to complete
+        uses: actions/github-script@v8
+        env:
+          PR_BRANCH: ${{ needs.update-docker-dependencies.outputs.pr_branch }}
+        with:
+          script: |
+            const branch = process.env.PR_BRANCH;
+            if (!branch) {
+              core.setFailed('Missing PR branch output from create-pull-request step.');
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const maxAttempts = 30;
+            const waitMs = 20_000;
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: 'docker-ops.yml',
+                branch,
+                event: 'push',
+                per_page: 20
+              });
+
+              const run = runs.data.workflow_runs.find((candidate) => candidate.head_branch === branch);
+
+              if (!run) {
+                core.info(`Attempt ${attempt}/${maxAttempts}: docker-ops run not found yet for ${branch}.`);
+              } else if (run.status !== 'completed') {
+                core.info(`Attempt ${attempt}/${maxAttempts}: docker-ops status is ${run.status}.`);
+              } else {
+                core.info(`docker-ops completed with conclusion: ${run.conclusion}`);
+                if (run.conclusion === 'success') {
+                  return;
+                }
+                core.setFailed(`docker-ops failed with conclusion: ${run.conclusion}`);
+                return;
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, waitMs));
+            }
+
+            core.setFailed(`Timed out waiting for docker-ops workflow on branch ${branch}.`);
