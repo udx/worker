@@ -48,7 +48,7 @@ jobs:
           latest_azure_cli_version="$(curl -fsSL https://pypi.org/pypi/azure-cli/json | jq -r '.info.version')"
           latest_pip_version="$(curl -fsSL https://pypi.org/pypi/pip/json | jq -r '.info.version')"
           latest_gcloud_version="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r '.version')"
-          latest_aws_cli_version="$(curl -fsSL https://api.github.com/repos/aws/aws-cli/releases/latest | jq -r '.tag_name | ltrimstr("v")')"
+          latest_aws_cli_version="$(curl -fsSL https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst | awk '/^[0-9]+\.[0-9]+\.[0-9]+/ { print $1; exit }')"
 
           require_value "YQ_VERSION" "${latest_yq_version}"
           require_value "AZURE_CLI_VERSION" "${latest_azure_cli_version}"
@@ -61,23 +61,31 @@ jobs:
           update_arg "PIP_VERSION" "${latest_pip_version}"
           update_arg "GCLOUD_VERSION" "${latest_gcloud_version}"
 
-          if grep -q '^ARG AWS_CLI_VERSION=' "${dockerfile}"; then
-            update_arg "AWS_CLI_VERSION" "${latest_aws_cli_version}"
-          else
-            awk -v version="${latest_aws_cli_version}" '
-              /^ARG GCLOUD_VERSION=/ {
-                print $0
-                print "ARG AWS_CLI_VERSION=" version
-                next
-              }
-              { print }
-            ' "${dockerfile}" > "${dockerfile}.tmp"
-            mv "${dockerfile}.tmp" "${dockerfile}"
-          fi
+          aws_cli_assets_available=true
+          curl -fsI "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${latest_aws_cli_version}.zip" >/dev/null || aws_cli_assets_available=false
+          curl -fsI "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-${latest_aws_cli_version}.zip" >/dev/null || aws_cli_assets_available=false
 
-          sed -i -E \
-            's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' \
-            "${dockerfile}"
+          if ${aws_cli_assets_available} || grep -q '\${AWS_CLI_VERSION}' "${dockerfile}"; then
+            if grep -q '^ARG AWS_CLI_VERSION=' "${dockerfile}"; then
+              update_arg "AWS_CLI_VERSION" "${latest_aws_cli_version}"
+            else
+              awk -v version="${latest_aws_cli_version}" '
+                /^ARG GCLOUD_VERSION=/ {
+                  print $0
+                  print "ARG AWS_CLI_VERSION=" version
+                  next
+                }
+                { print }
+              ' "${dockerfile}" > "${dockerfile}.tmp"
+              mv "${dockerfile}.tmp" "${dockerfile}"
+            fi
+
+            sed -i -E \
+              's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' \
+              "${dockerfile}"
+          else
+            echo "::warning::Skipping AWS CLI URL pinning because versioned AWS CLI assets were not available."
+          fi
 
           mapfile -t apt_packages < <(
             awk '
