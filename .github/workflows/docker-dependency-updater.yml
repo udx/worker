@@ -35,11 +35,26 @@ jobs:
             sed -i -E "s|^ARG ${arg_name}=.*$|ARG ${arg_name}=${new_value}|" "${dockerfile}"
           }
 
+          require_value() {
+            local value_name="$1"
+            local value="$2"
+            if [ -z "${value}" ] || [ "${value}" = "null" ]; then
+              echo "::error::Unable to determine ${value_name}"
+              exit 1
+            fi
+          }
+
           latest_yq_version="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r '.tag_name | ltrimstr("v")')"
           latest_azure_cli_version="$(curl -fsSL https://pypi.org/pypi/azure-cli/json | jq -r '.info.version')"
           latest_pip_version="$(curl -fsSL https://pypi.org/pypi/pip/json | jq -r '.info.version')"
           latest_gcloud_version="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r '.version')"
-          latest_aws_cli_version="$(curl -fsSL https://api.github.com/repos/aws/aws-cli/tags?per_page=1 | jq -r '.[0].name | ltrimstr("v")')"
+          latest_aws_cli_version="$(curl -fsSL https://api.github.com/repos/aws/aws-cli/releases/latest | jq -r '.tag_name | ltrimstr("v")')"
+
+          require_value "YQ_VERSION" "${latest_yq_version}"
+          require_value "AZURE_CLI_VERSION" "${latest_azure_cli_version}"
+          require_value "PIP_VERSION" "${latest_pip_version}"
+          require_value "GCLOUD_VERSION" "${latest_gcloud_version}"
+          require_value "AWS_CLI_VERSION" "${latest_aws_cli_version}"
 
           update_arg "YQ_VERSION" "${latest_yq_version}"
           update_arg "AZURE_CLI_VERSION" "${latest_azure_cli_version}"
@@ -60,8 +75,8 @@ jobs:
             mv "${dockerfile}.tmp" "${dockerfile}"
           fi
 
-          aws_cli_url_pattern='https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip'
-          aws_cli_versioned_url_pattern='https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}-${AWS_CLI_VERSION}.zip'
+          aws_cli_url_pattern='https://awscli.amazonaws.com/awscli-exe-linux-\${ARCH}.zip'
+          aws_cli_versioned_url_pattern='https://awscli.amazonaws.com/awscli-exe-linux-\${ARCH}-\${AWS_CLI_VERSION}.zip'
           sed -i -E "s|${aws_cli_url_pattern}|${aws_cli_versioned_url_pattern}|g" "${dockerfile}"
 
           mapfile -t apt_packages < <(
