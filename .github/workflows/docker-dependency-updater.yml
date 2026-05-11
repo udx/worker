@@ -13,6 +13,7 @@ name: Docker Dependency Updater
 permissions:
   actions: read
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -173,6 +174,9 @@ jobs:
 
             Dependabot remains the primary updater for supported ecosystems (Docker base images and GitHub Actions).
             This workflow handles Dockerfile dependency pins that Dependabot does not update.
+          labels: |
+            dependencies
+            docker
           branch: automation/docker-dependency-updates
           delete-branch: true
 
