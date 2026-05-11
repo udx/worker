@@ -58,7 +58,7 @@ jobs:
 
             while IFS='=' read -r pkg version; do
               [ -z "${pkg}" ] && continue
-              PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[0-9A-Za-z.+:~_-]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
+              PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[0-9A-Za-z.+~:-]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
             done <<< "${apt_versions}"
           fi
 
@@ -70,7 +70,7 @@ jobs:
 
       - name: Validate Docker build
         if: steps.update.outputs.changed == 'true'
-        run: docker build --progress=plain -t udx-worker-dependency-update-check .
+        run: docker build --progress=plain -t dependency-update-validation .
 
       - name: Create pull request
         if: steps.update.outputs.changed == 'true'
