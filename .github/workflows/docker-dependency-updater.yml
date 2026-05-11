@@ -1,7 +1,7 @@
 ---
 name: Docker Dependency Updater
 
-on:
+"on":
   schedule:
     - cron: "0 5 * * 1"
   workflow_dispatch:
@@ -60,7 +60,9 @@ jobs:
             mv "${dockerfile}.tmp" "${dockerfile}"
           fi
 
-          sed -i -E 's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' "${dockerfile}"
+          aws_cli_url_pattern='https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip'
+          aws_cli_versioned_url_pattern='https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}-${AWS_CLI_VERSION}.zip'
+          sed -i -E "s|${aws_cli_url_pattern}|${aws_cli_versioned_url_pattern}|g" "${dockerfile}"
 
           mapfile -t apt_packages < <(
             awk '
