@@ -1,0 +1,124 @@
+---
+name: Docker Dependency Updater
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-docker-dependencies:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Update Docker dependencies
+        id: update
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          dockerfile="Dockerfile"
+
+          update_arg() {
+            local arg_name="$1"
+            local new_value="$2"
+            sed -i -E "s|^ARG ${arg_name}=.*$|ARG ${arg_name}=${new_value}|" "${dockerfile}"
+          }
+
+          latest_yq_version="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r '.tag_name | ltrimstr("v")')"
+          latest_azure_cli_version="$(curl -fsSL https://pypi.org/pypi/azure-cli/json | jq -r '.info.version')"
+          latest_pip_version="$(curl -fsSL https://pypi.org/pypi/pip/json | jq -r '.info.version')"
+          latest_gcloud_version="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r '.version')"
+          latest_aws_cli_version="$(curl -fsSL https://api.github.com/repos/aws/aws-cli/tags?per_page=1 | jq -r '.[0].name | ltrimstr("v")')"
+
+          update_arg "YQ_VERSION" "${latest_yq_version}"
+          update_arg "AZURE_CLI_VERSION" "${latest_azure_cli_version}"
+          update_arg "PIP_VERSION" "${latest_pip_version}"
+          update_arg "GCLOUD_VERSION" "${latest_gcloud_version}"
+
+          if grep -q '^ARG AWS_CLI_VERSION=' "${dockerfile}"; then
+            update_arg "AWS_CLI_VERSION" "${latest_aws_cli_version}"
+          else
+            awk -v version="${latest_aws_cli_version}" '
+              /^ARG GCLOUD_VERSION=/ {
+                print $0
+                print "ARG AWS_CLI_VERSION=" version
+                next
+              }
+              { print }
+            ' "${dockerfile}" > "${dockerfile}.tmp"
+            mv "${dockerfile}.tmp" "${dockerfile}"
+          fi
+
+          sed -i -E 's|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}\.zip|https://awscli.amazonaws.com/awscli-exe-linux-\$\{ARCH\}-\$\{AWS_CLI_VERSION\}\.zip|g' "${dockerfile}"
+
+          mapfile -t apt_packages < <(
+            awk '
+              /apt-get install -y --no-install-recommends/ { in_block=1; next }
+              in_block && /&&/ { in_block=0 }
+              in_block {
+                gsub(/\\/, "", $0)
+                gsub(/^[[:space:]]+/, "", $0)
+                if ($0 ~ /^[[:alnum:].:+-]+=/) {
+                  split($0, parts, "=")
+                  print parts[1]
+                }
+              }
+            ' "${dockerfile}"
+          )
+
+          if [ "${#apt_packages[@]}" -gt 0 ]; then
+            apt_versions="$(
+              docker run --rm ubuntu:25.10 bash -s -- "${apt_packages[@]}" <<'EOF'
+          set -euo pipefail
+          apt-get update >/dev/null
+          for pkg in "$@"; do
+            version="$(apt-cache madison "${pkg}" | awk 'NR==1 {print $3}')"
+            if [ -n "${version}" ]; then
+              printf '%s=%s\n' "${pkg}" "${version}"
+            fi
+          done
+          EOF
+            )"
+
+            while IFS='=' read -r pkg version; do
+              [ -z "${pkg}" ] && continue
+              PKG="${pkg}" VERSION="${version}" perl -0pi -e 's/\Q$ENV{PKG}=\E[^\s\\]+/$ENV{PKG}=$ENV{VERSION}/g' "${dockerfile}"
+            done <<< "${apt_versions}"
+          fi
+
+          if git diff --quiet -- "${dockerfile}"; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Create pull request
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(deps): update docker dependencies"
+          title: "chore(deps): update Docker dependencies"
+          body: |
+            ## Summary
+
+            Automated update of Docker dependencies in `Dockerfile`, including:
+
+            - Ubuntu apt package version pins
+            - yq version
+            - Azure CLI version
+            - AWS CLI version
+            - Google Cloud SDK version
+            - pip version used by Azure CLI virtual environment
+          branch: automation/docker-dependency-updates
+          delete-branch: true
