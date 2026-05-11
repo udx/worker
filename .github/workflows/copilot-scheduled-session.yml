@@ -1,0 +1,52 @@
+---
+name: Scheduled Copilot Session
+
+"on":
+  schedule:
+    - cron: "30 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  schedule-copilot-session:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create scheduled Copilot issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = "chore: scheduled dependency upgrade session";
+
+            const existing = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              creator: "github-actions[bot]",
+              per_page: 100
+            });
+
+            const alreadyOpen = existing.data.some((issue) => issue.title === title);
+            if (alreadyOpen) {
+              core.info("Scheduled Copilot issue is already open. Skipping.");
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body: [
+                "@copilot please run a dependency upgrade sweep for this repository.",
+                "",
+                "Scope:",
+                "- Check Dockerfile dependency pins and ARG versions for available updates",
+                "- Update versions when available",
+                "- Validate with the repository build/tests",
+                "- Open or update a PR with the changes"
+              ].join("\n")
+            });
