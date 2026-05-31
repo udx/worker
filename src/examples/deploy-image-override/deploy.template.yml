@@ -1,8 +1,0 @@
----
-kind: workerDeployConfig
-version: udx.io/worker-v1/deploy
-config:
-  image: "${WORKER_IMAGE}"
-  command: "echo"
-  args:
-    - "Hello from CI/CD"

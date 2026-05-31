@@ -69,5 +69,5 @@ Python:
 
 ## Related Docs
 
-- `docs/development/child-images.md`
-- `docs/deploy/README.md`
+- `docs/child-images.md`
+- `docs/deployment.md`

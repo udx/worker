@@ -56,7 +56,7 @@ make log FOLLOW_LOGS=true
 make test
 ```
 
-The test target mounts `src/tests` and example configs into the container and runs `/home/udx/tests/main.sh`.
+The test target mounts `test` and example configs into the container and runs `/home/udx/test/main.sh`.
 
 ## Common Pitfalls
 
@@ -65,5 +65,5 @@ The test target mounts `src/tests` and example configs into the container and ru
 
 ## Related Docs
 
-- `docs/runtime/services.md`
-- `docs/runtime/config.md`
+- `docs/services.md`
+- `docs/config.md`

@@ -17,10 +17,10 @@ Use these docs when you need to:
 - **Core image**: modify this repo when changing worker behavior.
 - **Child image**: extend the core image for extra dependencies.
 
-## Examples
+## Guides
 
-- Core image workflow: `docs/development/core-image.md`
-- Child image workflow: `docs/development/child-images.md`
+- Core image workflow: `docs/core-image.md`
+- Child image workflow: `docs/child-images.md`
 
 ## Common Pitfalls
 
@@ -29,5 +29,5 @@ Use these docs when you need to:
 
 ## Related Docs
 
-- `docs/deploy/README.md`
-- `docs/reference/container-structure.md`
+- `docs/deployment.md`
+- `docs/references/container-structure.md`

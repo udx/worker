@@ -1,4 +1,4 @@
-# Service Configuration (`services.yaml`)
+# Service Config (`services.yaml`)
 
 ## Overview
 
@@ -14,7 +14,7 @@ Use this when you need to:
 ## Key Concepts
 
 - Runtime-only: it lives inside the container at `/home/udx/.config/worker/`.
-- Image selection happens at deployment time (see `docs/deploy/README.md`).
+- Image selection happens at deployment time (see `docs/deployment.md`).
 - Each service is configured with a single `command` string (there is no `args` field in `services.yaml`).
 
 ## Examples
@@ -115,12 +115,12 @@ services:
 
 ## Common Pitfalls
 
-- Using `services.yaml` to select the image (use `deploy.yml` instead).
+- Using `services.yaml` to select the image; image selection belongs to Docker, Kubernetes, or CI/CD deployment config.
 - Forgetting to mount `services.yaml` into the container.
 - Expecting an `args` field in `services.yaml` (put arguments directly in `command`).
 - Putting provider references (for example `azure/...`) in `services.yaml` `envs`.
 
 ## Related Docs
 
-- `docs/runtime/config.md`
-- `docs/deploy/README.md`
+- `docs/config.md`
+- `docs/deployment.md`

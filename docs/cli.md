@@ -14,17 +14,21 @@ Use the CLI when you need to:
 
 ## Key Concepts
 
-- Commands are namespaced (`worker service`, `worker env`, `worker auth`).
+- Commands are namespaced (`worker service`, `worker env`, `worker health`, `worker sbom`, `worker config`).
 - Most commands provide help when run without arguments.
+- `worker env reload` and `worker config apply` rerun the same config/env/secret resolution path used by the entrypoint.
 
 ## Examples
 
 ```bash
-# Show auth command help
-worker auth
-
 # Show service command help
 worker service
+
+# Inspect resolved environment
+worker env status
+
+# Re-apply worker.yaml after provider auth has been established
+worker env reload
 ```
 
 ## Common Pitfalls
@@ -34,5 +38,5 @@ worker service
 
 ## Related Docs
 
-- `docs/runtime/services.md`
-- `docs/runtime/config.md`
+- `docs/services.md`
+- `docs/config.md`

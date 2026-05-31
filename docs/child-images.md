@@ -20,28 +20,16 @@ Avoid a child image when:
 ## Key Concepts
 
 - Child images extend `usabilitydynamics/udx-worker`.
-- `worker gen` creates scaffolding to get started quickly.
+- Child image scaffolding can be created manually with a Dockerfile that extends the base worker image.
 
 ## Examples
 
-### Generate Scaffolding
-
-```bash
-npm install -g @udx/worker-deployment
-
-# Generate a child image repo skeleton (dry-run + prompt)
-worker gen repo
-
-# Generate a Dockerfile only (dry-run + prompt)
-worker gen dockerfile
-```
-
 ### Minimal Workflow
 
-1. Generate a repo or Dockerfile.
+1. Create a Dockerfile.
 2. Add dependencies.
 3. Build and tag the image.
-4. Deploy using `deploy.yml`.
+4. Run it with Docker, Kubernetes, or CI/CD.
 
 Example Dockerfile:
 
@@ -56,21 +44,20 @@ Build:
 docker build -t my-org/udx-worker-custom:latest .
 ```
 
-Deploy (excerpt):
+Run:
 
-```yaml
-kind: workerDeployConfig
-version: udx.io/worker-v1/deploy
-config:
-  image: "my-org/udx-worker-custom:latest"
+```bash
+docker run --rm \
+  -v "$(pwd)/.config/worker:/home/udx/.config/worker:ro" \
+  my-org/udx-worker-custom:latest
 ```
 
 ## Common Pitfalls
 
 - Baking secrets into the image.
-- Forgetting to update `deploy.yml` with the child image.
+- Forgetting to update the host deployment image reference.
 
 ## Related Docs
 
-- `docs/deploy/worker-deployment.md`
-- `docs/reference/container-structure.md`
+- `docs/deployment.md`
+- `docs/references/container-structure.md`

@@ -15,10 +15,3 @@ A set of small service scripts used to demonstrate supervisor behavior:
 Minimal `worker.yaml` used by tests and quick local runs:
 
 - `.config/worker/worker.yaml`
-
-## deploy-image-override
-
-Shows how to override the worker image in CI/CD using a deploy template:
-
-- `deploy.template.yml`
-- `README.md`
