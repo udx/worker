@@ -144,7 +144,8 @@ RUN mkdir -p \
 # Copy worker files
 COPY bin/entrypoint.sh ${WORKER_BIN_DIR}/
 COPY lib ${WORKER_LIB_DIR}/
-COPY etc/configs/worker/default.yaml ${WORKER_CONFIG_DIR}/worker.yaml
+COPY src/configs/worker.yaml ${WORKER_CONFIG_DIR}/worker.yaml
+COPY src/configs/services.yaml ${WORKER_CONFIG_DIR}/services.yaml
 COPY etc/configs/supervisor ${WORKER_CONFIG_DIR}/supervisor/
 
 # Make scripts executable and initialize environment

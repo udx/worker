@@ -5,7 +5,8 @@ source "${WORKER_LIB_DIR}/utils.sh"
 
 # Define paths
 USER_CONFIG_PATH="${HOME}/.config/worker/services.yaml"
-CONFIG_FILE="${USER_CONFIG_PATH}"
+BUILT_IN_CONFIG_PATH="${WORKER_CONFIG_DIR}/services.yaml"
+CONFIG_FILE=""
 
 # Supervisor configuration paths
 COMMON_TEMPLATE_FILE="${WORKER_CONFIG_DIR}/supervisor/common.conf"
@@ -18,10 +19,16 @@ trap 'handle_supervisor_signals SIGINT' SIGINT
 
 # Main execution
 main() {
-    # Check if user config exists
-    if [[ ! -f "${USER_CONFIG_PATH}" ]]; then
-        log_info "No services configuration found at ${USER_CONFIG_PATH}."
+    CONFIG_FILE=$(get_service_config_path)
+
+    if [[ -z "$CONFIG_FILE" ]]; then
+        log_info "No services configuration found."
         log_info "Run 'worker service' for information about service configuration"
+        exit 0
+    fi
+
+    if ! has_enabled_services; then
+        log_info "No enabled services found in $CONFIG_FILE."
         exit 0
     fi
 
@@ -44,6 +51,28 @@ main() {
     
     # Wait for signals
     wait
+}
+
+get_service_config_path() {
+    if [[ -f "$USER_CONFIG_PATH" && -s "$USER_CONFIG_PATH" ]]; then
+        echo "$USER_CONFIG_PATH"
+        return 0
+    fi
+
+    if [[ -f "$BUILT_IN_CONFIG_PATH" && -s "$BUILT_IN_CONFIG_PATH" ]]; then
+        echo "$BUILT_IN_CONFIG_PATH"
+        return 0
+    fi
+
+    return 1
+}
+
+has_enabled_services() {
+    local enabled_services_count
+
+    enabled_services_count=$(yq e '.services // [] | map(select(.ignore != true)) | length' "$CONFIG_FILE" 2>/dev/null)
+
+    [[ "${enabled_services_count:-0}" -gt 0 ]]
 }
 
 # Helper function to parse and process each service configuration
@@ -210,14 +239,11 @@ start_supervisor() {
 
 # Function to check for service configurations
 should_generate_config() {
-    local enabled_services_count
-    # Extract services into JSON format
-    services_yaml=$(yq e -o=json '.services[] | select(.ignore != true)' "$CONFIG_FILE")
-    # Count the number of items in the JSON array, trimming any newlines or spaces
-    enabled_services_count=$(echo "$services_yaml" | jq -c '. | length' | tr -d '\n')
+    if [[ -z "$CONFIG_FILE" ]]; then
+        CONFIG_FILE=$(get_service_config_path)
+    fi
 
-    # Check if the configuration file exists and there is at least one enabled service
-    if [ -f "$CONFIG_FILE" ] && [ "${enabled_services_count:-0}" -gt 0 ]; then
+    if [ -f "$CONFIG_FILE" ] && has_enabled_services; then
         return 0
     else
         return 1
@@ -226,6 +252,10 @@ should_generate_config() {
 
 # Function to configure services
 configure_services() {
+    if [[ -z "$CONFIG_FILE" ]]; then
+        CONFIG_FILE=$(get_service_config_path)
+    fi
+
     if ! should_generate_config; then
         log_warn "Process Manager" "No services found in $CONFIG_FILE. No Supervisor configuration generated."
         return 1

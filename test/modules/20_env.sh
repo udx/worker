@@ -2,7 +2,7 @@
 
 # Source test helpers
 # shellcheck source=../test_helpers.sh disable=SC1091
-source "/home/udx/tests/test_helpers.sh"
+source "/home/udx/test/test_helpers.sh"
 
 # Test environment commands
 print_header "Environment Tests"
@@ -42,6 +42,13 @@ for var in $CONFIG_ENV; do
         exit 1
     fi
 done
+
+# Test environment reload
+print_info "Testing: env reload"
+if ! worker env reload; then
+    print_error "env reload should re-apply current configuration"
+    exit 1
+fi
 
 # All tests passed
 print_success "All environment tests passed"

@@ -4,7 +4,7 @@
 
 # Source test helpers
 # shellcheck source=./test_helpers.sh disable=SC1091
-source "/home/udx/tests/test_helpers.sh"
+source "/home/udx/test/test_helpers.sh"
 
 # Exit on any error
 set -e
@@ -30,7 +30,7 @@ PASSED=0
 FAILED=0
 
 # Directory containing test files
-TEST_DIR="/home/udx/tests"
+TEST_DIR="/home/udx/test"
 cd "$TEST_DIR"
 
 # Don't exit on test failures

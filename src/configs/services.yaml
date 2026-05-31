@@ -1,0 +1,4 @@
+---
+kind: workerService
+version: udx.io/worker-v1/service
+services: []

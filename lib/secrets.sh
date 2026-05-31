@@ -20,7 +20,6 @@ if [[ -z "${WORKER_INTERNAL_VARS+x}" ]]; then
     readonly WORKER_INTERNAL_VARS=(
         "AZURE_CONFIG_DIR"
         "AWS_CONFIG_FILE"
-        "GCP_CREDS"
         "TZ"
     )
 fi

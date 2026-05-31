@@ -6,7 +6,14 @@ source "${WORKER_LIB_DIR}/utils.sh"
 log_info "Welcome to UDX Worker Container. Initializing environment..."
 
 # shellcheck disable=SC1091
-source "${WORKER_LIB_DIR}/environment.sh"
+source "${WORKER_LIB_DIR}/worker_config.sh"
+# shellcheck disable=SC1091
+source "${WORKER_LIB_DIR}/secrets.sh"
+configure_environment || exit 1
+
+# shellcheck disable=SC1091
+source "${WORKER_LIB_DIR}/runtime_output.sh"
+emit_runtime_output || exit 1
 
 # Start the process manager
 log_info "Starting process manager..."

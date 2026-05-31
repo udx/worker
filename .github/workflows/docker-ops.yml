@@ -12,7 +12,7 @@ name: Docker Ops
       - "lib/**"
       - "src/**"
       - "etc/**"
-      - "tests/**"
+      - "test/**"
       - "Makefile"
       - "Makefile.variables"
       - "ci/**"

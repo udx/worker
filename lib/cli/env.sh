@@ -255,19 +255,12 @@ show_status() {
     local format=${1:-text}
     
     local env_file_exists=false
-    local secrets_file_exists=false
     local env_count=0
-    local secrets_count=0
     
     [ -f "$WORKER_ENV_FILE" ] && env_file_exists=true
-    [ -f "$WORKER_SECRETS_FILE" ] && secrets_file_exists=true
     
     if [ "$env_file_exists" = true ]; then
         env_count=$(grep -c "^export" "$WORKER_ENV_FILE" || echo 0)
-    fi
-    
-    if [ "$secrets_file_exists" = true ]; then
-        secrets_count=$(grep -c "^export" "$WORKER_SECRETS_FILE" || echo 0)
     fi
     
     case $format in
@@ -278,11 +271,6 @@ show_status() {
                 echo "    \"file\": \"$WORKER_ENV_FILE\","
                 echo "    \"exists\": $env_file_exists,"
                 echo "    \"variables\": $env_count"
-                echo "  },"
-                echo "  \"secrets\": {"
-                echo "    \"file\": \"$WORKER_SECRETS_FILE\","
-                echo "    \"exists\": $secrets_file_exists,"
-                echo "    \"variables\": $secrets_count"
                 echo "  }"
                 echo "}"
             } | jq '.'
@@ -293,10 +281,6 @@ show_status() {
             echo "Environment File: $WORKER_ENV_FILE"
             echo "  - Exists: $env_file_exists"
             echo "  - Variables: $env_count"
-            echo
-            echo "Secrets File: $WORKER_SECRETS_FILE"
-            echo "  - Exists: $secrets_file_exists"
-            echo "  - Variables: $secrets_count"
             ;;
         *)
             log_error "Env" "Unknown format: $format"
@@ -411,27 +395,9 @@ env_handler() {
             ;;
         reload)
             log_info "Env" "Reloading environment from configuration..."
-            local config_json
-            if ! config_json=$(load_and_parse_config); then
-                log_error "Env" "Failed to load and parse configuration"
+            if ! configure_environment; then
+                log_error "Env" "Failed to reload environment from configuration"
                 return 1
-            fi
-
-            if ! export_variables_from_config "$config_json"; then
-                log_error "Env" "Failed to export variables from configuration"
-                return 1
-            fi
-
-            # Extract secrets section from config
-            local secrets_json
-            secrets_json=$(echo "$config_json" | jq -r '.config.secrets // {}')
-
-            # Fetch and set secrets if any are defined
-            if [[ "$secrets_json" != "{}" ]]; then
-                if ! fetch_secrets "$secrets_json"; then
-                    log_error "Env" "Failed to fetch and set secrets"
-                    return 1
-                fi
             fi
 
             log_success "Env" "Environment successfully reloaded from configuration"

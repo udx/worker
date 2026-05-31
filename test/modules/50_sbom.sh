@@ -2,7 +2,7 @@
 
 # Source test helpers
 # shellcheck source=../test_helpers.sh disable=SC1091
-source "/home/udx/tests/test_helpers.sh"
+source "/home/udx/test/test_helpers.sh"
 
 # Test SBOM commands
 print_header "SBOM Tests"
