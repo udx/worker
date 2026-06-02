@@ -1,5 +1,5 @@
 ---
-name: Docker Dependency Updater
+name: "UDX Automation: Docker Dependency Updater"
 
 "on":
   schedule:
@@ -60,7 +60,7 @@ jobs:
               "probe_dockerfile" => paths["probe_dockerfile"] || ".tmp/dependency-probe/Dockerfile",
               "report_path" => paths["report"] || "docker-dependency-report.json",
               "update_branch" => workflow["update_branch"] || "automation/docker-dependency-updates",
-              "pr_title" => workflow["pull_request_title"] || "chore(deps): update Docker dependency pins",
+              "pr_title" => workflow["pull_request_title"] || "UDX Automation: Docker dependency updates",
               "commit_message" => workflow["commit_message"] || "chore(deps): update Docker dependency pins",
               "validation_command" => validation.first || "docker build --progress=plain -t dependency-update-validation ."
             }
@@ -124,7 +124,7 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Docker Dependency Updater"
+            echo "## UDX Automation: Docker Dependency Updater"
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
@@ -450,7 +450,7 @@ jobs:
           fi
 
           {
-            echo "## Docker Dependency Updater"
+            echo "## UDX Automation: Docker Dependency Updater"
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
@@ -612,7 +612,7 @@ jobs:
           fi
 
           {
-            echo "## Docker Dependency Updater"
+            echo "## UDX Automation: Docker Dependency Updater"
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
