@@ -30,6 +30,7 @@ jobs:
       report_path: ${{ steps.config.outputs.report_path }}
       update_branch: ${{ steps.config.outputs.update_branch }}
       pr_title: ${{ steps.config.outputs.pr_title }}
+      pr_team_reviewers: ${{ steps.config.outputs.pr_team_reviewers }}
       commit_message: ${{ steps.config.outputs.commit_message }}
       validation_command: ${{ steps.config.outputs.validation_command }}
       should_run: ${{ steps.decision.outputs.should_run }}
@@ -61,6 +62,7 @@ jobs:
               "report_path" => paths["report"] || "docker-dependency-report.json",
               "update_branch" => workflow["update_branch"] || "automation/docker-dependency-updates",
               "pr_title" => workflow["pull_request_title"] || "udx-automation / dependency upgrade",
+              "pr_team_reviewers" => Array(workflow["pull_request_team_reviewers"] || []).join(","),
               "commit_message" => workflow["commit_message"] || "chore(deps): update Docker dependency pins",
               "validation_command" => validation.first || "docker build --progress=plain -t dependency-update-validation ."
             }
@@ -128,7 +130,7 @@ jobs:
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
-            echo "| config | ${{ job.status }} | Dockerfile: \`${{ steps.config.outputs.dockerfile }}\`; branch: \`${{ steps.config.outputs.update_branch }}\`; should run: \`${{ steps.decision.outputs.should_run }}\` |"
+            echo "| config | ${{ job.status }} | Dockerfile: \`${{ steps.config.outputs.dockerfile }}\`; branch: \`${{ steps.config.outputs.update_branch }}\`; reviewers: \`${{ steps.config.outputs.pr_team_reviewers }}\`; should run: \`${{ steps.decision.outputs.should_run }}\` |"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   analyze:
@@ -601,6 +603,8 @@ jobs:
           body-path: docker-dependency-pr-body.md
           branch: ${{ needs.config.outputs.update_branch }}
           add-paths: ${{ needs.config.outputs.dockerfile }}
+          team-reviewers: ${{ needs.config.outputs.pr_team_reviewers }}
+          draft: false
           delete-branch: true
 
       - name: Write apply summary
@@ -616,7 +620,7 @@ jobs:
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
-            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
+            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; reviewers: \`${{ needs.config.outputs.pr_team_reviewers }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
             echo "| analyze | ${{ needs.analyze.result }} | Report: \`${{ needs.analyze.outputs.report_path }}\`; apt: \`${{ needs.analyze.outputs.apt_count }}\`; probes: \`${{ needs.analyze.outputs.probe_count }}\`; observed-only: \`${{ needs.analyze.outputs.observed_count }}\` |"
             echo "| apply | ${{ job.status }} | Dockerfile changed: \`${{ steps.changes.outputs.changed }}\`; PR: ${pr_url} |"
           } >> "${GITHUB_STEP_SUMMARY}"
