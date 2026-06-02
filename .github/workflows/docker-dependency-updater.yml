@@ -1,0 +1,191 @@
+---
+name: Docker Dependency Updater
+
+"on":
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-dependency-report:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build unpinned dependency probe
+        run: |
+          chmod +x ci/docker-dependency-probe.sh
+          ci/docker-dependency-probe.sh \
+            --dockerfile Dockerfile \
+            --image worker-deps-probe:${{ github.run_id }} \
+            --report docker-dependency-report.json
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v5
+        with:
+          name: docker-dependency-report
+          path: docker-dependency-report.json
+
+  update-with-copilot:
+    needs: build-dependency-report
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Stop if an update PR is already open
+        id: existing-pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const head = `${owner}:automation/docker-dependency-updates`;
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head,
+              per_page: 100
+            });
+
+            core.setOutput("found", prs.data.length > 0 ? "true" : "false");
+            if (prs.data.length > 0) {
+              core.notice(`Update PR already open: ${prs.data[0].html_url}`);
+            }
+
+      - name: Download dependency report
+        if: steps.existing-pr.outputs.found != 'true'
+        uses: actions/download-artifact@v6
+        with:
+          name: docker-dependency-report
+
+      - name: Set up Node.js
+        if: steps.existing-pr.outputs.found != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        if: steps.existing-pr.outputs.found != 'true'
+        run: npm install -g @github/copilot
+
+      - name: Update Dockerfile with Copilot CLI
+        if: steps.existing-pr.outputs.found != 'true'
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_ALLOW_ALL: "true"
+          COPILOT_AUTO_UPDATE: "false"
+        run: |
+          set -euo pipefail
+
+          if [ -z "${COPILOT_GITHUB_TOKEN:-}" ]; then
+            echo "COPILOT_GITHUB_TOKEN secret is required. Use a fine-grained token with Copilot Requests permission." >&2
+            exit 1
+          fi
+
+          cat > /tmp/docker-dependency-updater-prompt.md <<'EOF'
+          You are updating Dockerfile dependency pins for this repository.
+
+          Intent:
+          - Read Dockerfile and docker-dependency-report.json.
+          - The report was produced by building a temporary copy of Dockerfile with dependency version pins removed.
+          - Treat the report as the primary evidence for versions that install successfully for the current base image.
+          - Update only Dockerfile dependency pins and ARG values when the report shows a newer installed version.
+          - Preserve the ubuntu base image tag unless explicitly necessary to make the reported versions valid.
+          - Keep AWS CLI unpinned unless Dockerfile already pins it; mention its latest observed version in the changelog only.
+          - Do not edit workflow files, docs, tests, or application code.
+          - Do not commit, push, or create a pull request; this workflow will do that.
+
+          Expected Dockerfile update categories:
+          - apt package pins from dependencies.apt[].installed
+          - PIP_VERSION from dependencies.pip[name="pip"].installed
+          - AZURE_CLI_VERSION from dependencies.pip[name="azure-cli"].installed
+          - YQ_VERSION from dependencies.github_releases[name="yq"].installed
+          - GCLOUD_VERSION from dependencies.archives[name="google-cloud-sdk"].installed
+
+          After editing:
+          - Print a concise changelog of every version change.
+          - Print any dependency that was observed but intentionally not pinned.
+          EOF
+
+          copilot \
+            --prompt "$(cat /tmp/docker-dependency-updater-prompt.md)" \
+            --attachment docker-dependency-report.json \
+            --allow-all-tools \
+            --allow-all-urls \
+            --no-ask-user \
+            --no-auto-update \
+            --silent \
+            --share copilot-docker-dependency-session.md
+
+      - name: Detect changes
+        if: steps.existing-pr.outputs.found != 'true'
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- Dockerfile; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+            git diff -- Dockerfile > docker-dependency-update.diff
+          fi
+
+      - name: Validate Docker build
+        if: steps.existing-pr.outputs.found != 'true' && steps.changes.outputs.changed == 'true'
+        run: docker build --progress=plain -t dependency-update-validation .
+
+      - name: Prepare pull request body
+        if: steps.existing-pr.outputs.found != 'true' && steps.changes.outputs.changed == 'true'
+        run: |
+          {
+            echo "## Summary"
+            echo
+            echo "Updates Dockerfile dependency pins using an unpinned probe build and Copilot CLI."
+            echo
+            echo "## Evidence"
+            echo
+            echo "- Probe report artifact: \`docker-dependency-report.json\`"
+            echo "- Copilot session artifact: \`copilot-docker-dependency-session.md\`"
+            echo "- Validation: \`docker build --progress=plain -t dependency-update-validation .\`"
+            echo
+            echo "## Diff"
+            echo
+            echo '```diff'
+            sed -n '1,220p' docker-dependency-update.diff
+            echo '```'
+          } > docker-dependency-pr-body.md
+
+      - name: Upload Copilot session
+        if: steps.existing-pr.outputs.found != 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: copilot-docker-dependency-session
+          path: |
+            copilot-docker-dependency-session.md
+            docker-dependency-update.diff
+          if-no-files-found: ignore
+
+      - name: Create pull request
+        if: steps.existing-pr.outputs.found != 'true' && steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(deps): update Docker dependency pins"
+          title: "chore(deps): update Docker dependency pins"
+          body-path: docker-dependency-pr-body.md
+          branch: automation/docker-dependency-updates
+          delete-branch: true
