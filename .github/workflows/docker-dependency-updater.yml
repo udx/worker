@@ -9,8 +9,11 @@ name: Docker Dependency Updater
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
-  configure:
+  config:
     runs-on: ubuntu-24.04
 
     permissions:
@@ -70,6 +73,7 @@ jobs:
           test -f "${config_path}"
           test -f "$(ruby -ryaml -e 'config = YAML.load_file(ARGV.fetch(0)) || {}; paths = config["paths"] || {}; puts paths["prompt"] || "ci/prompts/docker-dependency-updater.md"' "${config_path}")"
           test -f "$(ruby -ryaml -e 'config = YAML.load_file(ARGV.fetch(0)) || {}; puts config["dockerfile"] || "Dockerfile"' "${config_path}")"
+          echo "Config loaded: ${config_path}"
 
       - name: Stop if an update PR is already open
         id: existing-pr
@@ -92,7 +96,9 @@ jobs:
 
             core.setOutput("found", prs.data.length > 0 ? "true" : "false");
             if (prs.data.length > 0) {
-              core.notice(`Update PR already open: ${prs.data[0].html_url}`);
+              console.log(`Update PR already open: ${prs.data[0].html_url}`);
+            } else {
+              console.log(`No open update PR found for ${head}`);
             }
 
       - name: Decide updater execution
@@ -103,19 +109,37 @@ jobs:
           if [ "${EXISTING_PR_FOUND}" = "true" ]; then
             echo "should_run=false" >> "${GITHUB_OUTPUT}"
             echo "skip_reason=Update PR already open for ${UPDATE_BRANCH}" >> "${GITHUB_OUTPUT}"
+            echo "Config decision: skip, update PR already open for ${UPDATE_BRANCH}"
             exit 0
           fi
 
           echo "should_run=true" >> "${GITHUB_OUTPUT}"
           echo "skip_reason=" >> "${GITHUB_OUTPUT}"
+          echo "Config decision: run analyze/apply, no open updater PR found."
         env:
           EXISTING_PR_FOUND: ${{ steps.existing-pr.outputs.found }}
           UPDATE_BRANCH: ${{ steps.config.outputs.update_branch }}
 
-  build-dependency-report:
-    needs: configure
-    if: needs.configure.outputs.should_run == 'true'
+      - name: Write config summary
+        if: always()
+        run: |
+          {
+            echo "## Docker Dependency Updater"
+            echo
+            echo "| Job | Result | Details |"
+            echo "| --- | --- | --- |"
+            echo "| config | ${{ job.status }} | Dockerfile: \`${{ steps.config.outputs.dockerfile }}\`; branch: \`${{ steps.config.outputs.update_branch }}\`; should run: \`${{ steps.decision.outputs.should_run }}\` |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  analyze:
+    needs: config
+    if: needs.config.outputs.should_run == 'true'
     runs-on: ubuntu-24.04
+    outputs:
+      apt_count: ${{ steps.report.outputs.apt_count }}
+      observed_count: ${{ steps.report.outputs.observed_count }}
+      probe_count: ${{ steps.report.outputs.probe_count }}
+      report_path: ${{ needs.config.outputs.report_path }}
 
     steps:
       - name: Checkout repository
@@ -210,16 +234,19 @@ jobs:
               end
             end
           '
+          echo "Analyze render: ${DOCKERFILE} -> ${PROBE_DOCKERFILE}"
         env:
-          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
-          PROBE_CONFIG: ${{ needs.configure.outputs.config_path }}
-          PROBE_DOCKERFILE: ${{ needs.configure.outputs.probe_dockerfile }}
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+          PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
+          PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
 
       - name: Build unpinned dependency probe
-        run: docker build --pull --no-cache -f "${PROBE_DOCKERFILE}" -t "${PROBE_IMAGE}" .
+        run: |
+          docker build --pull --no-cache -f "${PROBE_DOCKERFILE}" -t "${PROBE_IMAGE}" .
+          echo "Analyze build: built ${PROBE_IMAGE} from ${PROBE_DOCKERFILE}"
         env:
-          PROBE_DOCKERFILE: ${{ needs.configure.outputs.probe_dockerfile }}
-          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+          PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
+          PROBE_IMAGE: ${{ needs.config.outputs.image }}
 
       - name: Discover pinned apt packages
         run: |
@@ -240,8 +267,11 @@ jobs:
               }
             }
           ' "${DOCKERFILE}" > .tmp/dependency-probe/apt-packages.txt
+
+          apt_count="$(wc -l < .tmp/dependency-probe/apt-packages.txt | tr -d ' ')"
+          echo "Analyze apt discovery: found ${apt_count} pinned apt packages in ${DOCKERFILE}"
         env:
-          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
 
       - name: Collect apt inventory
         run: |
@@ -259,8 +289,11 @@ jobs:
                 | map(split("\t") | {name: .[0], installed: .[1]})
               '
           EOF
+
+          apt_count="$(jq 'length' .tmp/dependency-probe/apt.json)"
+          echo "Analyze apt inventory: collected installed versions for ${apt_count} packages"
         env:
-          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+          PROBE_IMAGE: ${{ needs.config.outputs.image }}
 
       - name: Collect runtime metadata
         run: |
@@ -272,8 +305,12 @@ jobs:
             --arg arch "$(uname -m)" \
             '{os: $os, architecture: $arch}'
           EOF
+
+          os="$(jq -r '.os' .tmp/dependency-probe/runtime.json)"
+          arch="$(jq -r '.architecture' .tmp/dependency-probe/runtime.json)"
+          echo "Analyze runtime: ${os} on ${arch}"
         env:
-          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+          PROBE_IMAGE: ${{ needs.config.outputs.image }}
 
       - name: Collect configured probe inventory
         run: |
@@ -338,11 +375,16 @@ jobs:
             --argjson observed_only "${observed_only_json}" \
             '{probes: $probes, observed_only: $observed_only}'
           EOF
+
+          probe_count="$(jq '.probes | length' .tmp/dependency-probe/probes.json)"
+          observed_count="$(jq '.observed_only | length' .tmp/dependency-probe/probes.json)"
+          echo "Analyze probes: collected ${probe_count} managed probes and ${observed_count} observed-only probes"
         env:
-          PROBE_CONFIG: ${{ needs.configure.outputs.config_path }}
-          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+          PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
+          PROBE_IMAGE: ${{ needs.config.outputs.image }}
 
       - name: Assemble dependency report
+        id: report
         run: |
           set -euo pipefail
 
@@ -373,25 +415,59 @@ jobs:
             '.probe_config = {path: $config_path, format: "yaml", content: $config_yaml}' \
             "${PROBE_REPORT}" > "${report_tmp}"
           mv "${report_tmp}" "${PROBE_REPORT}"
+
+          apt_count="$(jq '.dependencies.apt | length' "${PROBE_REPORT}")"
+          probe_count="$(jq '.dependencies.probes | length' "${PROBE_REPORT}")"
+          observed_count="$(jq '.dependencies.observed_only | length' "${PROBE_REPORT}")"
+          printf 'apt_count=%s\n' "${apt_count}" >> "${GITHUB_OUTPUT}"
+          printf 'probe_count=%s\n' "${probe_count}" >> "${GITHUB_OUTPUT}"
+          printf 'observed_count=%s\n' "${observed_count}" >> "${GITHUB_OUTPUT}"
+          echo "Analyze report: wrote ${PROBE_REPORT} with apt=${apt_count}, probes=${probe_count}, observed-only=${observed_count}"
         env:
-          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
-          PROBE_CONFIG: ${{ needs.configure.outputs.config_path }}
-          PROBE_REPORT: ${{ needs.configure.outputs.report_path }}
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+          PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
+          PROBE_REPORT: ${{ needs.config.outputs.report_path }}
 
       - name: Upload dependency report
         uses: actions/upload-artifact@v5
         with:
           name: docker-dependency-report
           path: |
-            ${{ needs.configure.outputs.report_path }}
-            ${{ needs.configure.outputs.probe_dockerfile }}
+            ${{ needs.config.outputs.report_path }}
+            ${{ needs.config.outputs.probe_dockerfile }}
 
-  update-with-copilot:
+      - name: Write analyze summary
+        if: always()
+        run: |
+          apt_count="n/a"
+          probe_count="n/a"
+          observed_count="n/a"
+
+          if [ -f "${PROBE_REPORT}" ]; then
+            apt_count="$(jq '.dependencies.apt | length' "${PROBE_REPORT}")"
+            probe_count="$(jq '.dependencies.probes | length' "${PROBE_REPORT}")"
+            observed_count="$(jq '.dependencies.observed_only | length' "${PROBE_REPORT}")"
+          fi
+
+          {
+            echo "## Docker Dependency Updater"
+            echo
+            echo "| Job | Result | Details |"
+            echo "| --- | --- | --- |"
+            echo "| analyze | ${{ job.status }} | Report: \`${PROBE_REPORT}\`; apt: \`${apt_count}\`; probes: \`${probe_count}\`; observed-only: \`${observed_count}\` |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+        env:
+          PROBE_REPORT: ${{ needs.config.outputs.report_path }}
+
+  apply:
     needs:
-      - configure
-      - build-dependency-report
-    if: needs.configure.outputs.should_run == 'true'
+      - config
+      - analyze
+    if: needs.config.outputs.should_run == 'true'
     runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+      pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
 
     permissions:
       contents: write
@@ -414,15 +490,17 @@ jobs:
           node-version: "22"
 
       - name: Install Copilot CLI
-        run: npm install -g @github/copilot
+        run: |
+          npm install -g @github/copilot
+          echo "Apply setup: installed Copilot CLI"
 
       - name: Update Dockerfile with Copilot CLI
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           COPILOT_ALLOW_ALL: "true"
           COPILOT_AUTO_UPDATE: "false"
-          PROMPT_PATH: ${{ needs.configure.outputs.prompt_path }}
-          REPORT_PATH: ${{ needs.configure.outputs.report_path }}
+          PROMPT_PATH: ${{ needs.config.outputs.prompt_path }}
+          REPORT_PATH: ${{ needs.config.outputs.report_path }}
         run: |
           set -euo pipefail
 
@@ -452,6 +530,8 @@ jobs:
             --silent \
             --share copilot-docker-dependency-session.md
 
+          echo "Apply Copilot: completed; session saved to copilot-docker-dependency-session.md"
+
       - name: Detect changes
         id: changes
         shell: bash
@@ -459,16 +539,23 @@ jobs:
           set -euo pipefail
           if git diff --quiet -- "${DOCKERFILE}"; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
+            echo "Apply changes: no ${DOCKERFILE} changes"
           else
             echo "changed=true" >> "${GITHUB_OUTPUT}"
             git diff -- "${DOCKERFILE}" > docker-dependency-update.diff
+            changed_lines="$(wc -l < docker-dependency-update.diff | tr -d ' ')"
+            echo "Apply changes: ${DOCKERFILE} changed; diff has ${changed_lines} lines"
           fi
         env:
-          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
 
       - name: Validate Docker build
         if: steps.changes.outputs.changed == 'true'
-        run: ${{ needs.configure.outputs.validation_command }}
+        run: |
+          bash -lc "${VALIDATION_COMMAND}"
+          echo "Apply validation: succeeded: ${VALIDATION_COMMAND}"
+        env:
+          VALIDATION_COMMAND: ${{ needs.config.outputs.validation_command }}
 
       - name: Prepare pull request body
         if: steps.changes.outputs.changed == 'true'
@@ -490,9 +577,10 @@ jobs:
             sed -n '1,220p' docker-dependency-update.diff
             echo '```'
           } > docker-dependency-pr-body.md
+          echo "Apply PR body: prepared docker-dependency-pr-body.md"
         env:
-          REPORT_PATH: ${{ needs.configure.outputs.report_path }}
-          VALIDATION_COMMAND: ${{ needs.configure.outputs.validation_command }}
+          REPORT_PATH: ${{ needs.config.outputs.report_path }}
+          VALIDATION_COMMAND: ${{ needs.config.outputs.validation_command }}
 
       - name: Upload Copilot session
         uses: actions/upload-artifact@v5
@@ -504,12 +592,33 @@ jobs:
           if-no-files-found: ignore
 
       - name: Create pull request
+        id: create-pr
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: ${{ needs.configure.outputs.commit_message }}
-          title: ${{ needs.configure.outputs.pr_title }}
+          commit-message: ${{ needs.config.outputs.commit_message }}
+          title: ${{ needs.config.outputs.pr_title }}
           body-path: docker-dependency-pr-body.md
-          branch: ${{ needs.configure.outputs.update_branch }}
-          add-paths: ${{ needs.configure.outputs.dockerfile }}
+          branch: ${{ needs.config.outputs.update_branch }}
+          add-paths: ${{ needs.config.outputs.dockerfile }}
           delete-branch: true
+
+      - name: Write apply summary
+        if: always()
+        run: |
+          pr_url="${PR_URL:-}"
+          if [ -z "${pr_url}" ]; then
+            pr_url="n/a"
+          fi
+
+          {
+            echo "## Docker Dependency Updater"
+            echo
+            echo "| Job | Result | Details |"
+            echo "| --- | --- | --- |"
+            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
+            echo "| analyze | ${{ needs.analyze.result }} | Report: \`${{ needs.analyze.outputs.report_path }}\`; apt: \`${{ needs.analyze.outputs.apt_count }}\`; probes: \`${{ needs.analyze.outputs.probe_count }}\`; observed-only: \`${{ needs.analyze.outputs.observed_count }}\` |"
+            echo "| apply | ${{ job.status }} | Dockerfile changed: \`${{ steps.changes.outputs.changed }}\`; PR: ${pr_url} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+        env:
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}

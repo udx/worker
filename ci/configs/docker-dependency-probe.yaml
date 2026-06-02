@@ -1,7 +1,7 @@
 ---
 # Lightweight hints for Docker dependency update automation.
-# The probe script treats Dockerfile as the source of truth and this file as
-# repo-specific guidance for Copilot and future probe extensions.
+# The workflow treats Dockerfile as the source of truth and this file as
+# repo-specific guidance for the analyzer, Copilot, and future probe extensions.
 
 dockerfile: Dockerfile
 
