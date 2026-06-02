@@ -4,6 +4,13 @@ name: Docker Dependency Updater
 "on":
   schedule:
     - cron: "0 5 * * 1"
+  push:
+    branches:
+      - cleanup-worker-runtime-docs
+    paths:
+      - ".github/workflows/docker-dependency-updater.yml"
+      - "ci/docker-dependency-probe.sh"
+      - "Dockerfile"
   workflow_dispatch:
 
 permissions:
@@ -43,7 +50,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.ref }}
 
       - name: Stop if an update PR is already open
         id: existing-pr
