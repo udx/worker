@@ -4,13 +4,6 @@ name: Docker Dependency Updater
 "on":
   schedule:
     - cron: "0 5 * * 1"
-  push:
-    branches:
-      - cleanup-worker-runtime-docs
-    paths:
-      - ".github/workflows/docker-dependency-updater.yml"
-      - "ci/docker-dependency-probe.sh"
-      - "Dockerfile"
   workflow_dispatch:
 
 permissions:
