@@ -1,90 +1,105 @@
 ---
-# Lightweight hints for Docker dependency update automation.
-# The workflow treats Dockerfile as the source of truth and this file as
-# repo-specific guidance for the analyzer, Copilot, and future probe extensions.
+# Lightweight hints for Docker dependency update automation. Dockerfile remains
+# the source of truth; this file only describes repo-specific automation knobs.
+kind: DockerDependencyProbe
+version: 1
 
-dockerfile: Dockerfile
+# Dockerfile inputs and probe-time rewrites.
+dockerfile:
+  path: Dockerfile
 
+  # The probe Dockerfile is a temporary unpinned copy used to build a container
+  # that reports the versions Docker installs when pins are removed.
+  probe:
+    dockerfile: .tmp/dependency-probe/Dockerfile
+
+    # ARGs that must be resolved inside the probe build after their pinned ARG
+    # declarations are removed. These are probe rewrites, not final update rules.
+    version_resolvers:
+      - arg: YQ_VERSION
+        insert_before_pattern: github.com/mikefarah/yq/releases/download
+        assignment: >-
+          YQ_VERSION="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r .tag_name)"
+        rewrite:
+          from: download/v${YQ_VERSION}
+          to: download/${YQ_VERSION}
+
+      - arg: GCLOUD_VERSION
+        block_start_pattern: ^# Install Google Cloud SDK
+        insert_after_pattern: ^RUN ARCH=\$\(uname -m\) && \\$
+        assignment: >-
+          GCLOUD_VERSION="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r .version)"
+
+# GitHub Actions behavior for generated dependency upgrade PRs.
 workflow:
   update_branch: automation/docker-dependency-updates
-  pull_request_title: "chore(deps): docker dependency upgrade"
-  pull_request_team_reviewers:
-    - worker
-  pull_request_auto_merge: true
-  pull_request_merge_method: squash
   commit_message: "chore(deps): update Docker dependency pins"
 
-paths:
-  prompt: ci/prompts/docker-dependency-updater.md
-  probe_dockerfile: .tmp/dependency-probe/Dockerfile
+  pull_request:
+    title: "chore(deps): docker dependency upgrade"
+    team_reviewers:
+      - worker
+    auto_merge: true
+    merge_method: squash
+
+  validation:
+    command: docker build --progress=plain -t dependency-update-validation .
+
+# Analysis output.
+analysis:
   report: docker-dependency-report.json
 
-apt:
-  discover: true
+# Dependency groups. Apt is discovered from Dockerfile pins, while the other
+# registries use explicit commands against the unpinned probe image.
+dependencies:
+  apt:
+    discover: true
+    source: ubuntu apt repositories
 
-args:
-  discover_version_args: true
+  # Managed probes are pinned dependencies that should map back to Dockerfile
+  # ARGs. Groups are provider/source families and can be extended without
+  # workflow edits.
+  probes:
+    pip:
+      - name: pip
+        type: command
+        command: >-
+          /opt/az/bin/pip --version | awk '{ print $2 }'
+        maps_to_arg: PIP_VERSION
 
-latest_resolvers:
-  - arg: YQ_VERSION
-    insert_before_pattern: github.com/mikefarah/yq/releases/download
-    assignment: >-
-      YQ_VERSION="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r .tag_name)"
-    rewrite:
-      from: download/v${YQ_VERSION}
-      to: download/${YQ_VERSION}
+      - name: azure-cli
+        type: command
+        command: >-
+          /opt/az/bin/pip show azure-cli | awk -F': ' '$1 == "Version" { print $2 }'
+        maps_to_arg: AZURE_CLI_VERSION
 
-  - arg: GCLOUD_VERSION
-    block_start_pattern: ^# Install Google Cloud SDK
-    insert_after_pattern: ^RUN ARCH=\$\(uname -m\) && \\$
-    assignment: >-
-      GCLOUD_VERSION="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r .version)"
+    github_releases:
+      - name: yq
+        type: command
+        command: >-
+          yq --version | awk '{ print $NF }' | sed 's/^v//'
+        maps_to_arg: YQ_VERSION
+        source: mikefarah/yq
 
-probes:
-  pip:
-    - name: pip
-      type: command
-      command: >-
-        /opt/az/bin/pip --version | awk '{ print $2 }'
-      maps_to_arg: PIP_VERSION
+    archives:
+      - name: google-cloud-sdk
+        type: command
+        command: >-
+          gcloud version --format=json | jq -r '."Google Cloud SDK"'
+        maps_to_arg: GCLOUD_VERSION
+        source: Google Cloud SDK rapid channel
 
-    - name: azure-cli
-      type: command
-      command: >-
-        /opt/az/bin/pip show azure-cli | awk -F': ' '$1 == "Version" { print $2 }'
-      maps_to_arg: AZURE_CLI_VERSION
+  # Observed-only probes report tools that are installed dynamically but are not
+  # pinned in the Dockerfile today.
+  observed_only:
+    archives:
+      - name: aws-cli
+        type: command
+        command: >-
+          aws --version 2>&1 | awk '{ print $1 }' | sed 's#aws-cli/##'
+        reason: Dockerfile installs the latest AWS CLI zip and does not pin it.
 
-  github_releases:
-    - name: yq
-      type: command
-      command: >-
-        yq --version | awk '{ print $NF }' | sed 's/^v//'
-      maps_to_arg: YQ_VERSION
-      source: mikefarah/yq
-
-  archives:
-    - name: google-cloud-sdk
-      type: command
-      command: >-
-        gcloud version --format=json | jq -r '."Google Cloud SDK"'
-      maps_to_arg: GCLOUD_VERSION
-      source: Google Cloud SDK rapid channel
-
-observed_only:
-  archives:
-    - name: aws-cli
-      type: command
-      command: >-
-        aws --version 2>&1 | awk '{ print $1 }' | sed 's#aws-cli/##'
-      reason: Dockerfile installs the latest AWS CLI zip and does not pin it.
-
+# Copilot prompt input. Behavior lives in the prompt file so instructions are
+# not duplicated across two places.
 copilot:
-  intent:
-    - Use Dockerfile and the generated dependency report as primary evidence.
-    - Use this file as hints, not as the source of truth.
-    - Update only Dockerfile dependency pins and ARG values.
-    - Preserve the ubuntu base image tag unless explicitly necessary.
-    - Report versioned Dockerfile dependencies that are missing probe coverage.
-
-validation:
-  - docker build --progress=plain -t dependency-update-validation .
+  prompt: ci/prompts/docker-dependency-updater.md

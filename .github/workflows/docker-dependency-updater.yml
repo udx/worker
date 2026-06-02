@@ -49,36 +49,32 @@ jobs:
 
           config_path="ci/configs/docker-dependency-probe.yaml"
 
-          ruby -ryaml -e '
-            config = YAML.load_file(ARGV.fetch(0)) || {}
-            workflow = config["workflow"] || {}
-            paths = config["paths"] || {}
-            validation = Array(config["validation"])
+          kind="$(yq -r '.kind // ""' "${config_path}")"
+          version="$(yq -r '.version // ""' "${config_path}")"
+          if [ "${kind}" != "DockerDependencyProbe" ] || [ "${version}" != "1" ]; then
+            echo "Expected ${config_path} to declare kind=DockerDependencyProbe and version=1" >&2
+            exit 1
+          fi
 
-            outputs = {
-              "config_path" => ARGV.fetch(0),
-              "dockerfile" => config["dockerfile"] || "Dockerfile",
-              "image" => "worker-deps-probe:#{ENV.fetch("GITHUB_RUN_ID")}",
-              "prompt_path" => paths["prompt"] || "ci/prompts/docker-dependency-updater.md",
-              "probe_dockerfile" => paths["probe_dockerfile"] || ".tmp/dependency-probe/Dockerfile",
-              "report_path" => paths["report"] || "docker-dependency-report.json",
-              "update_branch" => workflow["update_branch"] || "automation/docker-dependency-updates",
-              "pr_title" => workflow["pull_request_title"] || "chore(deps): docker dependency upgrade",
-              "pr_team_reviewers" => Array(workflow["pull_request_team_reviewers"] || []).join(","),
-              "pr_auto_merge" => workflow.fetch("pull_request_auto_merge", true).to_s,
-              "pr_merge_method" => workflow["pull_request_merge_method"] || "squash",
-              "commit_message" => workflow["commit_message"] || "chore(deps): update Docker dependency pins",
-              "validation_command" => validation.first || "docker build --progress=plain -t dependency-update-validation ."
-            }
-
-            File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |out|
-              outputs.each { |key, value| out.puts("#{key}=#{value}") }
-            end
-          ' "${config_path}"
+          {
+            echo "config_path=${config_path}"
+            echo "dockerfile=$(yq -r '.dockerfile.path // "Dockerfile"' "${config_path}")"
+            echo "image=worker-deps-probe:${GITHUB_RUN_ID}"
+            echo "prompt_path=$(yq -r '.copilot.prompt // "ci/prompts/docker-dependency-updater.md"' "${config_path}")"
+            echo "probe_dockerfile=$(yq -r '.dockerfile.probe.dockerfile // ".tmp/dependency-probe/Dockerfile"' "${config_path}")"
+            echo "report_path=$(yq -r '.analysis.report // "docker-dependency-report.json"' "${config_path}")"
+            echo "update_branch=$(yq -r '.workflow.update_branch // "automation/docker-dependency-updates"' "${config_path}")"
+            echo "pr_title=$(yq -r '.workflow.pull_request.title // "chore(deps): docker dependency upgrade"' "${config_path}")"
+            echo "pr_team_reviewers=$(yq -r '.workflow.pull_request.team_reviewers // [] | join(",")' "${config_path}")"
+            echo "pr_auto_merge=$(yq -r '.workflow.pull_request.auto_merge // true' "${config_path}")"
+            echo "pr_merge_method=$(yq -r '.workflow.pull_request.merge_method // "squash"' "${config_path}")"
+            echo "commit_message=$(yq -r '.workflow.commit_message // "chore(deps): update Docker dependency pins"' "${config_path}")"
+            echo "validation_command=$(yq -r '.workflow.validation.command // "docker build --progress=plain -t dependency-update-validation ."' "${config_path}")"
+          } >> "${GITHUB_OUTPUT}"
 
           test -f "${config_path}"
-          test -f "$(ruby -ryaml -e 'config = YAML.load_file(ARGV.fetch(0)) || {}; paths = config["paths"] || {}; puts paths["prompt"] || "ci/prompts/docker-dependency-updater.md"' "${config_path}")"
-          test -f "$(ruby -ryaml -e 'config = YAML.load_file(ARGV.fetch(0)) || {}; puts config["dockerfile"] || "Dockerfile"' "${config_path}")"
+          test -f "$(yq -r '.copilot.prompt // "ci/prompts/docker-dependency-updater.md"' "${config_path}")"
+          test -f "$(yq -r '.dockerfile.path // "Dockerfile"' "${config_path}")"
           echo "Config loaded: ${config_path}"
 
       - name: Stop if an update PR is already open
@@ -154,9 +150,10 @@ jobs:
       - name: Render unpinned probe Dockerfile
         run: |
           mkdir -p "$(dirname "${PROBE_DOCKERFILE}")"
+          yq -o=json '.' "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
 
-          ruby -ryaml -e '
-            config = YAML.load_file(ENV.fetch("PROBE_CONFIG")) || {}
+          ruby -rjson -e '
+            config = JSON.parse(File.read(ENV.fetch("PROBE_CONFIG_JSON")))
             dockerfile = ENV.fetch("DOCKERFILE")
             output = ENV.fetch("PROBE_DOCKERFILE")
 
@@ -173,8 +170,13 @@ jobs:
               end
             end
 
-            probes = flatten_specs.call(config["probes"]) + flatten_specs.call(config["observed_only"])
-            resolvers = Array(config["latest_resolvers"])
+            dependencies = config["dependencies"] || {}
+            dockerfile_config = config["dockerfile"].is_a?(Hash) ? config["dockerfile"] : {}
+            probe_config = dockerfile_config["probe"] || {}
+
+            probes = flatten_specs.call(dependencies["probes"])
+            probes += flatten_specs.call(dependencies["observed_only"])
+            resolvers = Array(probe_config["version_resolvers"])
             managed_args = probes.map { |probe| probe["maps_to_arg"] }.compact
             managed_args += resolvers.map { |resolver| resolver["arg"] }.compact
             managed_args = managed_args.uniq
@@ -244,6 +246,7 @@ jobs:
         env:
           DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
           PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
+          PROBE_CONFIG_JSON: .tmp/dependency-probe/config.json
           PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
 
       - name: Build unpinned dependency probe
@@ -322,8 +325,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ruby -ryaml -rjson -e 'puts JSON.generate(YAML.load_file(ARGV.fetch(0)) || {})' \
-            "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
+          yq -o=json '.' "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
 
           docker run -i --rm --entrypoint bash \
             -v "${PWD}/.tmp/dependency-probe/config.json:/tmp/probe-config.json:ro" \
@@ -343,7 +345,7 @@ jobs:
                       empty
                     end;
 
-                  .${section} // {} | probe_specs
+                  (.dependencies.${section} // {}) | probe_specs
                 " /tmp/probe-config.json \
               | while IFS= read -r spec; do
                   name="$(jq -r '.name' <<< "${spec}")"
