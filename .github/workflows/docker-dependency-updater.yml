@@ -139,67 +139,25 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       apt_count: ${{ steps.report.outputs.apt_count }}
-      observed_count: ${{ steps.report.outputs.observed_count }}
-      probe_count: ${{ steps.report.outputs.probe_count }}
       report_path: ${{ needs.config.outputs.report_path }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Render unpinned probe Dockerfile
+      - name: Render apt probe Dockerfile
         run: |
           mkdir -p .tmp/dependency-probe
           mkdir -p "$(dirname "${PROBE_DOCKERFILE}")"
-          yq -o=json '.' "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
 
-          jq -r '
-            def probe_specs:
-              if type == "array" then
-                .[]
-              elif type == "object" then
-                to_entries[] | .value[]
-              else
-                empty
-              end;
-
-            [
-              .dependencies.probes // {}
-              | probe_specs
-              | select((.update_strategy // "unpin_probe") == "unpin_probe")
-              | .maps_to_arg // empty
-            ]
-            | unique
-            | .[]
-          ' .tmp/dependency-probe/config.json > .tmp/dependency-probe/managed-args.txt
-
-          awk -v args_file=.tmp/dependency-probe/managed-args.txt '
-            BEGIN {
-              while ((getline arg < args_file) > 0) {
-                managed[arg] = 1
-              }
-            }
-
-            /^ARG[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=/ {
-              arg_name = $0
-              sub(/^ARG[[:space:]]+/, "", arg_name)
-              sub(/=.*/, "", arg_name)
-              if (arg_name in managed) {
-                next
-              }
-            }
-
+          awk '
             {
               line = $0
 
               if (line ~ /apt-get install -y --no-install-recommends/) {
                 in_apt = 1
               } else if (in_apt) {
-                sub(/^([[:space:]]+[A-Za-z0-9.+-]+)=\S+(.*)$/, "\\1\\2", line)
-              }
-
-              for (arg in managed) {
-                gsub("==\\$\\{" arg "\\}", "", line)
+                sub(/^([[:space:]]+[A-Za-z0-9.+-]+)=[^[:space:]]+(.*)$/, "\\1\\2", line)
               }
 
               print line
@@ -210,13 +168,12 @@ jobs:
             }
           ' "${DOCKERFILE}" > "${PROBE_DOCKERFILE}"
 
-          echo "Analyze render: ${DOCKERFILE} -> ${PROBE_DOCKERFILE}"
+          echo "Analyze render: created apt-only probe ${PROBE_DOCKERFILE} from ${DOCKERFILE}"
         env:
           DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
-          PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
           PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
 
-      - name: Build unpinned dependency probe
+      - name: Build apt dependency probe
         run: |
           docker build --pull --no-cache -f "${PROBE_DOCKERFILE}" -t "${PROBE_IMAGE}" .
           echo "Analyze build: built ${PROBE_IMAGE} from ${PROBE_DOCKERFILE}"
@@ -224,9 +181,10 @@ jobs:
           PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
           PROBE_IMAGE: ${{ needs.config.outputs.image }}
 
-      - name: Discover pinned apt packages
+      - name: Write apt dependency report
+        id: report
         run: |
-          mkdir -p .tmp/dependency-probe
+          set -euo pipefail
 
           awk '
             /apt-get install -y --no-install-recommends/ { in_block=1; next }
@@ -244,15 +202,6 @@ jobs:
             }
           ' "${DOCKERFILE}" > .tmp/dependency-probe/apt-packages.txt
 
-          apt_count="$(wc -l < .tmp/dependency-probe/apt-packages.txt | tr -d ' ')"
-          echo "Analyze apt discovery: found ${apt_count} pinned apt packages in ${DOCKERFILE}"
-        env:
-          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
-
-      - name: Collect apt inventory
-        run: |
-          set -euo pipefail
-
           mapfile -t apt_packages < .tmp/dependency-probe/apt-packages.txt
 
           docker run -i --rm --entrypoint bash "${PROBE_IMAGE}" -s -- "${apt_packages[@]}" > .tmp/dependency-probe/apt.json <<'EOF'
@@ -266,122 +215,18 @@ jobs:
               '
           EOF
 
-          apt_count="$(jq 'length' .tmp/dependency-probe/apt.json)"
-          echo "Analyze apt inventory: collected installed versions for ${apt_count} packages"
-        env:
-          PROBE_IMAGE: ${{ needs.config.outputs.image }}
-
-      - name: Collect runtime metadata
-        run: |
-          docker run -i --rm --entrypoint bash "${PROBE_IMAGE}" -s > .tmp/dependency-probe/runtime.json <<'EOF'
-          set -euo pipefail
-
-          jq -n \
-            --arg os "$(. /etc/os-release && printf '%s' "${PRETTY_NAME}")" \
-            --arg arch "$(uname -m)" \
-            '{os: $os, architecture: $arch}'
-          EOF
-
-          os="$(jq -r '.os' .tmp/dependency-probe/runtime.json)"
-          arch="$(jq -r '.architecture' .tmp/dependency-probe/runtime.json)"
-          echo "Analyze runtime: ${os} on ${arch}"
-        env:
-          PROBE_IMAGE: ${{ needs.config.outputs.image }}
-
-      - name: Collect configured probe inventory
-        run: |
-          set -euo pipefail
-
-          yq -o=json '.' "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
-
-          docker run -i --rm --entrypoint bash \
-            -v "${PWD}/.tmp/dependency-probe/config.json:/tmp/probe-config.json:ro" \
-            "${PROBE_IMAGE}" -s > .tmp/dependency-probe/probes.json <<'EOF'
-          set -euo pipefail
-
-          run_probe_commands() {
-            local section="$1"
-
-            jq -c "
-                  def probe_specs:
-                    if type == \"array\" then
-                      .[]
-                    elif type == \"object\" then
-                      to_entries[] | .key as \$group | .value[] | . + {group: (.group // \$group)}
-                    else
-                      empty
-                    end;
-
-                  (.dependencies.${section} // {}) | probe_specs
-                " /tmp/probe-config.json \
-              | while IFS= read -r spec; do
-                  name="$(jq -r '.name' <<< "${spec}")"
-                  command="$(jq -r '.command' <<< "${spec}")"
-                  installed="$(bash -o pipefail -c "${command}")"
-
-                  jq -n \
-                    --arg name "${name}" \
-                    --arg type "$(jq -r '.type // "command"' <<< "${spec}")" \
-                    --arg command "${command}" \
-                    --arg installed "${installed}" \
-                    --arg maps_to_arg "$(jq -r '.maps_to_arg // empty' <<< "${spec}")" \
-                    --arg update_strategy "$(jq -r '.update_strategy // empty' <<< "${spec}")" \
-                    --arg group "$(jq -r '.group // empty' <<< "${spec}")" \
-                    --arg source "$(jq -r '.source // empty' <<< "${spec}")" \
-                    --arg reason "$(jq -r '.reason // empty' <<< "${spec}")" \
-                    '{
-                      name: $name,
-                      type: $type,
-                      command: $command,
-                      installed: $installed
-                    }
-                    + (if $maps_to_arg == "" then {} else {maps_to_arg: $maps_to_arg} end)
-                    + (if $update_strategy == "" then {} else {update_strategy: $update_strategy} end)
-                    + (if $group == "" then {} else {group: $group} end)
-                    + (if $source == "" then {} else {source: $source} end)
-                    + (if $reason == "" then {} else {reason: $reason, pinned_in_dockerfile: false} end)'
-                done \
-              | jq -s '.'
-          }
-
-          probes_json="$(run_probe_commands probes)"
-          observed_only_json="$(run_probe_commands observed_only)"
-
-          jq -n \
-            --argjson probes "${probes_json}" \
-            --argjson observed_only "${observed_only_json}" \
-            '{probes: $probes, observed_only: $observed_only}'
-          EOF
-
-          probe_count="$(jq '.probes | length' .tmp/dependency-probe/probes.json)"
-          observed_count="$(jq '.observed_only | length' .tmp/dependency-probe/probes.json)"
-          echo "Analyze probes: collected ${probe_count} managed probes and ${observed_count} observed-only probes"
-        env:
-          PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
-          PROBE_IMAGE: ${{ needs.config.outputs.image }}
-
-      - name: Assemble dependency report
-        id: report
-        run: |
-          set -euo pipefail
-
           base_image="$(awk '$1 == "FROM" { print $2; exit }' "${DOCKERFILE}")"
 
           jq -n \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg base_image "${base_image}" \
-            --slurpfile runtime .tmp/dependency-probe/runtime.json \
             --slurpfile apt .tmp/dependency-probe/apt.json \
-            --slurpfile probes .tmp/dependency-probe/probes.json \
             '{
               generated_at: $generated_at,
-              method: "unpinned Dockerfile probe build",
+              method: "apt-only Dockerfile probe build",
               base_image: $base_image,
-              runtime: $runtime[0],
               dependencies: {
-                apt: $apt[0],
-                probes: $probes[0].probes,
-                observed_only: $probes[0].observed_only
+                apt: $apt[0]
               }
             }' > "${PROBE_REPORT}"
 
@@ -394,15 +239,12 @@ jobs:
           mv "${report_tmp}" "${PROBE_REPORT}"
 
           apt_count="$(jq '.dependencies.apt | length' "${PROBE_REPORT}")"
-          probe_count="$(jq '.dependencies.probes | length' "${PROBE_REPORT}")"
-          observed_count="$(jq '.dependencies.observed_only | length' "${PROBE_REPORT}")"
           printf 'apt_count=%s\n' "${apt_count}" >> "${GITHUB_OUTPUT}"
-          printf 'probe_count=%s\n' "${probe_count}" >> "${GITHUB_OUTPUT}"
-          printf 'observed_count=%s\n' "${observed_count}" >> "${GITHUB_OUTPUT}"
-          echo "Analyze report: wrote ${PROBE_REPORT} with apt=${apt_count}, probes=${probe_count}, observed-only=${observed_count}"
+          echo "Analyze report: wrote ${PROBE_REPORT} with ${apt_count} apt packages"
         env:
           DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
           PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
+          PROBE_IMAGE: ${{ needs.config.outputs.image }}
           PROBE_REPORT: ${{ needs.config.outputs.report_path }}
 
       - name: Upload dependency report
@@ -417,13 +259,9 @@ jobs:
         if: always()
         run: |
           apt_count="n/a"
-          probe_count="n/a"
-          observed_count="n/a"
 
           if [ -f "${PROBE_REPORT}" ]; then
             apt_count="$(jq '.dependencies.apt | length' "${PROBE_REPORT}")"
-            probe_count="$(jq '.dependencies.probes | length' "${PROBE_REPORT}")"
-            observed_count="$(jq '.dependencies.observed_only | length' "${PROBE_REPORT}")"
           fi
 
           {
@@ -431,7 +269,7 @@ jobs:
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
-            echo "| analyze | ${{ job.status }} | Report: \`${PROBE_REPORT}\`; apt: \`${apt_count}\`; probes: \`${probe_count}\`; observed-only: \`${observed_count}\` |"
+            echo "| analyze | ${{ job.status }} | Report: \`${PROBE_REPORT}\`; apt: \`${apt_count}\` |"
           } >> "${GITHUB_STEP_SUMMARY}"
         env:
           PROBE_REPORT: ${{ needs.config.outputs.report_path }}
@@ -486,20 +324,8 @@ jobs:
             exit 1
           fi
 
-          cp "${PROMPT_PATH}" /tmp/docker-dependency-updater-prompt.md
-
-          {
-            echo
-            echo "Dependency report:"
-            echo
-            echo '```json'
-            cat "${REPORT_PATH}"
-            echo
-            echo '```'
-          } >> /tmp/docker-dependency-updater-prompt.md
-
           copilot \
-            --prompt "$(cat /tmp/docker-dependency-updater-prompt.md)" \
+            --prompt "$(cat "${PROMPT_PATH}")" \
             --allow-all-tools \
             --allow-all-urls \
             --no-ask-user \
@@ -540,7 +366,7 @@ jobs:
           {
             echo "## Summary"
             echo
-            echo "Updates Dockerfile dependency pins using an unpinned probe build and Copilot CLI."
+            echo "Updates Dockerfile dependency pins using an apt-only probe build and Copilot CLI."
             echo
             echo "## Evidence"
             echo
@@ -620,7 +446,7 @@ jobs:
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
             echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; reviewers: \`${{ needs.config.outputs.pr_team_reviewers }}\`; auto-merge: \`${{ needs.config.outputs.pr_auto_merge }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
-            echo "| analyze | ${{ needs.analyze.result }} | Report: \`${{ needs.analyze.outputs.report_path }}\`; apt: \`${{ needs.analyze.outputs.apt_count }}\`; probes: \`${{ needs.analyze.outputs.probe_count }}\`; observed-only: \`${{ needs.analyze.outputs.observed_count }}\` |"
+            echo "| analyze | ${{ needs.analyze.result }} | Report: \`${{ needs.analyze.outputs.report_path }}\`; apt: \`${{ needs.analyze.outputs.apt_count }}\` |"
             echo "| apply | ${{ job.status }} | Dockerfile changed: \`${{ steps.changes.outputs.changed }}\`; PR: ${pr_url} |"
           } >> "${GITHUB_STEP_SUMMARY}"
         env:

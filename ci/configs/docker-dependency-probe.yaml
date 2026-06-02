@@ -8,8 +8,8 @@ version: 1
 dockerfile:
   path: Dockerfile
 
-  # The probe Dockerfile is a temporary unpinned copy used to build a container
-  # that reports the versions Docker installs when pins are removed.
+  # The probe Dockerfile is a temporary copy used to build a container that
+  # reports the apt versions Docker installs when apt pins are removed.
   probe:
     dockerfile: .tmp/dependency-probe/Dockerfile
 
@@ -32,59 +32,13 @@ workflow:
 analysis:
   report: docker-dependency-report.json
 
-# Dependency groups. Apt is discovered from Dockerfile pins, while the other
-# registries use explicit commands against the unpinned probe image.
+# Dependency groups. Apt is discovered from Dockerfile pins and probed
+# deterministically; non-apt dependency discovery is delegated to Copilot from
+# the Dockerfile and prompt.
 dependencies:
   apt:
     discover: true
     source: ubuntu apt repositories
-
-  # Managed probes are pinned dependencies that should map back to Dockerfile
-  # ARGs. Groups are provider/source families and can be extended without
-  # workflow edits.
-  probes:
-    pip:
-      - name: pip
-        type: command
-        update_strategy: unpin_probe
-        command: >-
-          /opt/az/bin/pip --version | awk '{ print $2 }'
-        maps_to_arg: PIP_VERSION
-
-      - name: azure-cli
-        type: command
-        update_strategy: unpin_probe
-        command: >-
-          /opt/az/bin/pip show azure-cli | awk -F': ' '$1 == "Version" { print $2 }'
-        maps_to_arg: AZURE_CLI_VERSION
-
-    github_releases:
-      - name: yq
-        type: command
-        update_strategy: copilot_latest
-        command: >-
-          yq --version | awk '{ print $NF }' | sed 's/^v//'
-        maps_to_arg: YQ_VERSION
-        source: mikefarah/yq
-
-    archives:
-      - name: google-cloud-sdk
-        type: command
-        update_strategy: copilot_latest
-        command: >-
-          gcloud version --format=json | jq -r '."Google Cloud SDK"'
-        maps_to_arg: GCLOUD_VERSION
-        source: Google Cloud SDK rapid channel
-
-  # Observed-only probes report tools that are installed dynamically but are not
-  # pinned in the Dockerfile today.
-  observed_only:
-    archives:
-      - name: aws-cli
-        type: command
-        command: >-
-          aws --version 2>&1 | awk '{ print $1 }' | sed 's#aws-cli/##'
-        reason: Dockerfile installs the latest AWS CLI zip and does not pin it.
 
 # Copilot prompt input. Behavior lives in the prompt file so instructions are
 # not duplicated across two places.
