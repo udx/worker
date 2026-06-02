@@ -149,65 +149,71 @@ jobs:
 
       - name: Render unpinned probe Dockerfile
         run: |
+          mkdir -p .tmp/dependency-probe
           mkdir -p "$(dirname "${PROBE_DOCKERFILE}")"
           yq -o=json '.' "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
 
-          ruby -rjson -e '
-            config = JSON.parse(File.read(ENV.fetch("PROBE_CONFIG_JSON")))
-            dockerfile = ENV.fetch("DOCKERFILE")
-            output = ENV.fetch("PROBE_DOCKERFILE")
-
-            flatten_specs = lambda do |value|
-              case value
-              when Array
-                value
-              when Hash
-                value.flat_map do |group, specs|
-                  Array(specs).map { |spec| spec.merge("group" => spec["group"] || group) }
-                end
+          jq -r '
+            def probe_specs:
+              if type == "array" then
+                .[]
+              elif type == "object" then
+                to_entries[] | .value[]
               else
-                []
-              end
-            end
+                empty
+              end;
 
-            dependencies = config["dependencies"] || {}
-            probes = flatten_specs.call(dependencies["probes"])
-            managed_args = probes
-              .select { |probe| (probe["update_strategy"] || "unpin_probe") == "unpin_probe" }
-              .map { |probe| probe["maps_to_arg"] }
-              .compact
-              .uniq
+            [
+              .dependencies.probes // {}
+              | probe_specs
+              | select((.update_strategy // "unpin_probe") == "unpin_probe")
+              | .maps_to_arg // empty
+            ]
+            | unique
+            | .[]
+          ' .tmp/dependency-probe/config.json > .tmp/dependency-probe/managed-args.txt
 
-            in_apt = false
+          awk -v args_file=.tmp/dependency-probe/managed-args.txt '
+            BEGIN {
+              while ((getline arg < args_file) > 0) {
+                managed[arg] = 1
+              }
+            }
 
-            File.open(output, "w") do |out|
-              File.foreach(dockerfile) do |original_line|
-                arg_match = original_line.match(/^ARG\s+([A-Za-z_][A-Za-z0-9_]*)=/)
-                next if arg_match && managed_args.include?(arg_match[1])
+            /^ARG[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=/ {
+              arg_name = $0
+              sub(/^ARG[[:space:]]+/, "", arg_name)
+              sub(/=.*/, "", arg_name)
+              if (arg_name in managed) {
+                next
+              }
+            }
 
-                line = original_line.dup
+            {
+              line = $0
 
-                if line.include?("apt-get install -y --no-install-recommends")
-                  in_apt = true
-                elsif in_apt
-                  line = line.sub(/^(\s+[A-Za-z0-9.+-]+)=\S+(.+)$/, "\\1\\2")
-                end
+              if (line ~ /apt-get install -y --no-install-recommends/) {
+                in_apt = 1
+              } else if (in_apt) {
+                sub(/^([[:space:]]+[A-Za-z0-9.+-]+)=\S+(.*)$/, "\\1\\2", line)
+              }
 
-                managed_args.each do |arg|
-                  line = line.gsub("==${#{arg}}", "")
-                end
+              for (arg in managed) {
+                gsub("==\\$\\{" arg "\\}", "", line)
+              }
 
-                out.write line
+              print line
 
-                in_apt = false if in_apt && line.match?(/&&\s*\\?$/)
-              end
-            end
-          '
+              if (in_apt && line ~ /&&[[:space:]]*\\?$/) {
+                in_apt = 0
+              }
+            }
+          ' "${DOCKERFILE}" > "${PROBE_DOCKERFILE}"
+
           echo "Analyze render: ${DOCKERFILE} -> ${PROBE_DOCKERFILE}"
         env:
           DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
           PROBE_CONFIG: ${{ needs.config.outputs.config_path }}
-          PROBE_CONFIG_JSON: .tmp/dependency-probe/config.json
           PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
 
       - name: Build unpinned dependency probe
