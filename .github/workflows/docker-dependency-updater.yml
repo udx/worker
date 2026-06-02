@@ -279,18 +279,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          config_json="$(ruby -ryaml -rjson -e 'puts JSON.generate(YAML.load_file(ARGV.fetch(0)) || {})' "${PROBE_CONFIG}")"
+          ruby -ryaml -rjson -e 'puts JSON.generate(YAML.load_file(ARGV.fetch(0)) || {})' \
+            "${PROBE_CONFIG}" > .tmp/dependency-probe/config.json
 
           docker run -i --rm --entrypoint bash \
-            -e PROBE_CONFIG_JSON="${config_json}" \
+            -v "${PWD}/.tmp/dependency-probe/config.json:/tmp/probe-config.json:ro" \
             "${PROBE_IMAGE}" -s > .tmp/dependency-probe/probes.json <<'EOF'
           set -euo pipefail
 
           run_probe_commands() {
             local section="$1"
 
-            printf '%s' "${PROBE_CONFIG_JSON:-{}}" \
-              | jq -c "
+            jq -c "
                   def probe_specs:
                     if type == \"array\" then
                       .[]
@@ -301,7 +301,7 @@ jobs:
                     end;
 
                   .${section} // {} | probe_specs
-                " \
+                " /tmp/probe-config.json \
               | while IFS= read -r spec; do
                   name="$(jq -r '.name' <<< "${spec}")"
                   command="$(jq -r '.command' <<< "${spec}")"
