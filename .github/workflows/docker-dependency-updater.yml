@@ -10,49 +10,77 @@ permissions:
   contents: read
 
 jobs:
-  build-dependency-report:
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Build unpinned dependency probe
-        run: |
-          chmod +x ci/docker-dependency-probe.sh
-          ci/docker-dependency-probe.sh \
-            --dockerfile Dockerfile \
-            --image worker-deps-probe:${{ github.run_id }} \
-            --report docker-dependency-report.json
-
-      - name: Upload dependency report
-        uses: actions/upload-artifact@v5
-        with:
-          name: docker-dependency-report
-          path: docker-dependency-report.json
-
-  update-with-copilot:
-    needs: build-dependency-report
+  configure:
     runs-on: ubuntu-24.04
 
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      pull-requests: read
+
+    outputs:
+      config_path: ${{ steps.config.outputs.config_path }}
+      dockerfile: ${{ steps.config.outputs.dockerfile }}
+      existing_pr_found: ${{ steps.existing-pr.outputs.found }}
+      image: ${{ steps.config.outputs.image }}
+      prompt_path: ${{ steps.config.outputs.prompt_path }}
+      probe_dockerfile: ${{ steps.config.outputs.probe_dockerfile }}
+      report_path: ${{ steps.config.outputs.report_path }}
+      update_branch: ${{ steps.config.outputs.update_branch }}
+      pr_title: ${{ steps.config.outputs.pr_title }}
+      commit_message: ${{ steps.config.outputs.commit_message }}
+      validation_command: ${{ steps.config.outputs.validation_command }}
+      should_run: ${{ steps.decision.outputs.should_run }}
+      skip_reason: ${{ steps.decision.outputs.skip_reason }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.ref }}
+
+      - name: Load dependency updater config
+        id: config
+        run: |
+          set -euo pipefail
+
+          config_path="ci/configs/docker-dependency-probe.yaml"
+
+          ruby -ryaml -e '
+            config = YAML.load_file(ARGV.fetch(0)) || {}
+            workflow = config["workflow"] || {}
+            paths = config["paths"] || {}
+            validation = Array(config["validation"])
+
+            outputs = {
+              "config_path" => ARGV.fetch(0),
+              "dockerfile" => config["dockerfile"] || "Dockerfile",
+              "image" => "worker-deps-probe:#{ENV.fetch("GITHUB_RUN_ID")}",
+              "prompt_path" => paths["prompt"] || "ci/prompts/docker-dependency-updater.md",
+              "probe_dockerfile" => paths["probe_dockerfile"] || ".tmp/dependency-probe/Dockerfile",
+              "report_path" => paths["report"] || "docker-dependency-report.json",
+              "update_branch" => workflow["update_branch"] || "automation/docker-dependency-updates",
+              "pr_title" => workflow["pull_request_title"] || "chore(deps): update Docker dependency pins",
+              "commit_message" => workflow["commit_message"] || "chore(deps): update Docker dependency pins",
+              "validation_command" => validation.first || "docker build --progress=plain -t dependency-update-validation ."
+            }
+
+            File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |out|
+              outputs.each { |key, value| out.puts("#{key}=#{value}") }
+            end
+          ' "${config_path}"
+
+          test -f "${config_path}"
+          test -f "$(ruby -ryaml -e 'config = YAML.load_file(ARGV.fetch(0)) || {}; paths = config["paths"] || {}; puts paths["prompt"] || "ci/prompts/docker-dependency-updater.md"' "${config_path}")"
+          test -f "$(ruby -ryaml -e 'config = YAML.load_file(ARGV.fetch(0)) || {}; puts config["dockerfile"] || "Dockerfile"' "${config_path}")"
 
       - name: Stop if an update PR is already open
         id: existing-pr
         uses: actions/github-script@v8
+        env:
+          UPDATE_BRANCH: ${{ steps.config.outputs.update_branch }}
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const head = `${owner}:automation/docker-dependency-updates`;
+            const head = `${owner}:${process.env.UPDATE_BRANCH}`;
 
             const prs = await github.rest.pulls.list({
               owner,
@@ -67,28 +95,334 @@ jobs:
               core.notice(`Update PR already open: ${prs.data[0].html_url}`);
             }
 
+      - name: Decide updater execution
+        id: decision
+        run: |
+          set -euo pipefail
+
+          if [ "${EXISTING_PR_FOUND}" = "true" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "skip_reason=Update PR already open for ${UPDATE_BRANCH}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          echo "skip_reason=" >> "${GITHUB_OUTPUT}"
+        env:
+          EXISTING_PR_FOUND: ${{ steps.existing-pr.outputs.found }}
+          UPDATE_BRANCH: ${{ steps.config.outputs.update_branch }}
+
+  build-dependency-report:
+    needs: configure
+    if: needs.configure.outputs.should_run == 'true'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Render unpinned probe Dockerfile
+        run: |
+          mkdir -p "$(dirname "${PROBE_DOCKERFILE}")"
+
+          ruby -ryaml -e '
+            config = YAML.load_file(ENV.fetch("PROBE_CONFIG")) || {}
+            dockerfile = ENV.fetch("DOCKERFILE")
+            output = ENV.fetch("PROBE_DOCKERFILE")
+
+            flatten_specs = lambda do |value|
+              case value
+              when Array
+                value
+              when Hash
+                value.flat_map do |group, specs|
+                  Array(specs).map { |spec| spec.merge("group" => spec["group"] || group) }
+                end
+              else
+                []
+              end
+            end
+
+            probes = flatten_specs.call(config["probes"]) + flatten_specs.call(config["observed_only"])
+            resolvers = Array(config["latest_resolvers"])
+            managed_args = probes.map { |probe| probe["maps_to_arg"] }.compact
+            managed_args += resolvers.map { |resolver| resolver["arg"] }.compact
+            managed_args = managed_args.uniq
+
+            inserted = {}
+            active_blocks = {}
+            in_apt = false
+
+            File.open(output, "w") do |out|
+              File.foreach(dockerfile) do |original_line|
+                resolvers.each do |resolver|
+                  arg = resolver["arg"]
+                  block_start = resolver["block_start_pattern"]
+                  next if arg.nil? || block_start.nil?
+
+                  active_blocks[arg] = true if original_line.match?(Regexp.new(block_start))
+                  active_blocks[arg] = false if original_line.match?(/^# /) && !original_line.match?(Regexp.new(block_start))
+                end
+
+                arg_match = original_line.match(/^ARG\s+([A-Za-z_][A-Za-z0-9_]*)=/)
+                next if arg_match && managed_args.include?(arg_match[1])
+
+                line = original_line.dup
+
+                if line.include?("apt-get install -y --no-install-recommends")
+                  in_apt = true
+                elsif in_apt
+                  line = line.sub(/^(\s+[A-Za-z0-9.+-]+)=\S+(.+)$/, "\\1\\2")
+                end
+
+                managed_args.each do |arg|
+                  line = line.gsub("==${#{arg}}", "")
+                end
+
+                resolvers.each do |resolver|
+                  arg = resolver["arg"]
+                  next if arg.nil? || inserted[arg]
+                  next if resolver["block_start_pattern"] && !active_blocks[arg]
+
+                  insert_before = resolver["insert_before_pattern"]
+                  if insert_before && line.match?(Regexp.new(insert_before))
+                    out.puts "    #{resolver.fetch("assignment")} && \\"
+                    line = line.gsub(resolver.dig("rewrite", "from"), resolver.dig("rewrite", "to")) if resolver["rewrite"]
+                    inserted[arg] = true
+                  end
+                end
+
+                out.write line
+
+                resolvers.each do |resolver|
+                  arg = resolver["arg"]
+                  next if arg.nil? || inserted[arg]
+                  next if resolver["block_start_pattern"] && !active_blocks[arg]
+
+                  insert_after = resolver["insert_after_pattern"]
+                  if insert_after && line.match?(Regexp.new(insert_after))
+                    out.puts "    #{resolver.fetch("assignment")} && \\"
+                    inserted[arg] = true
+                  end
+                end
+
+                in_apt = false if in_apt && line.match?(/&&\s*\\?$/)
+              end
+            end
+          '
+        env:
+          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
+          PROBE_CONFIG: ${{ needs.configure.outputs.config_path }}
+          PROBE_DOCKERFILE: ${{ needs.configure.outputs.probe_dockerfile }}
+
+      - name: Build unpinned dependency probe
+        run: docker build --pull --no-cache -f "${PROBE_DOCKERFILE}" -t "${PROBE_IMAGE}" .
+        env:
+          PROBE_DOCKERFILE: ${{ needs.configure.outputs.probe_dockerfile }}
+          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+
+      - name: Discover pinned apt packages
+        run: |
+          mkdir -p .tmp/dependency-probe
+
+          awk '
+            /apt-get install -y --no-install-recommends/ { in_block=1; next }
+            in_block {
+              line=$0
+              gsub(/\\/, "", line)
+              gsub(/^[[:space:]]+/, "", line)
+              if (line ~ /^[[:alnum:].+-]+=/) {
+                split(line, parts, "=")
+                print parts[1]
+              }
+              if ($0 ~ /&&[[:space:]]*\\?$/) {
+                in_block=0
+              }
+            }
+          ' "${DOCKERFILE}" > .tmp/dependency-probe/apt-packages.txt
+        env:
+          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
+
+      - name: Collect apt inventory
+        run: |
+          set -euo pipefail
+
+          mapfile -t apt_packages < .tmp/dependency-probe/apt-packages.txt
+
+          docker run -i --rm --entrypoint bash "${PROBE_IMAGE}" -s -- "${apt_packages[@]}" > .tmp/dependency-probe/apt.json <<'EOF'
+          set -euo pipefail
+
+          dpkg-query -W -f='${binary:Package}\t${Version}\n' "$@" \
+            | jq -R -s '
+                split("\n")
+                | map(select(length > 0))
+                | map(split("\t") | {name: .[0], installed: .[1]})
+              '
+          EOF
+        env:
+          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+
+      - name: Collect runtime metadata
+        run: |
+          docker run -i --rm --entrypoint bash "${PROBE_IMAGE}" -s > .tmp/dependency-probe/runtime.json <<'EOF'
+          set -euo pipefail
+
+          jq -n \
+            --arg os "$(. /etc/os-release && printf '%s' "${PRETTY_NAME}")" \
+            --arg arch "$(uname -m)" \
+            '{os: $os, architecture: $arch}'
+          EOF
+        env:
+          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+
+      - name: Collect configured probe inventory
+        run: |
+          set -euo pipefail
+
+          config_json="$(ruby -ryaml -rjson -e 'puts JSON.generate(YAML.load_file(ARGV.fetch(0)) || {})' "${PROBE_CONFIG}")"
+
+          docker run -i --rm --entrypoint bash \
+            -e PROBE_CONFIG_JSON="${config_json}" \
+            "${PROBE_IMAGE}" -s > .tmp/dependency-probe/probes.json <<'EOF'
+          set -euo pipefail
+
+          run_probe_commands() {
+            local section="$1"
+
+            printf '%s' "${PROBE_CONFIG_JSON:-{}}" \
+              | jq -c "
+                  def probe_specs:
+                    if type == \"array\" then
+                      .[]
+                    elif type == \"object\" then
+                      to_entries[] | .key as \$group | .value[] | . + {group: (.group // \$group)}
+                    else
+                      empty
+                    end;
+
+                  .${section} // {} | probe_specs
+                " \
+              | while IFS= read -r spec; do
+                  name="$(jq -r '.name' <<< "${spec}")"
+                  command="$(jq -r '.command' <<< "${spec}")"
+                  installed="$(bash -o pipefail -c "${command}")"
+
+                  jq -n \
+                    --arg name "${name}" \
+                    --arg type "$(jq -r '.type // "command"' <<< "${spec}")" \
+                    --arg command "${command}" \
+                    --arg installed "${installed}" \
+                    --arg maps_to_arg "$(jq -r '.maps_to_arg // empty' <<< "${spec}")" \
+                    --arg group "$(jq -r '.group // empty' <<< "${spec}")" \
+                    --arg source "$(jq -r '.source // empty' <<< "${spec}")" \
+                    --arg reason "$(jq -r '.reason // empty' <<< "${spec}")" \
+                    '{
+                      name: $name,
+                      type: $type,
+                      command: $command,
+                      installed: $installed
+                    }
+                    + (if $maps_to_arg == "" then {} else {maps_to_arg: $maps_to_arg} end)
+                    + (if $group == "" then {} else {group: $group} end)
+                    + (if $source == "" then {} else {source: $source} end)
+                    + (if $reason == "" then {} else {reason: $reason, pinned_in_dockerfile: false} end)'
+                done \
+              | jq -s '.'
+          }
+
+          probes_json="$(run_probe_commands probes)"
+          observed_only_json="$(run_probe_commands observed_only)"
+
+          jq -n \
+            --argjson probes "${probes_json}" \
+            --argjson observed_only "${observed_only_json}" \
+            '{probes: $probes, observed_only: $observed_only}'
+          EOF
+        env:
+          PROBE_CONFIG: ${{ needs.configure.outputs.config_path }}
+          PROBE_IMAGE: ${{ needs.configure.outputs.image }}
+
+      - name: Assemble dependency report
+        run: |
+          set -euo pipefail
+
+          base_image="$(awk '$1 == "FROM" { print $2; exit }' "${DOCKERFILE}")"
+
+          jq -n \
+            --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg base_image "${base_image}" \
+            --slurpfile runtime .tmp/dependency-probe/runtime.json \
+            --slurpfile apt .tmp/dependency-probe/apt.json \
+            --slurpfile probes .tmp/dependency-probe/probes.json \
+            '{
+              generated_at: $generated_at,
+              method: "unpinned Dockerfile probe build",
+              base_image: $base_image,
+              runtime: $runtime[0],
+              dependencies: {
+                apt: $apt[0],
+                probes: $probes[0].probes,
+                observed_only: $probes[0].observed_only
+              }
+            }' > "${PROBE_REPORT}"
+
+          report_tmp="${PROBE_REPORT}.tmp"
+          jq \
+            --arg config_path "${PROBE_CONFIG}" \
+            --rawfile config_yaml "${PROBE_CONFIG}" \
+            '.probe_config = {path: $config_path, format: "yaml", content: $config_yaml}' \
+            "${PROBE_REPORT}" > "${report_tmp}"
+          mv "${report_tmp}" "${PROBE_REPORT}"
+        env:
+          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
+          PROBE_CONFIG: ${{ needs.configure.outputs.config_path }}
+          PROBE_REPORT: ${{ needs.configure.outputs.report_path }}
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v5
+        with:
+          name: docker-dependency-report
+          path: |
+            ${{ needs.configure.outputs.report_path }}
+            ${{ needs.configure.outputs.probe_dockerfile }}
+
+  update-with-copilot:
+    needs:
+      - configure
+      - build-dependency-report
+    if: needs.configure.outputs.should_run == 'true'
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+
       - name: Download dependency report
-        if: steps.existing-pr.outputs.found != 'true'
         uses: actions/download-artifact@v6
         with:
           name: docker-dependency-report
 
       - name: Set up Node.js
-        if: steps.existing-pr.outputs.found != 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "22"
 
       - name: Install Copilot CLI
-        if: steps.existing-pr.outputs.found != 'true'
         run: npm install -g @github/copilot
 
       - name: Update Dockerfile with Copilot CLI
-        if: steps.existing-pr.outputs.found != 'true'
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           COPILOT_ALLOW_ALL: "true"
           COPILOT_AUTO_UPDATE: "false"
+          PROMPT_PATH: ${{ needs.configure.outputs.prompt_path }}
+          REPORT_PATH: ${{ needs.configure.outputs.report_path }}
         run: |
           set -euo pipefail
 
@@ -97,37 +431,14 @@ jobs:
             exit 1
           fi
 
-          cat > /tmp/docker-dependency-updater-prompt.md <<'EOF'
-          You are updating Dockerfile dependency pins for this repository.
-
-          Intent:
-          - Read Dockerfile and docker-dependency-report.json.
-          - The report was produced by building a temporary copy of Dockerfile with dependency version pins removed.
-          - Treat the report as the primary evidence for versions that install successfully for the current base image.
-          - Update only Dockerfile dependency pins and ARG values when the report shows a newer installed version.
-          - Preserve the ubuntu base image tag unless explicitly necessary to make the reported versions valid.
-          - Keep AWS CLI unpinned unless Dockerfile already pins it; mention its latest observed version in the changelog only.
-          - Do not edit workflow files, docs, tests, or application code.
-          - Do not commit, push, or create a pull request; this workflow will do that.
-
-          Expected Dockerfile update categories:
-          - apt package pins from dependencies.apt[].installed
-          - PIP_VERSION from dependencies.pip[name="pip"].installed
-          - AZURE_CLI_VERSION from dependencies.pip[name="azure-cli"].installed
-          - YQ_VERSION from dependencies.github_releases[name="yq"].installed
-          - GCLOUD_VERSION from dependencies.archives[name="google-cloud-sdk"].installed
-
-          After editing:
-          - Print a concise changelog of every version change.
-          - Print any dependency that was observed but intentionally not pinned.
-
-          Dependency report:
-          EOF
+          cp "${PROMPT_PATH}" /tmp/docker-dependency-updater-prompt.md
 
           {
             echo
+            echo "Dependency report:"
+            echo
             echo '```json'
-            cat docker-dependency-report.json
+            cat "${REPORT_PATH}"
             echo
             echo '```'
           } >> /tmp/docker-dependency-updater-prompt.md
@@ -142,24 +453,25 @@ jobs:
             --share copilot-docker-dependency-session.md
 
       - name: Detect changes
-        if: steps.existing-pr.outputs.found != 'true'
         id: changes
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- Dockerfile; then
+          if git diff --quiet -- "${DOCKERFILE}"; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else
             echo "changed=true" >> "${GITHUB_OUTPUT}"
-            git diff -- Dockerfile > docker-dependency-update.diff
+            git diff -- "${DOCKERFILE}" > docker-dependency-update.diff
           fi
+        env:
+          DOCKERFILE: ${{ needs.configure.outputs.dockerfile }}
 
       - name: Validate Docker build
-        if: steps.existing-pr.outputs.found != 'true' && steps.changes.outputs.changed == 'true'
-        run: docker build --progress=plain -t dependency-update-validation .
+        if: steps.changes.outputs.changed == 'true'
+        run: ${{ needs.configure.outputs.validation_command }}
 
       - name: Prepare pull request body
-        if: steps.existing-pr.outputs.found != 'true' && steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true'
         run: |
           {
             echo "## Summary"
@@ -168,9 +480,9 @@ jobs:
             echo
             echo "## Evidence"
             echo
-            echo "- Probe report artifact: \`docker-dependency-report.json\`"
+            echo "- Probe report artifact: \`${REPORT_PATH}\`"
             echo "- Copilot session artifact: \`copilot-docker-dependency-session.md\`"
-            echo "- Validation: \`docker build --progress=plain -t dependency-update-validation .\`"
+            echo "- Validation: \`${VALIDATION_COMMAND}\`"
             echo
             echo "## Diff"
             echo
@@ -178,9 +490,11 @@ jobs:
             sed -n '1,220p' docker-dependency-update.diff
             echo '```'
           } > docker-dependency-pr-body.md
+        env:
+          REPORT_PATH: ${{ needs.configure.outputs.report_path }}
+          VALIDATION_COMMAND: ${{ needs.configure.outputs.validation_command }}
 
       - name: Upload Copilot session
-        if: steps.existing-pr.outputs.found != 'true'
         uses: actions/upload-artifact@v5
         with:
           name: copilot-docker-dependency-session
@@ -190,12 +504,12 @@ jobs:
           if-no-files-found: ignore
 
       - name: Create pull request
-        if: steps.existing-pr.outputs.found != 'true' && steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: "chore(deps): update Docker dependency pins"
-          title: "chore(deps): update Docker dependency pins"
+          commit-message: ${{ needs.configure.outputs.commit_message }}
+          title: ${{ needs.configure.outputs.pr_title }}
           body-path: docker-dependency-pr-body.md
-          branch: automation/docker-dependency-updates
-          add-paths: Dockerfile
+          branch: ${{ needs.configure.outputs.update_branch }}
+          add-paths: ${{ needs.configure.outputs.dockerfile }}
           delete-branch: true

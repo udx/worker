@@ -1,0 +1,86 @@
+---
+# Lightweight hints for Docker dependency update automation.
+# The probe script treats Dockerfile as the source of truth and this file as
+# repo-specific guidance for Copilot and future probe extensions.
+
+dockerfile: Dockerfile
+
+workflow:
+  update_branch: automation/docker-dependency-updates
+  pull_request_title: "chore(deps): update Docker dependency pins"
+  commit_message: "chore(deps): update Docker dependency pins"
+
+paths:
+  prompt: ci/prompts/docker-dependency-updater.md
+  probe_dockerfile: .tmp/dependency-probe/Dockerfile
+  report: docker-dependency-report.json
+
+apt:
+  discover: true
+
+args:
+  discover_version_args: true
+
+latest_resolvers:
+  - arg: YQ_VERSION
+    insert_before_pattern: github.com/mikefarah/yq/releases/download
+    assignment: >-
+      YQ_VERSION="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r .tag_name)"
+    rewrite:
+      from: download/v${YQ_VERSION}
+      to: download/${YQ_VERSION}
+
+  - arg: GCLOUD_VERSION
+    block_start_pattern: ^# Install Google Cloud SDK
+    insert_after_pattern: ^RUN ARCH=\$\(uname -m\) && \\$
+    assignment: >-
+      GCLOUD_VERSION="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r .version)"
+
+probes:
+  pip:
+    - name: pip
+      type: command
+      command: >-
+        /opt/az/bin/pip --version | awk '{ print $2 }'
+      maps_to_arg: PIP_VERSION
+
+    - name: azure-cli
+      type: command
+      command: >-
+        /opt/az/bin/pip show azure-cli | awk -F': ' '$1 == "Version" { print $2 }'
+      maps_to_arg: AZURE_CLI_VERSION
+
+  github_releases:
+    - name: yq
+      type: command
+      command: >-
+        yq --version | awk '{ print $NF }' | sed 's/^v//'
+      maps_to_arg: YQ_VERSION
+      source: mikefarah/yq
+
+  archives:
+    - name: google-cloud-sdk
+      type: command
+      command: >-
+        gcloud version --format=json | jq -r '."Google Cloud SDK"'
+      maps_to_arg: GCLOUD_VERSION
+      source: Google Cloud SDK rapid channel
+
+observed_only:
+  archives:
+    - name: aws-cli
+      type: command
+      command: >-
+        aws --version 2>&1 | awk '{ print $1 }' | sed 's#aws-cli/##'
+      reason: Dockerfile installs the latest AWS CLI zip and does not pin it.
+
+copilot:
+  intent:
+    - Use Dockerfile and the generated dependency report as primary evidence.
+    - Use this file as hints, not as the source of truth.
+    - Update only Dockerfile dependency pins and ARG values.
+    - Preserve the ubuntu base image tag unless explicitly necessary.
+    - Report versioned Dockerfile dependencies that are missing probe coverage.
+
+validation:
+  - docker build --progress=plain -t dependency-update-validation .
