@@ -31,6 +31,8 @@ jobs:
       update_branch: ${{ steps.config.outputs.update_branch }}
       pr_title: ${{ steps.config.outputs.pr_title }}
       pr_team_reviewers: ${{ steps.config.outputs.pr_team_reviewers }}
+      pr_auto_merge: ${{ steps.config.outputs.pr_auto_merge }}
+      pr_merge_method: ${{ steps.config.outputs.pr_merge_method }}
       commit_message: ${{ steps.config.outputs.commit_message }}
       validation_command: ${{ steps.config.outputs.validation_command }}
       should_run: ${{ steps.decision.outputs.should_run }}
@@ -63,6 +65,8 @@ jobs:
               "update_branch" => workflow["update_branch"] || "automation/docker-dependency-updates",
               "pr_title" => workflow["pull_request_title"] || "chore(deps): docker dependency upgrade",
               "pr_team_reviewers" => Array(workflow["pull_request_team_reviewers"] || []).join(","),
+              "pr_auto_merge" => workflow.fetch("pull_request_auto_merge", true).to_s,
+              "pr_merge_method" => workflow["pull_request_merge_method"] || "squash",
               "commit_message" => workflow["commit_message"] || "chore(deps): update Docker dependency pins",
               "validation_command" => validation.first || "docker build --progress=plain -t dependency-update-validation ."
             }
@@ -130,7 +134,7 @@ jobs:
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
-            echo "| config | ${{ job.status }} | Dockerfile: \`${{ steps.config.outputs.dockerfile }}\`; branch: \`${{ steps.config.outputs.update_branch }}\`; reviewers: \`${{ steps.config.outputs.pr_team_reviewers }}\`; should run: \`${{ steps.decision.outputs.should_run }}\` |"
+            echo "| config | ${{ job.status }} | Dockerfile: \`${{ steps.config.outputs.dockerfile }}\`; branch: \`${{ steps.config.outputs.update_branch }}\`; reviewers: \`${{ steps.config.outputs.pr_team_reviewers }}\`; auto-merge: \`${{ steps.config.outputs.pr_auto_merge }}\`; should run: \`${{ steps.decision.outputs.should_run }}\` |"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   analyze:
@@ -607,6 +611,30 @@ jobs:
           draft: false
           delete-branch: true
 
+      - name: Enable pull request auto-merge
+        if: >-
+          steps.changes.outputs.changed == 'true' &&
+          steps.create-pr.outputs.pull-request-url != '' &&
+          needs.config.outputs.pr_auto_merge == 'true'
+        run: |
+          set -euo pipefail
+
+          case "${MERGE_METHOD}" in
+            merge|rebase|squash)
+              gh pr merge "${PR_URL}" --auto "--${MERGE_METHOD}"
+              ;;
+            *)
+              echo "Unsupported merge method: ${MERGE_METHOD}" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "Apply auto-merge: enabled ${MERGE_METHOD} auto-merge for ${PR_URL}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_METHOD: ${{ needs.config.outputs.pr_merge_method }}
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+
       - name: Write apply summary
         if: always()
         run: |
@@ -620,7 +648,7 @@ jobs:
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
-            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; reviewers: \`${{ needs.config.outputs.pr_team_reviewers }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
+            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; reviewers: \`${{ needs.config.outputs.pr_team_reviewers }}\`; auto-merge: \`${{ needs.config.outputs.pr_auto_merge }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
             echo "| analyze | ${{ needs.analyze.result }} | Report: \`${{ needs.analyze.outputs.report_path }}\`; apt: \`${{ needs.analyze.outputs.apt_count }}\`; probes: \`${{ needs.analyze.outputs.probe_count }}\`; observed-only: \`${{ needs.analyze.outputs.observed_count }}\` |"
             echo "| apply | ${{ job.status }} | Dockerfile changed: \`${{ steps.changes.outputs.changed }}\`; PR: ${pr_url} |"
           } >> "${GITHUB_STEP_SUMMARY}"

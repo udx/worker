@@ -10,6 +10,8 @@ workflow:
   pull_request_title: "chore(deps): docker dependency upgrade"
   pull_request_team_reviewers:
     - worker
+  pull_request_auto_merge: true
+  pull_request_merge_method: squash
   commit_message: "chore(deps): update Docker dependency pins"
 
 paths:
