@@ -171,31 +171,17 @@ jobs:
             end
 
             dependencies = config["dependencies"] || {}
-            dockerfile_config = config["dockerfile"].is_a?(Hash) ? config["dockerfile"] : {}
-            probe_config = dockerfile_config["probe"] || {}
-
             probes = flatten_specs.call(dependencies["probes"])
-            probes += flatten_specs.call(dependencies["observed_only"])
-            resolvers = Array(probe_config["version_resolvers"])
-            managed_args = probes.map { |probe| probe["maps_to_arg"] }.compact
-            managed_args += resolvers.map { |resolver| resolver["arg"] }.compact
-            managed_args = managed_args.uniq
+            managed_args = probes
+              .select { |probe| (probe["update_strategy"] || "unpin_probe") == "unpin_probe" }
+              .map { |probe| probe["maps_to_arg"] }
+              .compact
+              .uniq
 
-            inserted = {}
-            active_blocks = {}
             in_apt = false
 
             File.open(output, "w") do |out|
               File.foreach(dockerfile) do |original_line|
-                resolvers.each do |resolver|
-                  arg = resolver["arg"]
-                  block_start = resolver["block_start_pattern"]
-                  next if arg.nil? || block_start.nil?
-
-                  active_blocks[arg] = true if original_line.match?(Regexp.new(block_start))
-                  active_blocks[arg] = false if original_line.match?(/^# /) && !original_line.match?(Regexp.new(block_start))
-                end
-
                 arg_match = original_line.match(/^ARG\s+([A-Za-z_][A-Za-z0-9_]*)=/)
                 next if arg_match && managed_args.include?(arg_match[1])
 
@@ -211,32 +197,7 @@ jobs:
                   line = line.gsub("==${#{arg}}", "")
                 end
 
-                resolvers.each do |resolver|
-                  arg = resolver["arg"]
-                  next if arg.nil? || inserted[arg]
-                  next if resolver["block_start_pattern"] && !active_blocks[arg]
-
-                  insert_before = resolver["insert_before_pattern"]
-                  if insert_before && line.match?(Regexp.new(insert_before))
-                    out.puts "    #{resolver.fetch("assignment")} && \\"
-                    line = line.gsub(resolver.dig("rewrite", "from"), resolver.dig("rewrite", "to")) if resolver["rewrite"]
-                    inserted[arg] = true
-                  end
-                end
-
                 out.write line
-
-                resolvers.each do |resolver|
-                  arg = resolver["arg"]
-                  next if arg.nil? || inserted[arg]
-                  next if resolver["block_start_pattern"] && !active_blocks[arg]
-
-                  insert_after = resolver["insert_after_pattern"]
-                  if insert_after && line.match?(Regexp.new(insert_after))
-                    out.puts "    #{resolver.fetch("assignment")} && \\"
-                    inserted[arg] = true
-                  end
-                end
 
                 in_apt = false if in_apt && line.match?(/&&\s*\\?$/)
               end
@@ -358,6 +319,7 @@ jobs:
                     --arg command "${command}" \
                     --arg installed "${installed}" \
                     --arg maps_to_arg "$(jq -r '.maps_to_arg // empty' <<< "${spec}")" \
+                    --arg update_strategy "$(jq -r '.update_strategy // empty' <<< "${spec}")" \
                     --arg group "$(jq -r '.group // empty' <<< "${spec}")" \
                     --arg source "$(jq -r '.source // empty' <<< "${spec}")" \
                     --arg reason "$(jq -r '.reason // empty' <<< "${spec}")" \
@@ -368,6 +330,7 @@ jobs:
                       installed: $installed
                     }
                     + (if $maps_to_arg == "" then {} else {maps_to_arg: $maps_to_arg} end)
+                    + (if $update_strategy == "" then {} else {update_strategy: $update_strategy} end)
                     + (if $group == "" then {} else {group: $group} end)
                     + (if $source == "" then {} else {source: $source} end)
                     + (if $reason == "" then {} else {reason: $reason, pinned_in_dockerfile: false} end)'

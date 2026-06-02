@@ -4,7 +4,7 @@
 kind: DockerDependencyProbe
 version: 1
 
-# Dockerfile inputs and probe-time rewrites.
+# Dockerfile input and probe build output.
 dockerfile:
   path: Dockerfile
 
@@ -12,23 +12,6 @@ dockerfile:
   # that reports the versions Docker installs when pins are removed.
   probe:
     dockerfile: .tmp/dependency-probe/Dockerfile
-
-    # ARGs that must be resolved inside the probe build after their pinned ARG
-    # declarations are removed. These are probe rewrites, not final update rules.
-    version_resolvers:
-      - arg: YQ_VERSION
-        insert_before_pattern: github.com/mikefarah/yq/releases/download
-        assignment: >-
-          YQ_VERSION="$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest | jq -r .tag_name)"
-        rewrite:
-          from: download/v${YQ_VERSION}
-          to: download/${YQ_VERSION}
-
-      - arg: GCLOUD_VERSION
-        block_start_pattern: ^# Install Google Cloud SDK
-        insert_after_pattern: ^RUN ARCH=\$\(uname -m\) && \\$
-        assignment: >-
-          GCLOUD_VERSION="$(curl -fsSL https://dl.google.com/dl/cloudsdk/channels/rapid/components-2.json | jq -r .version)"
 
 # GitHub Actions behavior for generated dependency upgrade PRs.
 workflow:
@@ -63,12 +46,14 @@ dependencies:
     pip:
       - name: pip
         type: command
+        update_strategy: unpin_probe
         command: >-
           /opt/az/bin/pip --version | awk '{ print $2 }'
         maps_to_arg: PIP_VERSION
 
       - name: azure-cli
         type: command
+        update_strategy: unpin_probe
         command: >-
           /opt/az/bin/pip show azure-cli | awk -F': ' '$1 == "Version" { print $2 }'
         maps_to_arg: AZURE_CLI_VERSION
@@ -76,6 +61,7 @@ dependencies:
     github_releases:
       - name: yq
         type: command
+        update_strategy: copilot_latest
         command: >-
           yq --version | awk '{ print $NF }' | sed 's/^v//'
         maps_to_arg: YQ_VERSION
@@ -84,6 +70,7 @@ dependencies:
     archives:
       - name: google-cloud-sdk
         type: command
+        update_strategy: copilot_latest
         command: >-
           gcloud version --format=json | jq -r '."Google Cloud SDK"'
         maps_to_arg: GCLOUD_VERSION
