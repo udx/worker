@@ -204,4 +204,5 @@ jobs:
           title: "chore(deps): update Docker dependency pins"
           body-path: docker-dependency-pr-body.md
           branch: automation/docker-dependency-updates
+          add-paths: Dockerfile
           delete-branch: true
