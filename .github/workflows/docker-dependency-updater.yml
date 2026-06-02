@@ -127,11 +127,20 @@ jobs:
           After editing:
           - Print a concise changelog of every version change.
           - Print any dependency that was observed but intentionally not pinned.
+
+          Dependency report:
           EOF
+
+          {
+            echo
+            echo '```json'
+            cat docker-dependency-report.json
+            echo
+            echo '```'
+          } >> /tmp/docker-dependency-updater-prompt.md
 
           copilot \
             --prompt "$(cat /tmp/docker-dependency-updater-prompt.md)" \
-            --attachment docker-dependency-report.json \
             --allow-all-tools \
             --allow-all-urls \
             --no-ask-user \
