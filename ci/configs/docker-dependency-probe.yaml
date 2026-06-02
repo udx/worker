@@ -7,7 +7,7 @@ dockerfile: Dockerfile
 
 workflow:
   update_branch: automation/docker-dependency-updates
-  pull_request_title: "UDX Automation: Docker dependency updates"
+  pull_request_title: "udx-automation / dependency upgrade"
   commit_message: "chore(deps): update Docker dependency pins"
 
 paths:
