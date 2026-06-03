@@ -161,7 +161,11 @@ jobs:
               if (line ~ /apt-get install -y --no-install-recommends/) {
                 in_apt = 1
               } else if (in_apt) {
-                sub(/^([[:space:]]+[A-Za-z0-9.+-]+)=[^[:space:]]+(.*)$/, "\\1\\2", line)
+                prefix = line
+                suffix = line
+                sub(/=.*/, "", prefix)
+                sub(/^[[:space:]]+[A-Za-z0-9.+-]+=[^[:space:]]+/, "", suffix)
+                line = prefix suffix
               }
 
               print line
