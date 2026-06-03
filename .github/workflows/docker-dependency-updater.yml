@@ -380,7 +380,11 @@ jobs:
 
           case "${MERGE_METHOD}" in
             merge|rebase|squash)
-              gh pr merge "${PR_URL}" --auto "--${MERGE_METHOD}"
+              if gh pr merge "${PR_URL}" --auto "--${MERGE_METHOD}"; then
+                echo "Upgrade auto-merge: enabled ${MERGE_METHOD} auto-merge for ${PR_URL}"
+              else
+                echo "Upgrade auto-merge: could not enable ${MERGE_METHOD} auto-merge for ${PR_URL}; leaving PR open or already mergeable." >&2
+              fi
               ;;
             *)
               echo "Unsupported merge method: ${MERGE_METHOD}" >&2
@@ -388,7 +392,6 @@ jobs:
               ;;
           esac
 
-          echo "Upgrade auto-merge: enabled ${MERGE_METHOD} auto-merge for ${PR_URL}"
         env:
           GH_TOKEN: ${{ github.token }}
           MERGE_METHOD: ${{ needs.config.outputs.pr_merge_method }}
