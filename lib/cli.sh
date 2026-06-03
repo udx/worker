@@ -87,7 +87,7 @@ EOF
     cat << EOF
 
 Run any command without arguments to see its detailed help and usage information.
-For example: 'worker auth' will show auth command help.
+For example: 'worker service' will show service command help.
 EOF
 }
 

@@ -1,0 +1,7 @@
+---
+kind: workerConfig
+version: udx.io/worker-v1/config
+config:
+  env:
+    WORKER_OUTPUT_FILE: ""
+  secrets: {}

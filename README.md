@@ -2,21 +2,23 @@
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/usabilitydynamics/udx-worker.svg)](https://hub.docker.com/r/usabilitydynamics/udx-worker) [![License](https://img.shields.io/github/license/udx/worker.svg)](LICENSE) [![Documentation](https://img.shields.io/badge/docs-udx.dev-blue.svg)](https://udx.dev/worker)
 
-**Secure, containerized environment for DevSecOps automation**
+Container runtime foundation for UDX automation images.
 
-[Quick Start](#-quick-start) • [Documentation](#-documentation) • [Development](#️-development) • [Contributing](#-contributing)
+[Quick Start](#quick-start) | [Documentation](#documentation) | [Development](#development)
 
-## 🚀 Overview
+## Overview
 
-UDX Worker is a containerized solution that simplifies DevSecOps by providing:
+UDX Worker is a base container image for automation workloads that need predictable runtime config, secret references, and process supervision.
 
-- 🔒 **Secure Environment**: Built on zero-trust principles
-- 🤖 **Automation Support**: Streamlined task execution
-- 🔑 **Secret Management**: Automatic detection and resolution from multiple providers
-- 📦 **12-Factor Compliance**: Modern application practices
-- ♾️ **CI/CD Ready**: Seamless pipeline integration with environment-based overrides
+It provides:
 
-## 🏃 Quick Start
+- `worker.yaml` for runtime env values, secret references, and opt-in runtime output.
+- `services.yaml` for supervised processes inside the container.
+- Secret reference resolution from AWS, Azure, and Google Cloud after provider auth exists.
+- A shared CLI for inspecting and re-applying container runtime config.
+- A stable base for child images that add workload-specific tools.
+
+## Quick Start
 
 ### Prerequisites
 
@@ -63,7 +65,7 @@ docker run -d \
 docker logs -f my-service
 ```
 
-### Example 2: Secrets Management with Authorization
+### Example 2: Secret References
 
 ```bash
 # Define secrets configuration
@@ -72,51 +74,34 @@ kind: workerConfig
 version: udx.io/worker-v1/config
 config:
   secrets:
-    API_KEY: "azure/key-vault/api-key"
-    DB_PASS: "aws/secrets/database"
+    API_KEY: "gcp/my-project/api-key"
+    DB_PASS: "aws/database-password/us-west-2"
 EOF
 
-# Create base64-encoded Azure credentials
-AZURE_CREDS=$(echo '{
-  "client_id": "your-client-id",
-  "client_secret": "your-client-secret",
-  "tenant_id": "your-tenant-id"
-}' | base64)
-
-# Run with cloud provider credentials
+# Run with provider auth injected by the host/platform
 docker run -d \
   --name my-secrets \
   -v "$(pwd)/.config/worker:/home/udx/.config/worker" \
-  -e AZURE_CREDS="${AZURE_CREDS}" \
   usabilitydynamics/udx-worker:latest
 
-# Verify authorization and secrets
-docker exec my-secrets worker auth verify
-docker exec my-secrets worker env get API_KEY
+# Verify the resolved environment without printing the secret value
+docker exec my-secrets sh -lc 'worker env show --filter API_KEY --format json | jq -e '\''has("API_KEY") and .API_KEY != ""'\'' >/dev/null'
 ```
 
-See [Authorization Guide](docs/authorization.md) for supported providers and credential formats (JSON, Base64, File Path).
+See [Secrets](docs/secrets.md) for secret references and provider auth boundaries.
 
-### 💡 Simplified Deployment
+### Deployment
 
-For easier deployment with automatic credential detection, use the [`@udx/worker-deployment`](https://www.npmjs.com/package/@udx/worker-deployment) CLI:
+Deployment uses the host-native tool for the target environment. Mount runtime config into the container and pass provider credentials, workload identity, or secret references through the platform.
 
 ```bash
-# Install
-npm install -g @udx/worker-deployment
-
-# Generate config
-worker config
-
-# Run with automatic GCP authentication
-worker run
+docker run --rm \
+  -v "$(pwd)/.config/worker:/home/udx/.config/worker:ro" \
+  -e API_KEY="gcp/my-project/api-key" \
+  usabilitydynamics/udx-worker:latest
 ```
 
-Features:
-- ✅ Auto-detects GCP credentials (service account keys, impersonation, workload identity)
-- ✅ Zero-config for default file names
-- ✅ Secure read-only mounts
-- ✅ Interactive debugging mode
+For Kubernetes, mount `worker.yaml` and `services.yaml` through ConfigMaps or Secrets and deploy the image with normal Kubernetes manifests.
 
 ### Development Setup
 
@@ -138,22 +123,18 @@ make test
 
 More examples available in [src/examples/README.md](src/examples/README.md).
 
-## 📚 Documentation
+## Documentation
 
-### Core Concepts
-- [Docs Index](docs/index.md) - Start here
-- [Runtime: Services](docs/runtime/services.md) - `services.yaml`
-- [Runtime: Config](docs/runtime/config.md) - `worker.yaml`
-- [Deployment](docs/deploy/README.md) - `deploy.yml` and `worker-deployment`
-- [Authorization](docs/authorization.md) - Credential management
-- [CLI Reference](docs/reference/cli.md) - Command line usage
-
-### Additional Resources
-- [Container Structure](docs/reference/container-structure.md) - Directory layout
-- [Development](docs/development/README.md) - Build, run, test, child images
+- [CLI](docs/cli.md) - runtime inspection and re-apply commands
+- [Config](docs/config.md) - `worker.yaml`, env values, runtime output
+- [Secrets](docs/secrets.md) - secret references and provider auth boundaries
+- [Services](docs/services.md) - `services.yaml` process config
+- [Deployment](docs/deployment.md) - Docker, Kubernetes, and CI usage
+- [Development](docs/development.md) - Build, test, and child image workflow
+- [Reference Docs](docs/references/README.md) - provider auth options and container structure
 - [Examples](src/examples/README.md) - Runnable samples
 
-## 🛠️ Development
+## Development
 
 ```bash
 # Clone repository
@@ -174,33 +155,18 @@ make test
 make help
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to your branch
-5. Open a Pull Request
-
-Please ensure your PR:
-- Follows our coding standards
-- Includes appropriate tests
-- Updates relevant documentation
-
-## 🔗 Resources
+## Resources
 
 - [Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker)
 - [Documentation](https://udx.dev/worker)
 - [Product Page](https://udx.io/products/udx-worker)
 
-## 🎯 Custom Development
+## Custom Development
 
 Need specific features or customizations?
 [Contact our team](https://udx.io/) for professional development services.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

@@ -92,7 +92,6 @@ edit_config() {
     
     # Create file if it doesn't exist
     if [ ! -f "$config_file" ]; then
-        # Copy built-in config first to ensure actors section is preserved
         if [ -f "$BUILT_IN_CONFIG" ]; then
             cp "$BUILT_IN_CONFIG" "$config_file" || {
                 log_error "Config" "Failed to copy built-in configuration"
@@ -128,9 +127,9 @@ EOF
 show_locations() {
     cat << EOF
 Configuration Locations:
-  Built-in config:   $BUILT_IN_CONFIG
+  Built-in config:  $BUILT_IN_CONFIG
   User config:      $USER_CONFIG
-  Merged config:    $MERGED_CONFIG
+  Active config:    $(get_worker_config_path)
 EOF
 }
 
@@ -157,7 +156,6 @@ EOF
 
     if [ -f "$USER_CONFIG" ]; then
         log_success "Config" "Configuration initialized at $USER_CONFIG"
-        merge_worker_configs  # Merge with built-in config
         return 0
     else
         log_error "Config" "Failed to create configuration file"
@@ -187,30 +185,10 @@ show_diff() {
 # Example: worker config apply
 apply_config() {
     log_info "Config" "Parsing and applying configuration..."
-    
-    # Load and parse the configuration
-    local config_json
-    if ! config_json=$(load_and_parse_config); then
-        log_error "Config" "Failed to load and parse configuration"
+
+    if ! configure_environment; then
+        log_error "Config" "Failed to parse and apply configuration"
         return 1
-    fi
-
-    # Export variables from the configuration
-    if ! export_variables_from_config "$config_json"; then
-        log_error "Config" "Failed to export variables from configuration"
-        return 1
-    fi
-
-    # Extract secrets section from config
-    local secrets_json
-    secrets_json=$(echo "$config_json" | jq -r '.config.secrets // {}')
-
-    # Fetch and set secrets if any are defined
-    if [[ "$secrets_json" != "{}" ]]; then
-        if ! fetch_secrets "$secrets_json"; then
-            log_error "Config" "Failed to fetch and set secrets"
-            return 1
-        fi
     fi
 
     log_success "Config" "Configuration successfully parsed and applied"

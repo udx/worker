@@ -5,7 +5,23 @@ source "${WORKER_LIB_DIR}/utils.sh"
 
 # Constants
 SERVICES_CONFIG_DIR="${HOME}/.config/worker"
-SERVICES_CONFIG_FILE="${SERVICES_CONFIG_DIR}/services.yaml"
+USER_SERVICES_CONFIG_FILE="${SERVICES_CONFIG_DIR}/services.yaml"
+BUILT_IN_SERVICES_CONFIG_FILE="${WORKER_CONFIG_DIR}/services.yaml"
+SERVICES_CONFIG_FILE=""
+
+get_services_config_file() {
+    if [ -f "$USER_SERVICES_CONFIG_FILE" ] && [ -s "$USER_SERVICES_CONFIG_FILE" ]; then
+        echo "$USER_SERVICES_CONFIG_FILE"
+        return 0
+    fi
+
+    if [ -f "$BUILT_IN_SERVICES_CONFIG_FILE" ] && [ -s "$BUILT_IN_SERVICES_CONFIG_FILE" ]; then
+        echo "$BUILT_IN_SERVICES_CONFIG_FILE"
+        return 0
+    fi
+
+    return 1
+}
 
 # Show help for service command
 service_help() {
@@ -66,9 +82,11 @@ service_handler() {
         return 0
     fi
 
+    SERVICES_CONFIG_FILE=$(get_services_config_file)
+
     # Check if services config exists before most commands
     if [ "$cmd" != "init" ]; then
-        if [ ! -f "$SERVICES_CONFIG_FILE" ]; then
+        if [ -z "$SERVICES_CONFIG_FILE" ]; then
             log_warn "Service" "No services configuration found"
             log_info "Service" "Run 'worker service' for information about service configuration"
             return 1
@@ -365,6 +383,29 @@ service_show_config() {
         echo ""
         cat "$SERVICES_CONFIG_FILE"
     fi
+}
+
+# Description: Initialize a user service configuration
+# Example: worker service init
+init_service_config() {
+    mkdir -p "$SERVICES_CONFIG_DIR" || {
+        log_error "Service" "Failed to create service config directory: $SERVICES_CONFIG_DIR"
+        return 1
+    }
+
+    if [ -f "$USER_SERVICES_CONFIG_FILE" ]; then
+        log_info "Service" "Service configuration already exists at $USER_SERVICES_CONFIG_FILE"
+        return 0
+    fi
+
+    cat > "$USER_SERVICES_CONFIG_FILE" << 'EOF'
+---
+kind: workerService
+version: udx.io/worker-v1/service
+services: []
+EOF
+
+    log_success "Service" "Service configuration created at $USER_SERVICES_CONFIG_FILE"
 }
 
 # Description: Start, stop, or restart a service

@@ -2,7 +2,7 @@
 
 These scripts demonstrate common service behaviors for `services.yaml`.
 
-Related docs: `docs/runtime/services.md`
+Related docs: `docs/services.md`
 
 ## Scripts
 

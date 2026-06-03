@@ -7,8 +7,10 @@
 .gitignore
 .gitattributes
 
-# CI/CD and GitHub-related files
+# CI/CD and repo metadata
 ci/*
+.github/*
+.rabbit/
 
 # macOS system files
 .DS_Store
@@ -21,12 +23,12 @@ ci/*
 .vscode/
 *.swp
 *.swo
-.github/*
 
-# Documentation files
+# Documentation and development-only files
 docs/*
 README.md
 SECURITY.md
+test/
 
 # Local development scripts and helper files
 Makefile
@@ -40,11 +42,12 @@ Makefile.variables
 *.bak
 *.old
 
-# Ignore test configuration files
+# Runtime defaults copied by Dockerfile live under src/configs.
+# Keep the rest of src out of the image build context.
 src/*
+!src/configs/
+!src/configs/**
 
-# Ignore IDE specific and Prettier configuration files
-.vscode/
+# Formatter/editor local files
 *.iml
 .prettierignore
-.DS_Store

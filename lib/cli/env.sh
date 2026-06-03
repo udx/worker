@@ -23,7 +23,7 @@ Available Commands:
 Options:
   --format    Output format (text/json)
   --filter    Filter variables by prefix
-  --include-secrets Include secrets in output (masked)
+  --include-secrets Include unmasked secrets in output
 
 Examples:
   worker env show                    # Show all environment variables
@@ -39,56 +39,65 @@ EOF
 # Description: Display environment variables with optional filtering
 # Options: --format text|json, --filter PATTERN, --include-secrets
 # Example: worker env show --format json --filter AWS_* --include-secrets
+is_secret_env_name() {
+    local name="$1"
+    local config
+
+    config=$(load_and_parse_config) || return 1
+    echo "$config" | jq -e --arg name "$name" --arg pattern "^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+" '
+        (.config.secrets // {} | has($name)) or
+        ((.config.env // {} | .[$name] // "" | tostring) | test($pattern))
+    ' >/dev/null
+}
+
+format_env_value_for_output() {
+    local name="$1"
+    local include_secrets="$2"
+    local value
+
+    if [[ "$include_secrets" != "true" ]] && is_secret_env_name "$name"; then
+        printf '%s' '********'
+        return 0
+    fi
+
+    value=$(get_env_value "$name") || return 1
+    printf '%s' "$value"
+}
+
 show_environment() {
     local format=${1:-text}
-    local filter=$2
+    local filter=${2:-}
     local include_secrets=${3:-false}
-    
+    local names
 
     # Check if environment file exists
     if [ ! -f "$WORKER_ENV_FILE" ]; then
         log_error "Env" "Environment file not found"
         return 1
     fi
+
+    names=$(grep "^export " "$WORKER_ENV_FILE" | cut -d'=' -f1 | cut -d' ' -f2)
     
     case $format in
         json)
-            # Get variables and convert to JSON
-            local vars
-            if [ -n "$filter" ]; then
-                vars=$(grep "^export $filter" "$WORKER_ENV_FILE")
-            else
-                vars=$(grep "^export" "$WORKER_ENV_FILE")
-            fi
-            
-            # Convert to JSON
-            local json="{"
-            local first=true
-            while IFS= read -r line; do
-                if [[ $line =~ ^export[[:space:]]+([^=]+)=\"([^\"]*)\" ]]; then
-                    if [ "$first" = true ]; then
-                        first=false
-                    else
-                        json="$json,"
-                    fi
-                    key=${BASH_REMATCH[1]}
-                    value=${BASH_REMATCH[2]}
-                    json="$json\"$key\":\"$value\""
+            local json="{}"
+            while IFS= read -r name; do
+                # shellcheck disable=SC2053 # Env filters intentionally support globs like AWS_*.
+                if [[ -n "$name" && ( -z "$filter" || "$name" == $filter ) ]]; then
+                    local value
+                    value=$(format_env_value_for_output "$name" "$include_secrets")
+                    json=$(echo "$json" | jq --arg key "$name" --arg value "$value" '. + {($key): $value}')
                 fi
-            done <<< "$vars"
-            json="$json}"
-            if command -v jq >/dev/null 2>&1; then
-                echo "$json" | jq .
-            else
-                echo "$json"
-            fi
+            done <<< "$names"
+            echo "$json" | jq .
             ;;
         text)
-            if [ -n "$filter" ]; then
-                grep "^export $filter" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
-            else
-                grep "^export" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
-            fi
+            while IFS= read -r name; do
+                # shellcheck disable=SC2053 # Env filters intentionally support globs like AWS_*.
+                if [[ -n "$name" && ( -z "$filter" || "$name" == $filter ) ]]; then
+                    printf '%s=%s\n' "$name" "$(format_env_value_for_output "$name" "$include_secrets")"
+                fi
+            done <<< "$names"
             ;;
         *)
             log_error "Env" "Unknown format: $format"
@@ -119,13 +128,8 @@ set_environment() {
         return 1
     fi
     
-    # Add to environment file
     if [ -f "$WORKER_ENV_FILE" ]; then
-        # Remove existing declaration if any
-        sed -i "/^export $name=/d" "$WORKER_ENV_FILE"
-        # Add new declaration
-        echo "export $name=\"$value\"" >> "$WORKER_ENV_FILE"
-        # Export in current session
+        upsert_env_value "$name" "$value" || return 1
         export "$name=$value"
         log_success "Env" "Set $name to '$value'"
     else
@@ -255,19 +259,12 @@ show_status() {
     local format=${1:-text}
     
     local env_file_exists=false
-    local secrets_file_exists=false
     local env_count=0
-    local secrets_count=0
     
     [ -f "$WORKER_ENV_FILE" ] && env_file_exists=true
-    [ -f "$WORKER_SECRETS_FILE" ] && secrets_file_exists=true
     
     if [ "$env_file_exists" = true ]; then
         env_count=$(grep -c "^export" "$WORKER_ENV_FILE" || echo 0)
-    fi
-    
-    if [ "$secrets_file_exists" = true ]; then
-        secrets_count=$(grep -c "^export" "$WORKER_SECRETS_FILE" || echo 0)
     fi
     
     case $format in
@@ -278,11 +275,6 @@ show_status() {
                 echo "    \"file\": \"$WORKER_ENV_FILE\","
                 echo "    \"exists\": $env_file_exists,"
                 echo "    \"variables\": $env_count"
-                echo "  },"
-                echo "  \"secrets\": {"
-                echo "    \"file\": \"$WORKER_SECRETS_FILE\","
-                echo "    \"exists\": $secrets_file_exists,"
-                echo "    \"variables\": $secrets_count"
                 echo "  }"
                 echo "}"
             } | jq '.'
@@ -293,10 +285,6 @@ show_status() {
             echo "Environment File: $WORKER_ENV_FILE"
             echo "  - Exists: $env_file_exists"
             echo "  - Variables: $env_count"
-            echo
-            echo "Secrets File: $WORKER_SECRETS_FILE"
-            echo "  - Exists: $secrets_file_exists"
-            echo "  - Variables: $secrets_count"
             ;;
         *)
             log_error "Env" "Unknown format: $format"
@@ -411,27 +399,9 @@ env_handler() {
             ;;
         reload)
             log_info "Env" "Reloading environment from configuration..."
-            local config_json
-            if ! config_json=$(load_and_parse_config); then
-                log_error "Env" "Failed to load and parse configuration"
+            if ! configure_environment; then
+                log_error "Env" "Failed to reload environment from configuration"
                 return 1
-            fi
-
-            if ! export_variables_from_config "$config_json"; then
-                log_error "Env" "Failed to export variables from configuration"
-                return 1
-            fi
-
-            # Extract secrets section from config
-            local secrets_json
-            secrets_json=$(echo "$config_json" | jq -r '.config.secrets // {}')
-
-            # Fetch and set secrets if any are defined
-            if [[ "$secrets_json" != "{}" ]]; then
-                if ! fetch_secrets "$secrets_json"; then
-                    log_error "Env" "Failed to fetch and set secrets"
-                    return 1
-                fi
             fi
 
             log_success "Env" "Environment successfully reloaded from configuration"

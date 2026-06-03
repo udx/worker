@@ -5,10 +5,9 @@ source "${WORKER_LIB_DIR}/utils.sh"
 # shellcheck source=${WORKER_LIB_DIR}/env_handler.sh disable=SC1091
 source "${WORKER_LIB_DIR}/env_handler.sh"
 
-# Paths for configurations
-BUILT_IN_CONFIG="${WORKER_CONFIG_DIR}/worker.yaml"  # Built-in default config
-USER_CONFIG="${HOME}/.config/worker/worker.yaml"    # Optional user config
-MERGED_CONFIG="${WORKER_CONFIG_DIR}/worker.merged.yaml"  # Result of merging both configs
+# Paths for configuration.
+BUILT_IN_CONFIG="${WORKER_CONFIG_DIR}/worker.yaml"
+USER_CONFIG="${HOME}/.config/worker/worker.yaml"
 
 # Ensure `yq` is available
 if ! command -v yq >/dev/null 2>&1; then
@@ -25,53 +24,34 @@ ensure_config_exists() {
     fi
 }
 
-# Merge built-in and user-provided configurations
-merge_worker_configs() {
-    # Ensure the merged configuration file exists
-    if [ ! -f "$MERGED_CONFIG" ]; then
-        touch "$MERGED_CONFIG" || { log_error "Worker configuration" "Failed to create merged configuration file at $MERGED_CONFIG"; return 1; }
-    fi
-
-    # Ensure built-in config exists and has actors section
-    if ! ensure_config_exists "$BUILT_IN_CONFIG"; then
-        log_error "Worker configuration" "Built-in configuration not found"
-        return 1
-    fi
-
-    # First copy built-in config (with actors) to merged config
-    if ! cp "$BUILT_IN_CONFIG" "$MERGED_CONFIG"; then
-        log_error "Worker configuration" "Failed to copy built-in configuration"
-        return 1
-    fi
-
-    # If user config exists, merge env and secrets sections
+# Resolve the runtime configuration path. A mounted user config is preferred;
+# otherwise the built-in default keeps the image runnable without mounts.
+get_worker_config_path() {
     if [[ -f "$USER_CONFIG" && -s "$USER_CONFIG" ]]; then
-        # Use yq to merge configs, preserving actors from built-in
-        if ! yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "$MERGED_CONFIG" "$USER_CONFIG" > "${MERGED_CONFIG}.tmp"; then
-            log_error "Worker configuration" "Failed to merge configurations"
-            return 1
-        fi
-
-        # Check if merge was successful
-        if [ -s "${MERGED_CONFIG}.tmp" ]; then
-            mv "${MERGED_CONFIG}.tmp" "$MERGED_CONFIG"
-            return 0
-        else
-            rm -f "${MERGED_CONFIG}.tmp"
-            log_error "Worker configuration" "Failed to merge configurations - empty result"
-            return 1
-        fi
+        echo "$USER_CONFIG"
+        return 0
     fi
+
+    if [[ -f "$BUILT_IN_CONFIG" && -s "$BUILT_IN_CONFIG" ]]; then
+        echo "$BUILT_IN_CONFIG"
+        return 0
+    fi
+
+    echo "$BUILT_IN_CONFIG"
 }
 
-# Load and parse the merged configuration
+# Load and parse the active configuration.
 load_and_parse_config() {
-    merge_worker_configs || return 1
+    local config_path
+    config_path=$(get_worker_config_path)
 
-    # Parse the merged configuration into JSON
+    if ! ensure_config_exists "$config_path"; then
+        return 1
+    fi
+
     local json_output
-    if ! json_output=$(yq eval -o=json "$MERGED_CONFIG" 2>/dev/null); then
-        log_error "Worker configuration" "Failed to parse merged YAML from $MERGED_CONFIG. yq returned an error."
+    if ! json_output=$(yq eval -o=json "$config_path" 2>/dev/null); then
+        log_error "Worker configuration" "Failed to parse YAML from $config_path. yq returned an error."
         return 1
     fi
 

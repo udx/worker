@@ -1,0 +1,461 @@
+---
+name: udx-automation / dependency upgrade
+
+"on":
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  DOCKERFILE: Dockerfile
+  PROBE_DOCKERFILE: .tmp/dependency-probe/Dockerfile
+  REPORT_PATH: docker-dependency-report.json
+  UPDATE_BRANCH: docker-dependency-updates
+  PR_TITLE: "chore(deps): docker dependency upgrade"
+  PR_AUTO_MERGE: "true"
+  PR_MERGE_METHOD: squash
+  COMMIT_MESSAGE: "chore(deps): update Docker dependency pins"
+  COPILOT_PROMPT_PARTS: >-
+    ci/prompts/docker-dependency-guardrails.md
+    ci/prompts/docker-dependency-apt.md
+    ci/prompts/docker-dependency-nonapt.md
+    ci/prompts/docker-dependency-output.md
+
+jobs:
+  config:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+      pull-requests: read
+
+    outputs:
+      dockerfile: ${{ steps.config.outputs.dockerfile }}
+      existing_pr_found: ${{ steps.existing-pr.outputs.found }}
+      image: ${{ steps.config.outputs.image }}
+      prompt_parts: ${{ steps.config.outputs.prompt_parts }}
+      probe_dockerfile: ${{ steps.config.outputs.probe_dockerfile }}
+      report_path: ${{ steps.config.outputs.report_path }}
+      update_branch: ${{ steps.config.outputs.update_branch }}
+      pr_title: ${{ steps.config.outputs.pr_title }}
+      pr_auto_merge: ${{ steps.config.outputs.pr_auto_merge }}
+      pr_merge_method: ${{ steps.config.outputs.pr_merge_method }}
+      commit_message: ${{ steps.config.outputs.commit_message }}
+      should_run: ${{ steps.decision.outputs.should_run }}
+      skip_reason: ${{ steps.decision.outputs.skip_reason }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Load dependency updater defaults
+        id: config
+        run: |
+          set -euo pipefail
+
+          {
+            echo "image=worker-deps-probe:${GITHUB_RUN_ID}"
+            echo "dockerfile=${DOCKERFILE}"
+            echo "prompt_parts=${COPILOT_PROMPT_PARTS}"
+            echo "probe_dockerfile=${PROBE_DOCKERFILE}"
+            echo "report_path=${REPORT_PATH}"
+            echo "update_branch=${UPDATE_BRANCH}"
+            echo "pr_title=${PR_TITLE}"
+            echo "pr_auto_merge=${PR_AUTO_MERGE}"
+            echo "pr_merge_method=${PR_MERGE_METHOD}"
+            echo "commit_message=${COMMIT_MESSAGE}"
+          } >> "${GITHUB_OUTPUT}"
+
+          test -n "${DOCKERFILE}"
+          test -n "${COPILOT_PROMPT_PARTS}"
+          test -n "${PROBE_DOCKERFILE}"
+          test -f "${DOCKERFILE}"
+          for prompt_part in ${COPILOT_PROMPT_PARTS}; do
+            test -f "${prompt_part}"
+          done
+          echo "Dependency updater defaults loaded for ${DOCKERFILE}"
+
+      - name: Stop if an update PR is already open
+        id: existing-pr
+        uses: actions/github-script@v8
+        env:
+          UPDATE_BRANCH: ${{ steps.config.outputs.update_branch }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const head = `${owner}:${process.env.UPDATE_BRANCH}`;
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head,
+              per_page: 100
+            });
+
+            core.setOutput("found", prs.data.length > 0 ? "true" : "false");
+            if (prs.data.length > 0) {
+              console.log(`Update PR already open: ${prs.data[0].html_url}`);
+            } else {
+              console.log(`No open update PR found for ${head}`);
+            }
+
+      - name: Decide updater execution
+        id: decision
+        run: |
+          set -euo pipefail
+
+          if [ "${EXISTING_PR_FOUND}" = "true" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "skip_reason=Update PR already open for ${UPDATE_BRANCH}" >> "${GITHUB_OUTPUT}"
+            echo "Config decision: skip, update PR already open for ${UPDATE_BRANCH}"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "${GITHUB_OUTPUT}"
+          echo "skip_reason=" >> "${GITHUB_OUTPUT}"
+          echo "Config decision: run upgrade, no open updater PR found."
+        env:
+          EXISTING_PR_FOUND: ${{ steps.existing-pr.outputs.found }}
+          UPDATE_BRANCH: ${{ steps.config.outputs.update_branch }}
+
+  upgrade:
+    needs: config
+    if: needs.config.outputs.should_run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      apt_count: ${{ steps.probe.outputs.apt_count }}
+      changed: ${{ steps.changes.outputs.changed }}
+      pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Generate no-pin apt probe report
+        id: probe
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+
+          probe_dir="$(dirname "${PROBE_DOCKERFILE}")"
+          apt_packages_path="${probe_dir}/apt-packages.txt"
+          apt_versions_path="${probe_dir}/apt.tsv"
+
+          mkdir -p "${probe_dir}"
+
+          awk '
+            {
+              line = $0
+
+              if (line ~ /apt-get install -y --no-install-recommends/) {
+                in_apt = 1
+              } else if (in_apt) {
+                prefix = line
+                suffix = line
+                sub(/=.*/, "", prefix)
+                sub(/^[[:space:]]+[A-Za-z0-9.+-]+=[^[:space:]]+/, "", suffix)
+                line = prefix suffix
+              }
+
+              print line
+
+              if (in_apt && line ~ /&&[[:space:]]*\\?$/) {
+                in_apt = 0
+              }
+            }
+          ' "${DOCKERFILE}" > "${PROBE_DOCKERFILE}"
+
+          awk '
+            /apt-get install -y --no-install-recommends/ { in_block=1; next }
+            in_block {
+              line=$0
+              sub(/#.*/, "", line)
+              gsub(/\\/, "", line)
+              gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+              if (line ~ /^[[:alnum:].+-]+=/) {
+                sub(/=.*/, "", line)
+                print line
+              }
+              if ($0 ~ /&&[[:space:]]*\\?$/) {
+                in_block=0
+              }
+            }
+          ' "${DOCKERFILE}" > "${apt_packages_path}"
+
+          mapfile -t apt_packages < "${apt_packages_path}"
+
+          docker build --pull --no-cache -f "${PROBE_DOCKERFILE}" -t "${PROBE_IMAGE}" .
+          docker run -i --rm --entrypoint bash "${PROBE_IMAGE}" -s -- "${apt_packages[@]}" > "${apt_versions_path}" <<'EOF'
+          set -euo pipefail
+
+          dpkg-query -W -f='${binary:Package}\t${Version}\n' "$@"
+          EOF
+
+          base_image="$(awk '$1 == "FROM" { print $2; exit }' "${DOCKERFILE}")"
+
+          jq -n \
+            --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg base_image "${base_image}" \
+            --arg dockerfile "${DOCKERFILE}" \
+            --arg probe_dockerfile "${PROBE_DOCKERFILE}" \
+            --rawfile apt_versions "${apt_versions_path}" \
+            '{
+              generated_at: $generated_at,
+              method: "no-pin apt probe",
+              base_image: $base_image,
+              strategy: {
+                summary: "Render a temporary Dockerfile with apt package pins removed, build it against the configured base image, then read installed versions with dpkg-query.",
+                dockerfile: $dockerfile,
+                probe_dockerfile: $probe_dockerfile
+              },
+              dependencies: {
+                apt: (
+                  $apt_versions
+                  | split("\n")
+                  | map(select(length > 0))
+                  | map(split("\t") | {name: .[0], installed: .[1]})
+                )
+              }
+            }' > "${PROBE_REPORT}"
+
+          apt_count="$(jq '.dependencies.apt | length' "${PROBE_REPORT}")"
+          echo "apt_count=${apt_count}" >> "${GITHUB_OUTPUT}"
+          echo "Upgrade probe: wrote ${PROBE_REPORT} with ${apt_count} apt packages"
+        env:
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+          PROBE_DOCKERFILE: ${{ needs.config.outputs.probe_dockerfile }}
+          PROBE_IMAGE: ${{ needs.config.outputs.image }}
+          PROBE_REPORT: ${{ needs.config.outputs.report_path }}
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v5
+        timeout-minutes: 3
+        with:
+          name: docker-dependency-report
+          path: |
+            ${{ needs.config.outputs.report_path }}
+            ${{ needs.config.outputs.probe_dockerfile }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        timeout-minutes: 3
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        timeout-minutes: 3
+        run: |
+          npm install -g @github/copilot
+          echo "Upgrade setup: installed Copilot CLI"
+
+      - name: Update Dockerfile with Copilot CLI
+        timeout-minutes: 8
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_ALLOW_ALL: "true"
+          COPILOT_AUTO_UPDATE: "false"
+          PROMPT_PARTS: ${{ needs.config.outputs.prompt_parts }}
+          REPORT_PATH: ${{ needs.config.outputs.report_path }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${COPILOT_GITHUB_TOKEN:-}" ]; then
+            echo "COPILOT_GITHUB_TOKEN secret is required. Use a fine-grained token with Copilot Requests permission." >&2
+            exit 1
+          fi
+
+          prompt_path=".tmp/dependency-upgrade/copilot-prompt.md"
+          mkdir -p "$(dirname "${prompt_path}")"
+          : > "${prompt_path}"
+          for prompt_part in ${PROMPT_PARTS}; do
+            test -f "${prompt_part}"
+            {
+              cat "${prompt_part}"
+              echo
+            } >> "${prompt_path}"
+          done
+
+          copilot \
+            --prompt "$(cat "${prompt_path}")" \
+            --allow-all-tools \
+            --allow-all-urls \
+            --no-ask-user \
+            --no-auto-update \
+            --silent \
+            --share copilot-docker-dependency-session.md
+
+          echo "Upgrade Copilot: completed; session saved to copilot-docker-dependency-session.md"
+
+      - name: Guard Dockerfile-only changes
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+
+          unexpected_changes="$(git diff --name-only | awk -v dockerfile="${DOCKERFILE}" '$0 != dockerfile')"
+          if [ -n "${unexpected_changes}" ]; then
+            echo "Upgrade guard: Copilot modified tracked files outside ${DOCKERFILE}:" >&2
+            printf '%s\n' "${unexpected_changes}" >&2
+            exit 1
+          fi
+
+          echo "Upgrade guard: tracked changes are limited to ${DOCKERFILE}"
+        env:
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+
+      - name: Detect changes
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "${DOCKERFILE}"; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            echo "Upgrade changes: no ${DOCKERFILE} changes"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+            git diff -- "${DOCKERFILE}" > docker-dependency-update.diff
+            changed_lines="$(wc -l < docker-dependency-update.diff | tr -d ' ')"
+            echo "Upgrade changes: ${DOCKERFILE} changed; diff has ${changed_lines} lines"
+          fi
+        env:
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+
+      - name: Prepare pull request body
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          {
+            echo "## Summary"
+            echo
+            echo "Updates Dockerfile dependency pins using a no-pin apt probe and Copilot CLI."
+            echo
+            echo "## Evidence"
+            echo
+            echo "- Probe report artifact: \`${REPORT_PATH}\`"
+            echo "- Copilot session artifact: \`copilot-docker-dependency-session.md\`"
+            echo "- Build validation: handled by the repository Docker/CI workflows"
+            echo
+            echo "## Diff"
+            echo
+            echo '```diff'
+            sed -n '1,220p' docker-dependency-update.diff
+            echo '```'
+          } > docker-dependency-pr-body.md
+          echo "Upgrade PR body: prepared docker-dependency-pr-body.md"
+        env:
+          REPORT_PATH: ${{ needs.config.outputs.report_path }}
+
+      - name: Upload Copilot session
+        uses: actions/upload-artifact@v5
+        timeout-minutes: 3
+        with:
+          name: copilot-docker-dependency-session
+          path: |
+            copilot-docker-dependency-session.md
+            docker-dependency-update.diff
+          if-no-files-found: ignore
+
+      - name: Create pull request
+        id: create-pr
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
+        timeout-minutes: 5
+        with:
+          commit-message: ${{ needs.config.outputs.commit_message }}
+          title: ${{ needs.config.outputs.pr_title }}
+          body-path: docker-dependency-pr-body.md
+          branch: ${{ needs.config.outputs.update_branch }}
+          add-paths: ${{ needs.config.outputs.dockerfile }}
+          draft: false
+          delete-branch: true
+
+      - name: Enable pull request auto-merge
+        if: >-
+          steps.changes.outputs.changed == 'true' &&
+            steps.create-pr.outputs.pull-request-url != '' &&
+            needs.config.outputs.pr_auto_merge == 'true'
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+
+          case "${MERGE_METHOD}" in
+            merge|rebase|squash)
+              if gh pr merge "${PR_URL}" --auto "--${MERGE_METHOD}"; then
+                echo "Upgrade auto-merge: enabled ${MERGE_METHOD} auto-merge for ${PR_URL}"
+              else
+                echo "Upgrade auto-merge: could not enable ${MERGE_METHOD} auto-merge for ${PR_URL}; leaving PR open or already mergeable." >&2
+              fi
+              ;;
+            *)
+              echo "Unsupported merge method: ${MERGE_METHOD}" >&2
+              exit 1
+              ;;
+          esac
+
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_METHOD: ${{ needs.config.outputs.pr_merge_method }}
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+
+  report:
+    needs:
+      - config
+      - upgrade
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Write workflow summary
+        if: always()
+        run: |
+          pr_url="${PR_URL:-}"
+          if [ -z "${pr_url}" ]; then
+            pr_url="n/a"
+          fi
+
+          skip_reason="${SKIP_REASON:-}"
+          if [ -z "${skip_reason}" ]; then
+            skip_reason="n/a"
+          fi
+
+          apt_count="${APT_COUNT:-}"
+          if [ -z "${apt_count}" ]; then
+            apt_count="n/a"
+          fi
+
+          changed="${CHANGED:-}"
+          if [ -z "${changed}" ]; then
+            changed="n/a"
+          fi
+
+          {
+            echo "## udx-automation / dependency upgrade"
+            echo
+            echo "| Job | Result | Details |"
+            echo "| --- | --- | --- |"
+            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; auto-merge: \`${{ needs.config.outputs.pr_auto_merge }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
+            echo "| upgrade | ${{ needs.upgrade.result }} | Report: \`${{ needs.config.outputs.report_path }}\`; apt: \`${apt_count}\`; Dockerfile changed: \`${changed}\`; PR: ${pr_url}; skip: \`${skip_reason}\` |"
+            echo "| report | ${{ job.status }} | Summary written |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+        env:
+          APT_COUNT: ${{ needs.upgrade.outputs.apt_count }}
+          CHANGED: ${{ needs.upgrade.outputs.changed }}
+          PR_URL: ${{ needs.upgrade.outputs.pr_url }}
+          SKIP_REASON: ${{ needs.config.outputs.skip_reason }}
