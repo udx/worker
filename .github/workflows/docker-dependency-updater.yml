@@ -6,6 +6,10 @@ name: udx-automation / dependency upgrade
     - cron: "0 5 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -19,11 +23,16 @@ env:
   PR_AUTO_MERGE: "true"
   PR_MERGE_METHOD: squash
   COMMIT_MESSAGE: "chore(deps): update Docker dependency pins"
-  COPILOT_PROMPT_PATH: ci/prompts/docker-dependency-updater.md
+  COPILOT_PROMPT_PARTS: >-
+    ci/prompts/docker-dependency-guardrails.md
+    ci/prompts/docker-dependency-apt.md
+    ci/prompts/docker-dependency-nonapt.md
+    ci/prompts/docker-dependency-output.md
 
 jobs:
   config:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
 
     permissions:
       contents: read
@@ -33,7 +42,7 @@ jobs:
       dockerfile: ${{ steps.config.outputs.dockerfile }}
       existing_pr_found: ${{ steps.existing-pr.outputs.found }}
       image: ${{ steps.config.outputs.image }}
-      prompt_path: ${{ steps.config.outputs.prompt_path }}
+      prompt_parts: ${{ steps.config.outputs.prompt_parts }}
       probe_dockerfile: ${{ steps.config.outputs.probe_dockerfile }}
       report_path: ${{ steps.config.outputs.report_path }}
       update_branch: ${{ steps.config.outputs.update_branch }}
@@ -56,7 +65,7 @@ jobs:
           {
             echo "image=worker-deps-probe:${GITHUB_RUN_ID}"
             echo "dockerfile=${DOCKERFILE}"
-            echo "prompt_path=${COPILOT_PROMPT_PATH}"
+            echo "prompt_parts=${COPILOT_PROMPT_PARTS}"
             echo "probe_dockerfile=${PROBE_DOCKERFILE}"
             echo "report_path=${REPORT_PATH}"
             echo "update_branch=${UPDATE_BRANCH}"
@@ -67,10 +76,12 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
           test -n "${DOCKERFILE}"
-          test -n "${COPILOT_PROMPT_PATH}"
+          test -n "${COPILOT_PROMPT_PARTS}"
           test -n "${PROBE_DOCKERFILE}"
           test -f "${DOCKERFILE}"
-          test -f "${COPILOT_PROMPT_PATH}"
+          for prompt_part in ${COPILOT_PROMPT_PARTS}; do
+            test -f "${prompt_part}"
+          done
           echo "Dependency updater defaults loaded for ${DOCKERFILE}"
 
       - name: Stop if an update PR is already open
@@ -122,6 +133,7 @@ jobs:
     needs: config
     if: needs.config.outputs.should_run == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     outputs:
       apt_count: ${{ steps.probe.outputs.apt_count }}
       changed: ${{ steps.changes.outputs.changed }}
@@ -139,6 +151,7 @@ jobs:
 
       - name: Generate no-pin apt probe report
         id: probe
+        timeout-minutes: 8
         run: |
           set -euo pipefail
 
@@ -234,6 +247,7 @@ jobs:
 
       - name: Upload dependency report
         uses: actions/upload-artifact@v5
+        timeout-minutes: 3
         with:
           name: docker-dependency-report
           path: |
@@ -242,20 +256,23 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
+        timeout-minutes: 3
         with:
           node-version: "22"
 
       - name: Install Copilot CLI
+        timeout-minutes: 3
         run: |
           npm install -g @github/copilot
           echo "Upgrade setup: installed Copilot CLI"
 
       - name: Update Dockerfile with Copilot CLI
+        timeout-minutes: 8
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           COPILOT_ALLOW_ALL: "true"
           COPILOT_AUTO_UPDATE: "false"
-          PROMPT_PATH: ${{ needs.config.outputs.prompt_path }}
+          PROMPT_PARTS: ${{ needs.config.outputs.prompt_parts }}
           REPORT_PATH: ${{ needs.config.outputs.report_path }}
         run: |
           set -euo pipefail
@@ -265,8 +282,19 @@ jobs:
             exit 1
           fi
 
+          prompt_path=".tmp/dependency-upgrade/copilot-prompt.md"
+          mkdir -p "$(dirname "${prompt_path}")"
+          : > "${prompt_path}"
+          for prompt_part in ${PROMPT_PARTS}; do
+            test -f "${prompt_part}"
+            {
+              cat "${prompt_part}"
+              echo
+            } >> "${prompt_path}"
+          done
+
           copilot \
-            --prompt "$(cat "${PROMPT_PATH}")" \
+            --prompt "$(cat "${prompt_path}")" \
             --allow-all-tools \
             --allow-all-urls \
             --no-ask-user \
@@ -319,6 +347,7 @@ jobs:
 
       - name: Upload Copilot session
         uses: actions/upload-artifact@v5
+        timeout-minutes: 3
         with:
           name: copilot-docker-dependency-session
           path: |
@@ -330,6 +359,7 @@ jobs:
         id: create-pr
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
+        timeout-minutes: 5
         with:
           commit-message: ${{ needs.config.outputs.commit_message }}
           title: ${{ needs.config.outputs.pr_title }}
@@ -342,8 +372,9 @@ jobs:
       - name: Enable pull request auto-merge
         if: >-
           steps.changes.outputs.changed == 'true' &&
-          steps.create-pr.outputs.pull-request-url != '' &&
-          needs.config.outputs.pr_auto_merge == 'true'
+            steps.create-pr.outputs.pull-request-url != '' &&
+            needs.config.outputs.pr_auto_merge == 'true'
+        timeout-minutes: 3
         run: |
           set -euo pipefail
 
@@ -369,6 +400,7 @@ jobs:
       - upgrade
     if: always()
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
 
     steps:
       - name: Write workflow summary
