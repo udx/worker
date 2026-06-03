@@ -16,7 +16,6 @@ env:
   REPORT_PATH: docker-dependency-report.json
   UPDATE_BRANCH: docker-dependency-updates
   PR_TITLE: "chore(deps): docker dependency upgrade"
-  PR_TEAM_REVIEWERS: worker
   PR_AUTO_MERGE: "true"
   PR_MERGE_METHOD: squash
   COMMIT_MESSAGE: "chore(deps): update Docker dependency pins"
@@ -40,7 +39,6 @@ jobs:
       report_path: ${{ steps.config.outputs.report_path }}
       update_branch: ${{ steps.config.outputs.update_branch }}
       pr_title: ${{ steps.config.outputs.pr_title }}
-      pr_team_reviewers: ${{ steps.config.outputs.pr_team_reviewers }}
       pr_auto_merge: ${{ steps.config.outputs.pr_auto_merge }}
       pr_merge_method: ${{ steps.config.outputs.pr_merge_method }}
       commit_message: ${{ steps.config.outputs.commit_message }}
@@ -65,7 +63,6 @@ jobs:
             echo "report_path=${REPORT_PATH}"
             echo "update_branch=${UPDATE_BRANCH}"
             echo "pr_title=${PR_TITLE}"
-            echo "pr_team_reviewers=${PR_TEAM_REVIEWERS}"
             echo "pr_auto_merge=${PR_AUTO_MERGE}"
             echo "pr_merge_method=${PR_MERGE_METHOD}"
             echo "commit_message=${COMMIT_MESSAGE}"
@@ -351,7 +348,6 @@ jobs:
           body-path: docker-dependency-pr-body.md
           branch: ${{ needs.config.outputs.update_branch }}
           add-paths: ${{ needs.config.outputs.dockerfile }}
-          team-reviewers: ${{ needs.config.outputs.pr_team_reviewers }}
           draft: false
           delete-branch: true
 
@@ -415,7 +411,7 @@ jobs:
             echo
             echo "| Job | Result | Details |"
             echo "| --- | --- | --- |"
-            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; reviewers: \`${{ needs.config.outputs.pr_team_reviewers }}\`; auto-merge: \`${{ needs.config.outputs.pr_auto_merge }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
+            echo "| config | ${{ needs.config.result }} | Dockerfile: \`${{ needs.config.outputs.dockerfile }}\`; branch: \`${{ needs.config.outputs.update_branch }}\`; auto-merge: \`${{ needs.config.outputs.pr_auto_merge }}\`; should run: \`${{ needs.config.outputs.should_run }}\` |"
             echo "| upgrade | ${{ needs.upgrade.result }} | Report: \`${{ needs.config.outputs.report_path }}\`; apt: \`${apt_count}\`; Dockerfile changed: \`${changed}\`; PR: ${pr_url}; skip: \`${skip_reason}\` |"
             echo "| report | ${{ job.status }} | Summary written |"
           } >> "${GITHUB_STEP_SUMMARY}"
