@@ -23,7 +23,7 @@ Available Commands:
 Options:
   --format    Output format (text/json)
   --filter    Filter variables by prefix
-  --include-secrets Include secrets in output (masked)
+  --include-secrets Include unmasked secrets in output
 
 Examples:
   worker env show                    # Show all environment variables
@@ -39,6 +39,31 @@ EOF
 # Description: Display environment variables with optional filtering
 # Options: --format text|json, --filter PATTERN, --include-secrets
 # Example: worker env show --format json --filter AWS_* --include-secrets
+is_secret_env_name() {
+    local name="$1"
+    local config
+
+    config=$(load_and_parse_config) || return 1
+    echo "$config" | jq -e --arg name "$name" --arg pattern "^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+" '
+        (.config.secrets // {} | has($name)) or
+        ((.config.env // {} | .[$name] // "" | tostring) | test($pattern))
+    ' >/dev/null
+}
+
+format_env_value_for_output() {
+    local name="$1"
+    local include_secrets="$2"
+    local value
+
+    if [[ "$include_secrets" != "true" ]] && is_secret_env_name "$name"; then
+        printf '%s' '********'
+        return 0
+    fi
+
+    value=$(get_env_value "$name") || return 1
+    printf '%s' "$value"
+}
+
 show_environment() {
     local format=${1:-text}
     local filter=${2:-}
@@ -60,7 +85,7 @@ show_environment() {
                 # shellcheck disable=SC2053 # Env filters intentionally support globs like AWS_*.
                 if [[ -n "$name" && ( -z "$filter" || "$name" == $filter ) ]]; then
                     local value
-                    value=$(get_env_value "$name")
+                    value=$(format_env_value_for_output "$name" "$include_secrets")
                     json=$(echo "$json" | jq --arg key "$name" --arg value "$value" '. + {($key): $value}')
                 fi
             done <<< "$names"
@@ -70,7 +95,7 @@ show_environment() {
             while IFS= read -r name; do
                 # shellcheck disable=SC2053 # Env filters intentionally support globs like AWS_*.
                 if [[ -n "$name" && ( -z "$filter" || "$name" == $filter ) ]]; then
-                    printf '%s=%s\n' "$name" "$(get_env_value "$name")"
+                    printf '%s=%s\n' "$name" "$(format_env_value_for_output "$name" "$include_secrets")"
                 fi
             done <<< "$names"
             ;;

@@ -84,8 +84,8 @@ docker run -d \
   -v "$(pwd)/.config/worker:/home/udx/.config/worker" \
   usabilitydynamics/udx-worker:latest
 
-# Verify resolved environment
-docker exec my-secrets worker env show --filter API_KEY
+# Verify the resolved environment without printing the secret value
+docker exec my-secrets sh -lc 'worker env show --filter API_KEY --format json | jq -e '\''has("API_KEY") and .API_KEY != ""'\'' >/dev/null'
 ```
 
 See [Secrets](docs/secrets.md) for secret references and provider auth boundaries.
