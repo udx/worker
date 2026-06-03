@@ -19,7 +19,6 @@ env:
   PR_AUTO_MERGE: "true"
   PR_MERGE_METHOD: squash
   COMMIT_MESSAGE: "chore(deps): update Docker dependency pins"
-  VALIDATION_COMMAND: docker build --progress=plain -t dependency-update-validation .
   COPILOT_PROMPT_PATH: ci/prompts/docker-dependency-updater.md
 
 jobs:
@@ -42,7 +41,6 @@ jobs:
       pr_auto_merge: ${{ steps.config.outputs.pr_auto_merge }}
       pr_merge_method: ${{ steps.config.outputs.pr_merge_method }}
       commit_message: ${{ steps.config.outputs.commit_message }}
-      validation_command: ${{ steps.config.outputs.validation_command }}
       should_run: ${{ steps.decision.outputs.should_run }}
       skip_reason: ${{ steps.decision.outputs.skip_reason }}
 
@@ -66,7 +64,6 @@ jobs:
             echo "pr_auto_merge=${PR_AUTO_MERGE}"
             echo "pr_merge_method=${PR_MERGE_METHOD}"
             echo "commit_message=${COMMIT_MESSAGE}"
-            echo "validation_command=${VALIDATION_COMMAND}"
           } >> "${GITHUB_OUTPUT}"
 
           test -n "${DOCKERFILE}"
@@ -296,14 +293,6 @@ jobs:
         env:
           DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
 
-      - name: Validate Docker build
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          bash -lc "${VALIDATION_COMMAND}"
-          echo "Upgrade validation: succeeded: ${VALIDATION_COMMAND}"
-        env:
-          VALIDATION_COMMAND: ${{ needs.config.outputs.validation_command }}
-
       - name: Prepare pull request body
         if: steps.changes.outputs.changed == 'true'
         run: |
@@ -316,7 +305,7 @@ jobs:
             echo
             echo "- Probe report artifact: \`${REPORT_PATH}\`"
             echo "- Copilot session artifact: \`copilot-docker-dependency-session.md\`"
-            echo "- Validation: \`${VALIDATION_COMMAND}\`"
+            echo "- Build validation: handled by the repository Docker/CI workflows"
             echo
             echo "## Diff"
             echo
@@ -327,7 +316,6 @@ jobs:
           echo "Upgrade PR body: prepared docker-dependency-pr-body.md"
         env:
           REPORT_PATH: ${{ needs.config.outputs.report_path }}
-          VALIDATION_COMMAND: ${{ needs.config.outputs.validation_command }}
 
       - name: Upload Copilot session
         uses: actions/upload-artifact@v5
