@@ -17,8 +17,27 @@ FINAL_CONFIG="${WORKER_CONFIG_DIR}/supervisor/supervisord.conf"
 trap 'handle_supervisor_signals SIGTERM' SIGTERM
 trap 'handle_supervisor_signals SIGINT' SIGINT
 
+ensure_process_manager_dependencies() {
+    local missing=false
+
+    for command in yq jq; do
+        if ! command -v "$command" >/dev/null 2>&1; then
+            log_error "Process Manager" "$command is not installed. Please ensure it is available in the PATH."
+            missing=true
+        fi
+    done
+
+    [[ "$missing" == "false" ]]
+}
+
 # Main execution
 main() {
+    local enabled_services_count
+
+    if ! ensure_process_manager_dependencies; then
+        exit 1
+    fi
+
     CONFIG_FILE=$(get_service_config_path)
 
     if [[ -z "$CONFIG_FILE" ]]; then
@@ -27,7 +46,11 @@ main() {
         exit 0
     fi
 
-    if ! has_enabled_services; then
+    if ! enabled_services_count=$(count_enabled_services); then
+        exit 1
+    fi
+
+    if [[ "${enabled_services_count:-0}" -eq 0 ]]; then
         log_info "No enabled services found in $CONFIG_FILE."
         exit 0
     fi
@@ -67,10 +90,21 @@ get_service_config_path() {
     return 1
 }
 
+count_enabled_services() {
+    local enabled_services_count
+
+    if ! enabled_services_count=$(yq e '.services // [] | map(select(.ignore != true)) | length' "$CONFIG_FILE" 2>/dev/null); then
+        log_error "Process Manager" "Failed to parse services configuration: $CONFIG_FILE"
+        return 1
+    fi
+
+    echo "${enabled_services_count:-0}"
+}
+
 has_enabled_services() {
     local enabled_services_count
 
-    enabled_services_count=$(yq e '.services // [] | map(select(.ignore != true)) | length' "$CONFIG_FILE" 2>/dev/null)
+    enabled_services_count=$(count_enabled_services) || return 1
 
     [[ "${enabled_services_count:-0}" -gt 0 ]]
 }

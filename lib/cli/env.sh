@@ -41,54 +41,38 @@ EOF
 # Example: worker env show --format json --filter AWS_* --include-secrets
 show_environment() {
     local format=${1:-text}
-    local filter=$2
+    local filter=${2:-}
     local include_secrets=${3:-false}
-    
+    local names
 
     # Check if environment file exists
     if [ ! -f "$WORKER_ENV_FILE" ]; then
         log_error "Env" "Environment file not found"
         return 1
     fi
+
+    names=$(grep "^export " "$WORKER_ENV_FILE" | cut -d'=' -f1 | cut -d' ' -f2)
     
     case $format in
         json)
-            # Get variables and convert to JSON
-            local vars
-            if [ -n "$filter" ]; then
-                vars=$(grep "^export $filter" "$WORKER_ENV_FILE")
-            else
-                vars=$(grep "^export" "$WORKER_ENV_FILE")
-            fi
-            
-            # Convert to JSON
-            local json="{"
-            local first=true
-            while IFS= read -r line; do
-                if [[ $line =~ ^export[[:space:]]+([^=]+)=\"([^\"]*)\" ]]; then
-                    if [ "$first" = true ]; then
-                        first=false
-                    else
-                        json="$json,"
-                    fi
-                    key=${BASH_REMATCH[1]}
-                    value=${BASH_REMATCH[2]}
-                    json="$json\"$key\":\"$value\""
+            local json="{}"
+            while IFS= read -r name; do
+                # shellcheck disable=SC2053 # Env filters intentionally support globs like AWS_*.
+                if [[ -n "$name" && ( -z "$filter" || "$name" == $filter ) ]]; then
+                    local value
+                    value=$(get_env_value "$name")
+                    json=$(echo "$json" | jq --arg key "$name" --arg value "$value" '. + {($key): $value}')
                 fi
-            done <<< "$vars"
-            json="$json}"
-            if command -v jq >/dev/null 2>&1; then
-                echo "$json" | jq .
-            else
-                echo "$json"
-            fi
+            done <<< "$names"
+            echo "$json" | jq .
             ;;
         text)
-            if [ -n "$filter" ]; then
-                grep "^export $filter" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
-            else
-                grep "^export" "$WORKER_ENV_FILE" | sed 's/export \([^=]*\)="\([^"]*\)"/\1=\2/'
-            fi
+            while IFS= read -r name; do
+                # shellcheck disable=SC2053 # Env filters intentionally support globs like AWS_*.
+                if [[ -n "$name" && ( -z "$filter" || "$name" == $filter ) ]]; then
+                    printf '%s=%s\n' "$name" "$(get_env_value "$name")"
+                fi
+            done <<< "$names"
             ;;
         *)
             log_error "Env" "Unknown format: $format"
@@ -119,13 +103,8 @@ set_environment() {
         return 1
     fi
     
-    # Add to environment file
     if [ -f "$WORKER_ENV_FILE" ]; then
-        # Remove existing declaration if any
-        sed -i "/^export $name=/d" "$WORKER_ENV_FILE"
-        # Add new declaration
-        echo "export $name=\"$value\"" >> "$WORKER_ENV_FILE"
-        # Export in current session
+        upsert_env_value "$name" "$value" || return 1
         export "$name=$value"
         log_success "Env" "Set $name to '$value'"
     else

@@ -19,15 +19,11 @@ ensure_env_file() {
         log_error "Environment" "Failed to create environment file: $WORKER_ENV_FILE"
         return 1
     }
-}
 
-escape_env_value() {
-    local value="$1"
-    value=${value//\\/\\\\}
-    value=${value//\"/\\\"}
-    value=${value//\$/\\\$}
-    value=${value//\`/\\\`}
-    printf "%s" "$value"
+    chmod 600 "$WORKER_ENV_FILE" || {
+        log_error "Environment" "Failed to restrict environment file permissions: $WORKER_ENV_FILE"
+        return 1
+    }
 }
 
 upsert_env_value() {
@@ -53,11 +49,16 @@ upsert_env_value() {
     }
 
     grep -v "^export $name=" "$WORKER_ENV_FILE" > "$tmpfile" || true
-    printf 'export %s="%s"\n' "$name" "$(escape_env_value "$value")" >> "$tmpfile"
+    printf 'export %s=%q\n' "$name" "$value" >> "$tmpfile"
 
     mv "$tmpfile" "$WORKER_ENV_FILE" || {
         rm -f "$tmpfile"
         log_error "Environment" "Failed to update environment file"
+        return 1
+    }
+
+    chmod 600 "$WORKER_ENV_FILE" || {
+        log_error "Environment" "Failed to restrict environment file permissions: $WORKER_ENV_FILE"
         return 1
     }
 }
@@ -76,34 +77,20 @@ generate_env_file() {
     
     ensure_env_file || return 1
     
-    # Process each environment variable
     while IFS= read -r entry; do
-        # Extract key and value using string manipulation instead of regex
-        if [[ $entry == export* ]]; then
-            # Remove 'export ' prefix
-            local kv_pair=${entry#export }
-            # Extract key (everything before =)
-            local key=${kv_pair%%=*}
-            # Extract value (everything after = and remove quotes)
-            local value=${kv_pair#*=}
-            value=${value//\"/}
-            value=${value#\"}
-            value=${value%\"}
-            
-            # Check if the environment variable is exported (available in the environment)
-            # We use printenv to check if it's truly in the environment, not just a shell variable
-            if ! printenv "$key" > /dev/null 2>&1; then
-                # Variable doesn't exist in environment, add it from config
-                upsert_env_value "$key" "$value" || return 1
-            else
-                # Variable exists in environment, use that value instead
-                local env_value
-                env_value="$(printenv "$key")"
-                upsert_env_value "$key" "$env_value" || return 1
-                log_info "Environment" "Detected [$key] in container environment - using runtime value instead of config value"
-            fi
+        local key value
+        key=$(echo "$entry" | jq -r '.key')
+        value=$(echo "$entry" | jq -r '.value | tostring')
+
+        if ! printenv "$key" > /dev/null 2>&1; then
+            upsert_env_value "$key" "$value" || return 1
+        else
+            local env_value
+            env_value="$(printenv "$key")"
+            upsert_env_value "$key" "$env_value" || return 1
+            log_info "Environment" "Detected [$key] in container environment - using runtime value instead of config value"
         fi
-    done < <(echo "$config" | yq eval '.config.env | to_entries | .[] | "export " + .key + "=\"" + .value + "\""' -)
+    done < <(echo "$config" | jq -c '.config.env // {} | to_entries[]')
 }
 
 # Internal function to resolve and append secrets
@@ -206,6 +193,8 @@ configure_environment() {
         return 1
     fi
 
+    load_environment
+
     log_info "Secure environment setup completed successfully."
 }
 
@@ -276,7 +265,11 @@ get_env_value() {
     fi
     
     if [ -f "$WORKER_ENV_FILE" ]; then
-        grep "^export $var_name=" "$WORKER_ENV_FILE" | cut -d'=' -f2- | tr -d '"'
+        (
+            # shellcheck source=/dev/null
+            source "$WORKER_ENV_FILE"
+            printenv "$var_name"
+        )
     else
         log_error "Environment" "Environment file does not exist"
         return 1

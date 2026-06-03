@@ -304,6 +304,22 @@ jobs:
 
           echo "Upgrade Copilot: completed; session saved to copilot-docker-dependency-session.md"
 
+      - name: Guard Dockerfile-only changes
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+
+          unexpected_changes="$(git diff --name-only | awk -v dockerfile="${DOCKERFILE}" '$0 != dockerfile')"
+          if [ -n "${unexpected_changes}" ]; then
+            echo "Upgrade guard: Copilot modified tracked files outside ${DOCKERFILE}:" >&2
+            printf '%s\n' "${unexpected_changes}" >&2
+            exit 1
+          fi
+
+          echo "Upgrade guard: tracked changes are limited to ${DOCKERFILE}"
+        env:
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+
       - name: Detect changes
         id: changes
         shell: bash
@@ -358,7 +374,7 @@ jobs:
       - name: Create pull request
         id: create-pr
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
         timeout-minutes: 5
         with:
           commit-message: ${{ needs.config.outputs.commit_message }}

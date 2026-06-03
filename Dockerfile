@@ -139,7 +139,7 @@ RUN mkdir -p \
     # Create and set permissions for environment files
     touch ${WORKER_CONFIG_DIR}/environment && \
     chown ${USER}:${USER} ${WORKER_CONFIG_DIR}/environment && \
-    chmod 644 ${WORKER_CONFIG_DIR}/environment
+    chmod 600 ${WORKER_CONFIG_DIR}/environment
 
 # Copy worker files
 COPY bin/entrypoint.sh ${WORKER_BIN_DIR}/
@@ -182,6 +182,7 @@ RUN \
     find ${WORKER_BASE_DIR} ${WORKER_CONFIG_DIR} ${WORKER_LIB_DIR} ${WORKER_BIN_DIR} -type d -exec chmod 755 {} + && \
     # Set base file permissions
     find ${WORKER_CONFIG_DIR} -type f -exec chmod 644 {} + && \
+    chmod 600 ${WORKER_CONFIG_DIR}/environment && \
     find ${WORKER_LIB_DIR} -type f ! -name process_manager.sh -exec chmod 644 {} + && \
     # Make specific files executable
     chmod 755 \
