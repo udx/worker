@@ -53,7 +53,7 @@ RUN apt-get update && \
     jq=1.8.1-3ubuntu1.1 \
     zip=3.0-15ubuntu2 \
     unzip=6.0-28ubuntu7 \
-    nano=8.4-1 \
+    nano=8.4-1ubuntu0.1 \
     vim=2:9.1.0967-1ubuntu6.5 \
     python3.13=3.13.7-1ubuntu0.4 \
     python3.13-venv=3.13.7-1ubuntu0.4 \
