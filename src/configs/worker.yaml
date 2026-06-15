@@ -4,4 +4,5 @@ version: udx.io/worker-v1/config
 config:
   env:
     WORKER_OUTPUT_FILE: ""
+    WORKER_OUTPUT_LOG: "false"
   secrets: {}
