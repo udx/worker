@@ -54,7 +54,7 @@ RUN apt-get update && \
     zip=3.0-15ubuntu2 \
     unzip=6.0-28ubuntu7 \
     nano=8.4-1 \
-    vim=2:9.1.0967-1ubuntu6.5 \
+    vim=2:9.1.0967-1ubuntu6.6 \
     python3.13=3.13.7-1ubuntu0.4 \
     python3.13-venv=3.13.7-1ubuntu0.4 \
     supervisor=4.2.5-3 && \
@@ -65,7 +65,7 @@ RUN apt-get update && \
     ln -s /opt/az/bin/az /usr/local/bin/az && \
     # Clean up pip cache and temp files
     rm -rf /root/.cache/pip && \
-    find /opt/az -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
+    (find /opt/az -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true) && \
     apt-get clean && \
     rm -rf /tmp/* /var/tmp/* && \
     # Set up sources.list.d for child images
@@ -74,15 +74,15 @@ RUN apt-get update && \
 
 # Configure the timezone
 RUN echo $TZ > /etc/timezone && \
-    rm /etc/localtime && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
+    rm -f /etc/localtime && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
 
 # Install yq (architecture-aware)
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; elif [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; fi && \
-    curl -sL https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_${ARCH}.tar.gz | tar xz && \
-    mv yq_linux_${ARCH} /usr/bin/yq && \
+    curl -fsSL "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_${ARCH}.tar.gz" -o /tmp/yq.tar.gz && \
+    tar -xzf /tmp/yq.tar.gz -C /tmp && \
+    mv /tmp/yq_linux_${ARCH} /usr/bin/yq && \
     rm -rf /tmp/*
 
 # Install Google Cloud SDK (architecture-aware)
