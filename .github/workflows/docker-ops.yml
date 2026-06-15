@@ -35,3 +35,47 @@ jobs:
       version_config_path: ci/git-version.yml
     secrets:
       docker_token: ${{ secrets.DOCKER_TOKEN }}
+
+  runtime-output:
+    name: Runtime Output
+    needs: docker-ops
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Build worker image
+        run: docker build --pull --tag "worker-runtime-output:${GITHUB_SHA}" .
+
+      - name: Capture runtime output
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-output
+          sudo chown 500:500 runtime-output
+          docker run --rm \
+            -e WORKER_OUTPUT_FILE=/tmp/worker-runtime-output/runtime.json \
+            -e WORKER_OUTPUT_LOG=true \
+            -v "${PWD}/runtime-output:/tmp/worker-runtime-output" \
+            "worker-runtime-output:${GITHUB_SHA}" \
+            /bin/bash -lc 'test -s "$WORKER_OUTPUT_FILE"'
+          sudo chown "$(id -u):$(id -g)" runtime-output/runtime.json
+          jq -e '.env | type == "object"' runtime-output/runtime.json
+          jq -c . runtime-output/runtime.json
+
+      - name: Write runtime output summary
+        run: |
+          {
+            echo "### Worker runtime output"
+            echo
+            echo '```json'
+            jq . runtime-output/runtime.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload runtime output artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-runtime-output
+          path: runtime-output/runtime.json
