@@ -1,5 +1,5 @@
 ---
-name: Docker Ops
+name: Build/Release
 
 "on":
   push:
@@ -47,20 +47,14 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Build worker image
-        run: docker build --pull --tag "worker-runtime-output:${GITHUB_SHA}" .
+        run: make build IMAGE_NAME=worker-runtime-output TAG="${GITHUB_SHA}"
 
-      - name: Capture runtime output
+      - name: Run tests with runtime output
         run: |
-          set -euo pipefail
-          mkdir -p runtime-output
-          sudo chown 500:500 runtime-output
-          docker run --rm \
-            -e WORKER_OUTPUT_FILE=/tmp/worker-runtime-output/runtime.json \
-            -e WORKER_OUTPUT_LOG=true \
-            -v "${PWD}/runtime-output:/tmp/worker-runtime-output" \
-            "worker-runtime-output:${GITHUB_SHA}" \
-            /bin/bash -lc 'test -s "$WORKER_OUTPUT_FILE"'
-          sudo chown "$(id -u):$(id -g)" runtime-output/runtime.json
+          make test \
+            IMAGE_NAME=worker-runtime-output \
+            TAG="${GITHUB_SHA}" \
+            TEST_RUNTIME_OUTPUT=true
           jq -e '.env | type == "object"' runtime-output/runtime.json
           jq -c . runtime-output/runtime.json
 
