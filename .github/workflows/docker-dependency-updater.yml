@@ -86,7 +86,7 @@ jobs:
 
       - name: Stop if an update PR is already open
         id: existing-pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           UPDATE_BRANCH: ${{ steps.config.outputs.update_branch }}
         with:
@@ -246,7 +246,7 @@ jobs:
           PROBE_REPORT: ${{ needs.config.outputs.report_path }}
 
       - name: Upload dependency report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         timeout-minutes: 3
         with:
           name: docker-dependency-report
@@ -362,7 +362,7 @@ jobs:
           REPORT_PATH: ${{ needs.config.outputs.report_path }}
 
       - name: Upload Copilot session
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         timeout-minutes: 3
         with:
           name: copilot-docker-dependency-session
@@ -374,7 +374,7 @@ jobs:
       - name: Create pull request
         id: create-pr
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1
         timeout-minutes: 5
         with:
           commit-message: ${{ needs.config.outputs.commit_message }}

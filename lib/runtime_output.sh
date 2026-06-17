@@ -7,7 +7,7 @@ source "${WORKER_LIB_DIR}/worker_config.sh"
 
 build_runtime_output_json() {
     local config_json="$1"
-    local worker_config_path services_config_path env_json secrets_json
+    local worker_config_path services_config_path env_json redacted_json
 
     worker_config_path=$(get_worker_config_path)
     services_config_path="${HOME}/.config/worker/services.yaml"
@@ -15,8 +15,8 @@ build_runtime_output_json() {
         services_config_path="${WORKER_CONFIG_DIR}/services.yaml"
     fi
 
-    env_json=$(echo "$config_json" | jq '.config.env // {} | with_entries(.value = "redacted")' 2>/dev/null) || return 1
-    secrets_json=$(echo "$config_json" | jq '.config.secrets // {} | with_entries(.value = "redacted")' 2>/dev/null) || return 1
+    env_json=$(build_runtime_env_json "$config_json") || return 1
+    redacted_json=$(build_runtime_redacted_json "$config_json") || return 1
 
     jq -n \
         --arg worker_config_path "$worker_config_path" \
@@ -24,7 +24,7 @@ build_runtime_output_json() {
         --arg worker_env_file "$WORKER_ENV_FILE" \
         --arg generated_at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
         --argjson env "$env_json" \
-        --argjson secrets "$secrets_json" \
+        --argjson redacted "$redacted_json" \
         '{
             generated_at: $generated_at,
             paths: {
@@ -33,16 +33,87 @@ build_runtime_output_json() {
                 environment: $worker_env_file
             },
             env: $env,
-            secrets: $secrets,
-            secret_values: "redacted"
+            redacted: $redacted
         }'
+}
+
+is_runtime_output_redacted_name() {
+    local config_json="$1"
+    local name="$2"
+
+    echo "$config_json" | jq -e --arg name "$name" --arg pattern "^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+" '
+        (.config.secrets // {} | has($name)) or
+        ((.config.env // {} | .[$name] // "" | tostring) | test($pattern))
+    ' >/dev/null
+}
+
+build_runtime_env_json() {
+    local config_json="$1"
+    local names name value json
+
+    if [[ ! -f "$WORKER_ENV_FILE" ]]; then
+        log_error "Runtime output" "Environment file not found: $WORKER_ENV_FILE"
+        return 1
+    fi
+
+    names=$(grep "^export " "$WORKER_ENV_FILE" | cut -d'=' -f1 | cut -d' ' -f2)
+    json="{}"
+    while IFS= read -r name; do
+        if [[ -z "$name" ]] || is_runtime_output_redacted_name "$config_json" "$name"; then
+            continue
+        fi
+
+        value=$(get_env_value "$name") || return 1
+        json=$(echo "$json" | jq --arg key "$name" --arg value "$value" '. + {($key): $value}') || return 1
+    done <<< "$names"
+
+    echo "$json" | jq -S .
+}
+
+build_runtime_redacted_json() {
+    local config_json="$1"
+    local names name json
+
+    if [[ ! -f "$WORKER_ENV_FILE" ]]; then
+        log_error "Runtime output" "Environment file not found: $WORKER_ENV_FILE"
+        return 1
+    fi
+
+    names=$(grep "^export " "$WORKER_ENV_FILE" | cut -d'=' -f1 | cut -d' ' -f2)
+    json="[]"
+    while IFS= read -r name; do
+        if [[ -n "$name" ]] && is_runtime_output_redacted_name "$config_json" "$name"; then
+            json=$(echo "$json" | jq --arg name "$name" '. + [$name]') || return 1
+        fi
+    done <<< "$names"
+
+    echo "$json" | jq -S 'unique'
+}
+
+runtime_output_log_enabled() {
+    case "${WORKER_OUTPUT_LOG:-false}" in
+        true|TRUE|1|yes|YES|on|ON)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+emit_runtime_output_log() {
+    local runtime_json="$1"
+    local compact_json
+
+    compact_json=$(echo "$runtime_json" | jq -c .) || return 1
+    printf 'WORKER_RUNTIME_OUTPUT_JSON=%s\n' "$compact_json"
 }
 
 emit_runtime_output() {
     local config_json runtime_json
 
-    if [[ -z "${WORKER_OUTPUT_FILE:-}" ]]; then
-        log_info "Runtime output disabled. Set WORKER_OUTPUT_FILE to write redacted JSON runtime config for workflow/deployment integrations."
+    if [[ -z "${WORKER_OUTPUT_FILE:-}" ]] && ! runtime_output_log_enabled; then
+        log_info "Runtime output disabled. Set WORKER_OUTPUT_FILE or WORKER_OUTPUT_LOG=true to emit redacted JSON runtime config for workflow/deployment integrations."
         return 0
     fi
 
@@ -52,8 +123,14 @@ emit_runtime_output() {
         return 1
     fi
 
-    mkdir -p "$(dirname "$WORKER_OUTPUT_FILE")" || return 1
-    install -m 600 /dev/null "$WORKER_OUTPUT_FILE" || return 1
-    printf '%s\n' "$runtime_json" > "$WORKER_OUTPUT_FILE"
-    log_info "Runtime output written to $WORKER_OUTPUT_FILE"
+    if [[ -n "${WORKER_OUTPUT_FILE:-}" ]]; then
+        mkdir -p "$(dirname "$WORKER_OUTPUT_FILE")" || return 1
+        install -m 600 /dev/null "$WORKER_OUTPUT_FILE" || return 1
+        printf '%s\n' "$runtime_json" > "$WORKER_OUTPUT_FILE"
+        log_info "Runtime output written to $WORKER_OUTPUT_FILE"
+    fi
+
+    if runtime_output_log_enabled; then
+        emit_runtime_output_log "$runtime_json" || return 1
+    fi
 }
