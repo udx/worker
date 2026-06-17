@@ -5,6 +5,9 @@ source "${WORKER_LIB_DIR}/utils.sh"
 # shellcheck source=${WORKER_LIB_DIR}/worker_config.sh disable=SC1091
 source "${WORKER_LIB_DIR}/worker_config.sh"
 
+WORKER_ENV_FILE="${WORKER_ENV_FILE:-/etc/worker/environment}"
+WORKER_ENV_REDACTION_FILE="${WORKER_ENV_REDACTION_FILE:-${WORKER_ENV_FILE}.redacted}"
+
 build_runtime_output_json() {
     local config_json="$1"
     local worker_config_path services_config_path env_json redacted_json
@@ -40,6 +43,10 @@ build_runtime_output_json() {
 is_runtime_output_redacted_name() {
     local config_json="$1"
     local name="$2"
+
+    if [[ -f "$WORKER_ENV_REDACTION_FILE" ]] && grep -Fxq "$name" "$WORKER_ENV_REDACTION_FILE"; then
+        return 0
+    fi
 
     echo "$config_json" | jq -e --arg name "$name" --arg pattern "^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+" '
         (.config.secrets // {} | has($name)) or

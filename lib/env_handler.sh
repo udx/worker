@@ -5,6 +5,7 @@ source "${WORKER_LIB_DIR}/utils.sh"
 
 # Environment file location
 WORKER_ENV_FILE="${WORKER_ENV_FILE:-/etc/worker/environment}"
+WORKER_ENV_REDACTION_FILE="${WORKER_ENV_REDACTION_FILE:-${WORKER_ENV_FILE}.redacted}"
 
 ensure_env_file() {
     local env_dir
@@ -26,6 +27,43 @@ ensure_env_file() {
     }
 }
 
+reset_env_redactions() {
+    local redaction_dir
+    redaction_dir=$(dirname "$WORKER_ENV_REDACTION_FILE")
+
+    mkdir -p "$redaction_dir" || {
+        log_error "Environment" "Failed to create redaction directory: $redaction_dir"
+        return 1
+    }
+
+    install -m 600 /dev/null "$WORKER_ENV_REDACTION_FILE" || {
+        log_error "Environment" "Failed to initialize redaction file: $WORKER_ENV_REDACTION_FILE"
+        return 1
+    }
+}
+
+mark_env_value_redacted() {
+    local name="$1"
+
+    if [[ -z "$name" ]]; then
+        log_error "Environment" "Variable name not provided for redaction"
+        return 1
+    fi
+
+    if ! [[ "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        log_error "Environment" "Invalid redaction variable name: $name"
+        return 1
+    fi
+
+    if [[ ! -f "$WORKER_ENV_REDACTION_FILE" ]]; then
+        reset_env_redactions || return 1
+    fi
+
+    if ! grep -Fxq "$name" "$WORKER_ENV_REDACTION_FILE"; then
+        printf '%s\n' "$name" >> "$WORKER_ENV_REDACTION_FILE"
+    fi
+}
+
 upsert_env_value() {
     local name="$1"
     local value="$2"
@@ -41,6 +79,7 @@ upsert_env_value() {
     fi
 
     ensure_env_file || return 1
+    reset_env_redactions || return 1
 
     local tmpfile
     tmpfile=$(mktemp "${WORKER_ENV_FILE}.tmp.XXXXXX") || {
@@ -134,6 +173,7 @@ _resolve_and_append_secrets() {
             has_failures=true
         else
             upsert_env_value "$name" "$value" || has_failures=true
+            mark_env_value_redacted "$name" || has_failures=true
             log_success "Environment" "Resolved secret for $name"
         fi
     done < <(echo "$secrets_json" | jq -c 'to_entries[]')

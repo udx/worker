@@ -12,11 +12,15 @@ source "${WORKER_LIB_DIR}/runtime_output.sh"
 print_info "Testing: runtime output redacts configured secrets"
 RUNTIME_ENV_FILE=$(mktemp)
 ORIGINAL_WORKER_ENV_FILE="$WORKER_ENV_FILE"
+ORIGINAL_WORKER_ENV_REDACTION_FILE="${WORKER_ENV_REDACTION_FILE:-}"
 export WORKER_ENV_FILE="$RUNTIME_ENV_FILE"
+export WORKER_ENV_REDACTION_FILE="${RUNTIME_ENV_FILE}.redacted"
 
 printf 'export PUBLIC_VALUE=%q\n' "visible value" > "$WORKER_ENV_FILE"
 printf 'export CONFIG_SECRET=%q\n' "resolved secret" >> "$WORKER_ENV_FILE"
 printf 'export CONFIG_REF=%q\n' "resolved reference" >> "$WORKER_ENV_FILE"
+printf 'export DEPLOYMENT_SECRET=%q\n' "resolved deployment secret" >> "$WORKER_ENV_FILE"
+printf '%s\n' "DEPLOYMENT_SECRET" > "$WORKER_ENV_REDACTION_FILE"
 
 CONFIG_JSON='{
   "config": {
@@ -32,19 +36,24 @@ CONFIG_JSON='{
 
 RUNTIME_OUTPUT=$(build_runtime_output_json "$CONFIG_JSON")
 export WORKER_ENV_FILE="$ORIGINAL_WORKER_ENV_FILE"
-rm -f "$RUNTIME_ENV_FILE"
+if [[ -n "$ORIGINAL_WORKER_ENV_REDACTION_FILE" ]]; then
+    export WORKER_ENV_REDACTION_FILE="$ORIGINAL_WORKER_ENV_REDACTION_FILE"
+else
+    unset WORKER_ENV_REDACTION_FILE
+fi
+rm -f "$RUNTIME_ENV_FILE" "${RUNTIME_ENV_FILE}.redacted"
 
 if ! echo "$RUNTIME_OUTPUT" | jq -e '.env.PUBLIC_VALUE == "visible value"' >/dev/null; then
     print_error "runtime output missing non-secret env value"
     exit 1
 fi
 
-if echo "$RUNTIME_OUTPUT" | jq -e '.env.CONFIG_SECRET or .env.CONFIG_REF' >/dev/null; then
+if echo "$RUNTIME_OUTPUT" | jq -e '.env.CONFIG_SECRET or .env.CONFIG_REF or .env.DEPLOYMENT_SECRET' >/dev/null; then
     print_error "runtime output leaked a redacted env value"
     exit 1
 fi
 
-if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_REF", "CONFIG_SECRET"]' >/dev/null; then
+if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_REF", "CONFIG_SECRET", "DEPLOYMENT_SECRET"]' >/dev/null; then
     print_error "runtime output redacted list is incorrect"
     exit 1
 fi
