@@ -79,7 +79,6 @@ upsert_env_value() {
     fi
 
     ensure_env_file || return 1
-    reset_env_redactions || return 1
 
     local tmpfile
     tmpfile=$(mktemp "${WORKER_ENV_FILE}.tmp.XXXXXX") || {
@@ -115,6 +114,7 @@ generate_env_file() {
     log_info "Environment" "Loading environment variables from configuration"
     
     ensure_env_file || return 1
+    reset_env_redactions || return 1
     
     while IFS= read -r entry; do
         local key value

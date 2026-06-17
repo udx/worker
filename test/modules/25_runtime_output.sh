@@ -22,7 +22,10 @@ export WORKER_ENV_REDACTION_FILE="${RUNTIME_ENV_FILE}.redacted"
     printf 'export CONFIG_REF=%q\n' "resolved reference"
     printf 'export DEPLOYMENT_SECRET=%q\n' "resolved deployment secret"
 } > "$WORKER_ENV_FILE"
-printf '%s\n' "DEPLOYMENT_SECRET" > "$WORKER_ENV_REDACTION_FILE"
+reset_env_redactions
+mark_env_value_redacted "DEPLOYMENT_SECRET"
+upsert_env_value "DEPLOYMENT_SECRET_TWO" "resolved deployment secret two"
+mark_env_value_redacted "DEPLOYMENT_SECRET_TWO"
 
 CONFIG_JSON='{
   "config": {
@@ -50,12 +53,12 @@ if ! echo "$RUNTIME_OUTPUT" | jq -e '.env.PUBLIC_VALUE == "visible value"' >/dev
     exit 1
 fi
 
-if echo "$RUNTIME_OUTPUT" | jq -e '.env.CONFIG_SECRET or .env.CONFIG_REF or .env.DEPLOYMENT_SECRET' >/dev/null; then
+if echo "$RUNTIME_OUTPUT" | jq -e '.env.CONFIG_SECRET or .env.CONFIG_REF or .env.DEPLOYMENT_SECRET or .env.DEPLOYMENT_SECRET_TWO' >/dev/null; then
     print_error "runtime output leaked a redacted env value"
     exit 1
 fi
 
-if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_REF", "CONFIG_SECRET", "DEPLOYMENT_SECRET"]' >/dev/null; then
+if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_REF", "CONFIG_SECRET", "DEPLOYMENT_SECRET", "DEPLOYMENT_SECRET_TWO"]' >/dev/null; then
     print_error "runtime output redacted list is incorrect"
     exit 1
 fi
