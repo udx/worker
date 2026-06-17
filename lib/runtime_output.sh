@@ -81,18 +81,29 @@ build_runtime_redacted_json() {
     local config_json="$1"
     local names name json
 
-    if [[ ! -f "$WORKER_ENV_FILE" ]]; then
-        log_error "Runtime output" "Environment file not found: $WORKER_ENV_FILE"
-        return 1
+    json=$(echo "$config_json" | jq -c --arg pattern "^(${SUPPORTED_SECRET_PROVIDERS})/.+/.+" '
+        [
+            (.config.secrets // {} | keys[]?),
+            (.config.env // {} | to_entries[]? | select(((.value // "") | tostring) | test($pattern)) | .key)
+        ]
+    ') || return 1
+
+    if [[ -f "$WORKER_ENV_FILE" ]]; then
+        names=$(grep "^export " "$WORKER_ENV_FILE" | cut -d'=' -f1 | cut -d' ' -f2)
+        while IFS= read -r name; do
+            if [[ -n "$name" ]] && is_runtime_output_redacted_name "$config_json" "$name"; then
+                json=$(echo "$json" | jq --arg name "$name" '. + [$name]') || return 1
+            fi
+        done <<< "$names"
     fi
 
-    names=$(grep "^export " "$WORKER_ENV_FILE" | cut -d'=' -f1 | cut -d' ' -f2)
-    json="[]"
-    while IFS= read -r name; do
-        if [[ -n "$name" ]] && is_runtime_output_redacted_name "$config_json" "$name"; then
-            json=$(echo "$json" | jq --arg name "$name" '. + [$name]') || return 1
-        fi
-    done <<< "$names"
+    if [[ -f "$WORKER_ENV_REDACTION_FILE" ]]; then
+        while IFS= read -r name; do
+            if [[ -n "$name" ]]; then
+                json=$(echo "$json" | jq --arg name "$name" '. + [$name]') || return 1
+            fi
+        done < "$WORKER_ENV_REDACTION_FILE"
+    fi
 
     echo "$json" | jq -S 'unique'
 }
@@ -140,8 +151,8 @@ emit_runtime_output_stdout() {
 emit_runtime_output() {
     local config_json runtime_json
 
-    if [[ -z "${WORKER_OUTPUT_FILE:-}" ]] && ! runtime_output_log_enabled && ! runtime_output_stdout_enabled; then
-        log_info "Runtime output disabled. Set WORKER_OUTPUT_FILE, WORKER_OUTPUT_LOG=true, or WORKER_OUTPUT_STDOUT=true to emit redacted JSON runtime config for workflow/deployment integrations."
+    if ! runtime_output_log_enabled && ! runtime_output_stdout_enabled; then
+        log_info "Runtime output disabled. Set WORKER_OUTPUT_STDOUT=true or WORKER_OUTPUT_LOG=true to emit redacted JSON runtime config for workflow/deployment integrations."
         return 0
     fi
 
@@ -149,13 +160,6 @@ emit_runtime_output() {
     if ! runtime_json=$(build_runtime_output_json "$config_json"); then
         log_error "Runtime output" "Failed to build runtime output JSON"
         return 1
-    fi
-
-    if [[ -n "${WORKER_OUTPUT_FILE:-}" ]]; then
-        mkdir -p "$(dirname "$WORKER_OUTPUT_FILE")" || return 1
-        install -m 600 /dev/null "$WORKER_OUTPUT_FILE" || return 1
-        printf '%s\n' "$runtime_json" > "$WORKER_OUTPUT_FILE"
-        log_info "Runtime output written to $WORKER_OUTPUT_FILE"
     fi
 
     if runtime_output_log_enabled; then

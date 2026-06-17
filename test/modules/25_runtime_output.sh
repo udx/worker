@@ -34,7 +34,8 @@ CONFIG_JSON='{
       "CONFIG_REF": "gcp/project-id/secret-name"
     },
     "secrets": {
-      "CONFIG_SECRET": "aws/secret-name/us-west-2"
+      "CONFIG_SECRET": "aws/secret-name/us-west-2",
+      "CONFIG_ONLY_SECRET": "aws/config-only/us-west-2"
     }
   }
 }'
@@ -58,7 +59,7 @@ if echo "$RUNTIME_OUTPUT" | jq -e '.env.CONFIG_SECRET or .env.CONFIG_REF or .env
     exit 1
 fi
 
-if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_REF", "CONFIG_SECRET", "DEPLOYMENT_SECRET", "DEPLOYMENT_SECRET_TWO"]' >/dev/null; then
+if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_ONLY_SECRET", "CONFIG_REF", "CONFIG_SECRET", "DEPLOYMENT_SECRET", "DEPLOYMENT_SECRET_TWO"]' >/dev/null; then
     print_error "runtime output redacted list is incorrect"
     exit 1
 fi

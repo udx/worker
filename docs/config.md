@@ -81,11 +81,7 @@ docker run --rm \
 
 ## Runtime Output
 
-By default the worker does not print runtime config details or write output files. The entrypoint logs a short hint that output can be enabled.
-
-Set `WORKER_OUTPUT_FILE` when a deployment or workflow needs redacted runtime config evidence. The worker writes JSON runtime metadata to that path after `worker.yaml`, deployment environment overrides, and secret references have been applied.
-
-Set `WORKER_OUTPUT_LOG=true` to also emit the same JSON to container logs as a single minified line prefixed with `WORKER_RUNTIME_OUTPUT_JSON=`. This is useful for Kubernetes or workflow systems where the next step reads container logs instead of a mounted file.
+By default the worker does not print runtime config details. The entrypoint logs a short hint that output can be enabled.
 
 Set `WORKER_OUTPUT_STDOUT=true` when a workflow should capture only the runtime JSON from stdout. In this mode the entrypoint sends setup logs to stderr, writes the redacted runtime JSON to stdout, and exits before starting the process manager:
 
@@ -94,6 +90,8 @@ docker run --rm \
   -e WORKER_OUTPUT_STDOUT=true \
   usabilitydynamics/udx-worker:latest > runtime-output/runtime.json
 ```
+
+Set `WORKER_OUTPUT_LOG=true` to also emit the same JSON to container logs as a single minified line prefixed with `WORKER_RUNTIME_OUTPUT_JSON=`. This is useful for Kubernetes or workflow systems where the next step reads container logs from a normal-running container.
 
 The output contains:
 
