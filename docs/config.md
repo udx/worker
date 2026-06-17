@@ -87,6 +87,14 @@ Set `WORKER_OUTPUT_FILE` when a deployment or workflow needs redacted runtime co
 
 Set `WORKER_OUTPUT_LOG=true` to also emit the same JSON to container logs as a single minified line prefixed with `WORKER_RUNTIME_OUTPUT_JSON=`. This is useful for Kubernetes or workflow systems where the next step reads container logs instead of a mounted file.
 
+Set `WORKER_OUTPUT_STDOUT=true` when a workflow should capture only the runtime JSON from stdout. In this mode the entrypoint sends setup logs to stderr, writes the redacted runtime JSON to stdout, and exits before starting the process manager:
+
+```bash
+docker run --rm \
+  -e WORKER_OUTPUT_STDOUT=true \
+  usabilitydynamics/udx-worker:latest > runtime-output/runtime.json
+```
+
 The output contains:
 
 - `env`: resolved non-secret environment variables.

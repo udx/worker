@@ -50,5 +50,3 @@ help:
 	@echo "  DOCKER_IMAGE (default: $(DOCKER_IMAGE))"
 	@echo "  FOLLOW_LOGS (default: $(FOLLOW_LOGS))"
 	@echo "  RUN_ENV (default: $(RUN_ENV))"
-	@echo "  TEST_RUNTIME_OUTPUT (default: $(TEST_RUNTIME_OUTPUT))"
-	@echo "  TEST_RUNTIME_OUTPUT_DIR (default: $(TEST_RUNTIME_OUTPUT_DIR))"

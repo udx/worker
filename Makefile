@@ -102,27 +102,15 @@ clean:
 
 test: clean
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Running tests...$(COLOR_RESET)\n"
-	@if [ "$(TEST_RUNTIME_OUTPUT)" = "true" ]; then \
-		mkdir -p "$(TEST_RUNTIME_OUTPUT_DIR)"; \
-	fi
 	@$(MAKE) run \
-		RUN_ENV="$(if $(filter true,$(TEST_RUNTIME_OUTPUT)),-e WORKER_OUTPUT_LOG=$(TEST_RUNTIME_OUTPUT_LOG))" \
 		VOLUMES="$(PWD)/test:/home/udx/test $(PWD)/src/examples/simple-config/.config/worker/worker.yaml:/home/udx/.config/worker/worker.yaml $(PWD)/src/examples/simple-service/.config/worker/services.yaml:/home/udx/.config/worker/services.yaml" \
 		COMMAND="/home/udx/test/main.sh"
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Following test output...$(COLOR_RESET)\n"
-	@if [ "$(TEST_RUNTIME_OUTPUT)" = "true" ]; then \
-		docker logs -f $(CONTAINER_NAME) | tee "$(TEST_RUNTIME_OUTPUT_DIR)/container.log" & LOGS_PID=$$!; \
-	else \
-		docker logs -f $(CONTAINER_NAME) & LOGS_PID=$$!; \
-	fi; \
+	@docker logs -f $(CONTAINER_NAME) & LOGS_PID=$$!; \
 	EXIT_CODE=$$(docker wait $(CONTAINER_NAME)); \
 	kill $$LOGS_PID 2>/dev/null || true; \
 	wait $$LOGS_PID 2>/dev/null || true; \
 	exit $$EXIT_CODE
-	@if [ "$(TEST_RUNTIME_OUTPUT)" = "true" ]; then \
-		sed -n 's/^.*WORKER_RUNTIME_OUTPUT_JSON=//p' "$(TEST_RUNTIME_OUTPUT_DIR)/container.log" | tail -n 1 > "$(TEST_RUNTIME_OUTPUT_DIR)/$(TEST_RUNTIME_OUTPUT_FILE)"; \
-		test -s "$(TEST_RUNTIME_OUTPUT_DIR)/$(TEST_RUNTIME_OUTPUT_FILE)"; \
-	fi
 	@$(MAKE) clean || exit 1
 	@printf "$(COLOR_GREEN)$(SYM_SUCCESS) Tests completed successfully$(COLOR_RESET)\n"
 

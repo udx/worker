@@ -108,6 +108,17 @@ runtime_output_log_enabled() {
     esac
 }
 
+runtime_output_stdout_enabled() {
+    case "${WORKER_OUTPUT_STDOUT:-false}" in
+        true|TRUE|1|yes|YES|on|ON)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 emit_runtime_output_log() {
     local runtime_json="$1"
     local compact_json
@@ -116,11 +127,21 @@ emit_runtime_output_log() {
     printf 'WORKER_RUNTIME_OUTPUT_JSON=%s\n' "$compact_json"
 }
 
+emit_runtime_output_stdout() {
+    local runtime_json="$1"
+
+    if [[ -n "${WORKER_OUTPUT_STDOUT_FD:-}" ]]; then
+        printf '%s\n' "$runtime_json" >&"${WORKER_OUTPUT_STDOUT_FD}"
+    else
+        printf '%s\n' "$runtime_json"
+    fi
+}
+
 emit_runtime_output() {
     local config_json runtime_json
 
-    if [[ -z "${WORKER_OUTPUT_FILE:-}" ]] && ! runtime_output_log_enabled; then
-        log_info "Runtime output disabled. Set WORKER_OUTPUT_FILE or WORKER_OUTPUT_LOG=true to emit redacted JSON runtime config for workflow/deployment integrations."
+    if [[ -z "${WORKER_OUTPUT_FILE:-}" ]] && ! runtime_output_log_enabled && ! runtime_output_stdout_enabled; then
+        log_info "Runtime output disabled. Set WORKER_OUTPUT_FILE, WORKER_OUTPUT_LOG=true, or WORKER_OUTPUT_STDOUT=true to emit redacted JSON runtime config for workflow/deployment integrations."
         return 0
     fi
 
@@ -139,5 +160,9 @@ emit_runtime_output() {
 
     if runtime_output_log_enabled; then
         emit_runtime_output_log "$runtime_json" || return 1
+    fi
+
+    if runtime_output_stdout_enabled; then
+        emit_runtime_output_stdout "$runtime_json" || return 1
     fi
 }

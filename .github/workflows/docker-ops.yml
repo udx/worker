@@ -49,12 +49,13 @@ jobs:
       - name: Build worker image
         run: make build IMAGE_NAME=worker-runtime-output TAG="${GITHUB_SHA}"
 
-      - name: Run tests with runtime output
+      - name: Capture runtime output
         run: |
-          make test \
-            IMAGE_NAME=worker-runtime-output \
-            TAG="${GITHUB_SHA}" \
-            TEST_RUNTIME_OUTPUT=true
+          mkdir -p runtime-output
+          docker run --rm \
+            -e WORKER_OUTPUT_STDOUT=true \
+            "worker-runtime-output:${GITHUB_SHA}" \
+            > runtime-output/runtime.json
           jq -e '.env | type == "object"' runtime-output/runtime.json
           jq -c . runtime-output/runtime.json
 

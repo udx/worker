@@ -15,10 +15,6 @@ COMMAND ?=
 MULTIPLATFORM ?= false
 FOLLOW_LOGS ?= false
 RUN_ENV ?=
-TEST_RUNTIME_OUTPUT ?= false
-TEST_RUNTIME_OUTPUT_DIR ?= $(PWD)/runtime-output
-TEST_RUNTIME_OUTPUT_FILE ?= runtime.json
-TEST_RUNTIME_OUTPUT_LOG ?= true
 
 # Colors for better visibility
 COLOR_RESET=\033[0m

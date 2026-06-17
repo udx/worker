@@ -74,4 +74,15 @@ if ! echo "${LOG_LINE#WORKER_RUNTIME_OUTPUT_JSON=}" | jq -e '.env.PUBLIC_VALUE =
     exit 1
 fi
 
+STDOUT_OUTPUT=$(WORKER_OUTPUT_STDOUT=true emit_runtime_output_stdout "$RUNTIME_OUTPUT")
+if [[ "$STDOUT_OUTPUT" == WORKER_RUNTIME_OUTPUT_JSON=* ]]; then
+    print_error "runtime output stdout mode should emit raw JSON"
+    exit 1
+fi
+
+if ! echo "$STDOUT_OUTPUT" | jq -e '.env.PUBLIC_VALUE == "visible value"' >/dev/null; then
+    print_error "runtime output stdout JSON is invalid"
+    exit 1
+fi
+
 print_success "All runtime output tests passed"
