@@ -16,10 +16,12 @@ ORIGINAL_WORKER_ENV_REDACTION_FILE="${WORKER_ENV_REDACTION_FILE:-}"
 export WORKER_ENV_FILE="$RUNTIME_ENV_FILE"
 export WORKER_ENV_REDACTION_FILE="${RUNTIME_ENV_FILE}.redacted"
 
-printf 'export PUBLIC_VALUE=%q\n' "visible value" > "$WORKER_ENV_FILE"
-printf 'export CONFIG_SECRET=%q\n' "resolved secret" >> "$WORKER_ENV_FILE"
-printf 'export CONFIG_REF=%q\n' "resolved reference" >> "$WORKER_ENV_FILE"
-printf 'export DEPLOYMENT_SECRET=%q\n' "resolved deployment secret" >> "$WORKER_ENV_FILE"
+{
+    printf 'export PUBLIC_VALUE=%q\n' "visible value"
+    printf 'export CONFIG_SECRET=%q\n' "resolved secret"
+    printf 'export CONFIG_REF=%q\n' "resolved reference"
+    printf 'export DEPLOYMENT_SECRET=%q\n' "resolved deployment secret"
+} > "$WORKER_ENV_FILE"
 printf '%s\n' "DEPLOYMENT_SECRET" > "$WORKER_ENV_REDACTION_FILE"
 
 CONFIG_JSON='{
