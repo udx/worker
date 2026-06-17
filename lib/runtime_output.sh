@@ -108,8 +108,8 @@ build_runtime_redacted_json() {
     echo "$json" | jq -S 'unique'
 }
 
-runtime_output_log_enabled() {
-    case "${WORKER_OUTPUT_LOG:-false}" in
+runtime_output_enabled() {
+    case "${WORKER_RUNTIME_OUTPUT:-false}" in
         true|TRUE|1|yes|YES|on|ON)
             return 0
             ;;
@@ -117,32 +117,13 @@ runtime_output_log_enabled() {
             return 1
             ;;
     esac
-}
-
-runtime_output_stdout_enabled() {
-    case "${WORKER_OUTPUT_STDOUT:-false}" in
-        true|TRUE|1|yes|YES|on|ON)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
-
-emit_runtime_output_log() {
-    local runtime_json="$1"
-    local compact_json
-
-    compact_json=$(echo "$runtime_json" | jq -c .) || return 1
-    printf 'WORKER_RUNTIME_OUTPUT_JSON=%s\n' "$compact_json"
 }
 
 emit_runtime_output_stdout() {
     local runtime_json="$1"
 
-    if [[ -n "${WORKER_OUTPUT_STDOUT_FD:-}" ]]; then
-        printf '%s\n' "$runtime_json" >&"${WORKER_OUTPUT_STDOUT_FD}"
+    if [[ -n "${WORKER_RUNTIME_OUTPUT_FD:-}" ]]; then
+        printf '%s\n' "$runtime_json" >&"${WORKER_RUNTIME_OUTPUT_FD}"
     else
         printf '%s\n' "$runtime_json"
     fi
@@ -151,8 +132,8 @@ emit_runtime_output_stdout() {
 emit_runtime_output() {
     local config_json runtime_json
 
-    if ! runtime_output_log_enabled && ! runtime_output_stdout_enabled; then
-        log_info "Runtime output disabled. Set WORKER_OUTPUT_STDOUT=true or WORKER_OUTPUT_LOG=true to emit redacted JSON runtime config for workflow/deployment integrations."
+    if ! runtime_output_enabled; then
+        log_info "Runtime output disabled. Set WORKER_RUNTIME_OUTPUT=true to emit redacted JSON runtime config for workflow/deployment integrations."
         return 0
     fi
 
@@ -162,11 +143,5 @@ emit_runtime_output() {
         return 1
     fi
 
-    if runtime_output_log_enabled; then
-        emit_runtime_output_log "$runtime_json" || return 1
-    fi
-
-    if runtime_output_stdout_enabled; then
-        emit_runtime_output_stdout "$runtime_json" || return 1
-    fi
+    emit_runtime_output_stdout "$runtime_json" || return 1
 }

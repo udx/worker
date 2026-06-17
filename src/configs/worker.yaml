@@ -3,6 +3,5 @@ kind: workerConfig
 version: udx.io/worker-v1/config
 config:
   env:
-    WORKER_OUTPUT_LOG: "false"
-    WORKER_OUTPUT_STDOUT: "false"
+    WORKER_RUNTIME_OUTPUT: "false"
   secrets: {}

@@ -64,25 +64,9 @@ if ! echo "$RUNTIME_OUTPUT" | jq -e '.redacted == ["CONFIG_ONLY_SECRET", "CONFIG
     exit 1
 fi
 
-LOG_LINE=$(WORKER_OUTPUT_LOG=true emit_runtime_output_log "$RUNTIME_OUTPUT")
-if [[ "$LOG_LINE" != WORKER_RUNTIME_OUTPUT_JSON=* ]]; then
-    print_error "runtime output log marker is missing"
-    exit 1
-fi
-
-if ! echo "${LOG_LINE#WORKER_RUNTIME_OUTPUT_JSON=}" | jq -e '.env.PUBLIC_VALUE == "visible value"' >/dev/null; then
-    print_error "runtime output log JSON is invalid"
-    exit 1
-fi
-
-STDOUT_OUTPUT=$(WORKER_OUTPUT_STDOUT=true emit_runtime_output_stdout "$RUNTIME_OUTPUT")
-if [[ "$STDOUT_OUTPUT" == WORKER_RUNTIME_OUTPUT_JSON=* ]]; then
-    print_error "runtime output stdout mode should emit raw JSON"
-    exit 1
-fi
-
+STDOUT_OUTPUT=$(WORKER_RUNTIME_OUTPUT=true emit_runtime_output_stdout "$RUNTIME_OUTPUT")
 if ! echo "$STDOUT_OUTPUT" | jq -e '.env.PUBLIC_VALUE == "visible value"' >/dev/null; then
-    print_error "runtime output stdout JSON is invalid"
+    print_error "runtime output JSON is invalid"
     exit 1
 fi
 

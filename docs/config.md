@@ -83,15 +83,20 @@ docker run --rm \
 
 By default the worker does not print runtime config details. The entrypoint logs a short hint that output can be enabled.
 
-Set `WORKER_OUTPUT_STDOUT=true` when a workflow should capture only the runtime JSON from stdout. In this mode the entrypoint sends setup logs to stderr, writes the redacted runtime JSON to stdout, and exits before starting the process manager:
+Set `WORKER_RUNTIME_OUTPUT=true` when a workflow or deployment should receive the runtime contract JSON. In this mode the entrypoint sends setup and process logs to stderr, writes the redacted runtime JSON to stdout, and continues normal runtime execution:
 
 ```bash
-docker run --rm \
-  -e WORKER_OUTPUT_STDOUT=true \
+# Runtime contract plus normal container processes.
+docker run \
+  -e WORKER_RUNTIME_OUTPUT=true \
   usabilitydynamics/udx-worker:latest > runtime-output/runtime.json
-```
 
-Set `WORKER_OUTPUT_LOG=true` to also emit the same JSON to container logs as a single minified line prefixed with `WORKER_RUNTIME_OUTPUT_JSON=`. This is useful for Kubernetes or workflow systems where the next step reads container logs from a normal-running container.
+# Runtime contract only, with a command that exits.
+docker run --rm \
+  -e WORKER_RUNTIME_OUTPUT=true \
+  usabilitydynamics/udx-worker:latest \
+  true > runtime-output/runtime.json
+```
 
 The output contains:
 

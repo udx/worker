@@ -53,8 +53,9 @@ jobs:
         run: |
           mkdir -p runtime-output
           docker run --rm \
-            -e WORKER_OUTPUT_STDOUT=true \
+            -e WORKER_RUNTIME_OUTPUT=true \
             "worker-runtime-output:${GITHUB_SHA}" \
+            true \
             > runtime-output/runtime.json
           jq -e '.env | type == "object"' runtime-output/runtime.json
           jq -c . runtime-output/runtime.json
