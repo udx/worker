@@ -21,6 +21,7 @@ name: Build/Release
 
 jobs:
   docker-ops:
+    name: Docker Ops
     permissions:
       contents: write
       security-events: write
