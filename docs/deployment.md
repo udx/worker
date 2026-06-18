@@ -52,3 +52,4 @@ For orchestrators such as Kubernetes, mount `worker.yaml` and `services.yaml` th
 - `docs/config.md`
 - `docs/services.md`
 - `docs/secrets.md`
+- `docs/runtime-output.md`
