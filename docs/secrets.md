@@ -87,4 +87,5 @@ worker env resolve gcp/my-project/api-key
 
 - `docs/config.md`
 - `docs/services.md`
+- `docs/runtime-output.md`
 - `docs/references/cloud-providers-auth.md`

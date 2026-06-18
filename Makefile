@@ -62,6 +62,7 @@ run: clean
 	fi
 	@docker run $(if $(INTERACTIVE),-it,-d) --rm --name $(CONTAINER_NAME) \
 		--env-file $(ENV_FILE) \
+		$(RUN_ENV) \
 		$(foreach vol,$(VOLUMES),-v $(vol)) \
 		$(DOCKER_IMAGE) $(COMMAND)
 	@if [ "$(INTERACTIVE)" = "true" ]; then \
@@ -106,8 +107,9 @@ test: clean
 		COMMAND="/home/udx/test/main.sh"
 	@printf "$(COLOR_BLUE)$(SYM_ARROW) Following test output...$(COLOR_RESET)\n"
 	@docker logs -f $(CONTAINER_NAME) & LOGS_PID=$$!; \
-	docker wait $(CONTAINER_NAME) > /dev/null; EXIT_CODE=$$?; \
+	EXIT_CODE=$$(docker wait $(CONTAINER_NAME)); \
 	kill $$LOGS_PID 2>/dev/null || true; \
+	wait $$LOGS_PID 2>/dev/null || true; \
 	exit $$EXIT_CODE
 	@$(MAKE) clean || exit 1
 	@printf "$(COLOR_GREEN)$(SYM_SUCCESS) Tests completed successfully$(COLOR_RESET)\n"

@@ -2,18 +2,28 @@
 
 # shellcheck disable=SC1091
 source "${WORKER_LIB_DIR}/utils.sh"
-
-log_info "Welcome to UDX Worker Container. Initializing environment..."
-
 # shellcheck disable=SC1091
 source "${WORKER_LIB_DIR}/worker_config.sh"
 # shellcheck disable=SC1091
 source "${WORKER_LIB_DIR}/secrets.sh"
-configure_environment || exit 1
-
 # shellcheck disable=SC1091
 source "${WORKER_LIB_DIR}/runtime_output.sh"
+
+if runtime_output_enabled; then
+    exec 3>&1
+    exec 1>&2
+    export WORKER_RUNTIME_OUTPUT_FD=3
+fi
+
+log_info "Welcome to UDX Worker Container. Initializing environment..."
+
+configure_environment || exit 1
+
 emit_runtime_output || exit 1
+
+if runtime_output_enabled; then
+    exec 3>&-
+fi
 
 # Start the process manager
 log_info "Starting process manager..."

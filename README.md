@@ -130,6 +130,7 @@ More examples available in [src/examples/README.md](src/examples/README.md).
 - [Secrets](docs/secrets.md) - secret references and provider auth boundaries
 - [Services](docs/services.md) - `services.yaml` process config
 - [Deployment](docs/deployment.md) - Docker, Kubernetes, and CI usage
+- [Runtime Output](docs/runtime-output.md) - redacted runtime contract capture
 - [Development](docs/development.md) - Build, test, and child image workflow
 - [Reference Docs](docs/references/README.md) - provider auth options and container structure
 - [Examples](src/examples/README.md) - Runnable samples
