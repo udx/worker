@@ -20,8 +20,24 @@ name: Build/Release
   workflow_dispatch:
 
 jobs:
+  control-gate:
+    name: Control Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject manual latest release
+        if: github.event_name == 'workflow_dispatch' && github.ref_name == 'latest'
+        run: |
+          echo "::error::Manual latest releases are disabled. Merge to latest so the push trigger runs the release path."
+          exit 1
+
+      - name: Accept workflow trigger
+        run: |
+          echo "Build/Release accepted for ${GITHUB_EVENT_NAME} on ${GITHUB_REF_NAME}."
+
   docker-ops:
     name: Docker Ops
+    needs: control-gate
+    if: needs.control-gate.result == 'success'
     permissions:
       contents: write
       security-events: write
@@ -45,7 +61,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Build worker image
         run: make build IMAGE_NAME=worker-runtime-output TAG="${GITHUB_SHA}"
