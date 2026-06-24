@@ -382,7 +382,7 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         timeout-minutes: 5
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.DEPENDABOT_REVIEWER_TOKEN || secrets.GH_TOKEN }}
           commit-message: ${{ needs.config.outputs.commit_message }}
           title: ${{ needs.config.outputs.pr_title }}
           body-path: docker-dependency-pr-body.md
@@ -417,7 +417,7 @@ jobs:
           esac
 
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.DEPENDABOT_REVIEWER_TOKEN || secrets.GH_TOKEN }}
           MERGE_METHOD: ${{ needs.config.outputs.pr_merge_method }}
           PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
 
