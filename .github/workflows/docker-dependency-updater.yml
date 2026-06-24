@@ -20,6 +20,10 @@ env:
   REPORT_PATH: docker-dependency-report.json
   UPDATE_BRANCH: docker-dependency-updates
   PR_TITLE: "chore(deps): docker dependency upgrade"
+  PR_TEAM_REVIEWER: worker
+  PR_LABELS: |-
+    docker
+    dependencies
   PR_AUTO_MERGE: "true"
   PR_MERGE_METHOD: squash
   COMMIT_MESSAGE: "chore(deps): update Docker dependency pins"
@@ -382,6 +386,8 @@ jobs:
           body-path: docker-dependency-pr-body.md
           branch: ${{ needs.config.outputs.update_branch }}
           add-paths: ${{ needs.config.outputs.dockerfile }}
+          labels: ${{ env.PR_LABELS }}
+          team-reviewers: ${{ env.PR_TEAM_REVIEWER }}
           draft: false
           delete-branch: true
 
