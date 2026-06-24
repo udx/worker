@@ -2,21 +2,6 @@
 name: Build/Release
 
 "on":
-  pull_request:
-    branches:
-      - latest
-    paths:
-      - ".github/workflows/docker-ops.yml"
-      - ".dockerignore"
-      - "Dockerfile"
-      - "bin/**"
-      - "lib/**"
-      - "src/**"
-      - "etc/**"
-      - "test/**"
-      - "Makefile"
-      - "Makefile.variables"
-      - "ci/**"
   push:
     branches:
       - "**"
@@ -37,7 +22,6 @@ name: Build/Release
 jobs:
   docker-ops:
     name: Docker Ops
-    if: github.event_name != 'pull_request'
     permissions:
       contents: write
       security-events: write
@@ -53,40 +37,9 @@ jobs:
     secrets:
       docker_token: ${{ secrets.DOCKER_TOKEN }}
 
-  docker-ops-pr:
-    name: Docker Ops PR Build
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Build worker image
-        run: make build IMAGE_NAME=worker-pr-validation TAG="${GITHUB_SHA}"
-
-      - name: Capture runtime output
-        run: |
-          mkdir -p runtime-output
-          docker run --rm \
-            -e WORKER_RUNTIME_OUTPUT=true \
-            "worker-pr-validation:${GITHUB_SHA}" \
-            true \
-            > runtime-output/runtime.json
-          jq -e '.env | type == "object"' runtime-output/runtime.json
-          jq -c . runtime-output/runtime.json
-
-      - name: Upload runtime output artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: worker-pr-runtime-output
-          path: runtime-output/runtime.json
-
   runtime-output:
     name: Runtime Output
     needs: docker-ops
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
