@@ -383,6 +383,8 @@ jobs:
         timeout-minutes: 5
         with:
           token: ${{ secrets.DEPENDABOT_REVIEWER_TOKEN || secrets.GH_TOKEN }}
+          author: udx-github <73100442+udx-github@users.noreply.github.com>
+          committer: udx-github <73100442+udx-github@users.noreply.github.com>
           commit-message: ${{ needs.config.outputs.commit_message }}
           title: ${{ needs.config.outputs.pr_title }}
           body-path: docker-dependency-pr-body.md
