@@ -7,7 +7,7 @@ LABEL maintainer="UDX CAG Team"
 ARG AZURE_CLI_VERSION=2.87.0
 ARG PIP_VERSION=26.1.2
 ARG YQ_VERSION=4.53.3
-ARG GCLOUD_VERSION=574.0.0
+ARG GCLOUD_VERSION=575.0.0
 
 # Set base environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -43,7 +43,7 @@ USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     tzdata=2026a-0ubuntu0.25.10.1  \
-    curl=8.14.1-2ubuntu1.3  \
+    curl=8.14.1-2ubuntu1.4  \
     bash=5.2.37-2ubuntu5  \
     apt-utils=3.1.6ubuntu2 \
     gettext=0.23.1-2build2 \
@@ -54,7 +54,7 @@ RUN apt-get update && \
     zip=3.0-15ubuntu2 \
     unzip=6.0-28ubuntu7 \
     nano=8.4-1ubuntu0.1 \
-    vim=2:9.1.0967-1ubuntu6.7 \
+    vim=2:9.1.0967-1ubuntu6.8 \
     python3.13=3.13.7-1ubuntu0.4 \
     python3.13-venv=3.13.7-1ubuntu0.4 \
     supervisor=4.2.5-3 && \
