@@ -260,7 +260,7 @@ jobs:
             ${{ needs.config.outputs.probe_dockerfile }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         timeout-minutes: 3
         with:
           node-version: "22"
