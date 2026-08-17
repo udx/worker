@@ -4,10 +4,10 @@ FROM ubuntu:25.10
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
 
-ARG AZURE_CLI_VERSION=2.89.0
+ARG AZURE_CLI_VERSION=2.89.1
 ARG PIP_VERSION=26.2.1
 ARG YQ_VERSION=4.53.3
-ARG GCLOUD_VERSION=579.0.0
+ARG GCLOUD_VERSION=580.0.0
 
 # Set base environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
