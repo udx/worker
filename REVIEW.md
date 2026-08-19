@@ -5,7 +5,7 @@ Base container image for the entire UDX worker family (worker-nodejs, worker-php
 ## Critical Areas (extra scrutiny)
 
 - `bin/entrypoint.sh`: the ENTRYPOINT for the whole image family. Trace every change for child-image compatibility (children rely on its env handling, service startup, and exit behavior).
-- `lib/*.sh` (`process_manager.sh`, `env_handler.sh`, `secrets.sh`, `worker_config.sh`, `runtime_output.sh`, `cli.sh`): shared runtime library. Function signature or output format changes are breaking changes for children; require a check of downstream usage.
+- `lib/` shared runtime library (`process_manager.sh`, `env_handler.sh`, `secrets.sh` + `lib/secrets/{aws,azure,gcp}.sh`, `worker_config.sh`, `runtime_output.sh`, `utils.sh`, `cli.sh` + `lib/cli/*`): function signature or output format changes are breaking changes for children; require a check of downstream usage.
 - `src/configs/services.yaml` and `src/configs/worker.yaml`: default service and worker config schema consumed downstream.
 - Dockerfile UID/GID 500 creation and the `chown -R` block: everything downstream assumes UID 500 with specific ownership. Changes to user, ownership, or directory permissions are the classic source of child-image breakage (log dirs, port binds, home paths). Flag ANY permissions change and require downstream verification.
 - `worker.yml` secrets resolution (`gcp/...`, `aws/...`, `azure/...`, `bitwarden/...` refs): watch for changes that could log resolved secret values or weaken provider auth handling.
