@@ -344,6 +344,7 @@ jobs:
           copilot_args=(
             --prompt "$(cat "${prompt_path}")"
             --available-tools "apply_patch,edit,view,grep,glob,web_fetch"
+            --allow-tool "read"
             --allow-tool "write(${DOCKERFILE})"
             --secret-env-vars "COPILOT_GITHUB_TOKEN"
             --no-ask-user
