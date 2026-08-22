@@ -132,6 +132,7 @@ More examples available in [src/examples/README.md](src/examples/README.md).
 - [Deployment](docs/deployment.md) - Docker, Kubernetes, and CI usage
 - [Runtime Output](docs/runtime-output.md) - redacted runtime contract capture
 - [Development](docs/development.md) - Build, test, and child image workflow
+- [Rabbit CI repository configuration](.rabbit/README.md) - generated GitHub delivery metadata
 - [Reference Docs](docs/references/README.md) - provider auth options and container structure
 - [Examples](src/examples/README.md) - Runnable samples
 
