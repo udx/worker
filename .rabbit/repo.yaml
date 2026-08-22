@@ -7,10 +7,6 @@ repository:
 branches:
   - name: ci/daily-docker-dependency-upgrades
     rules: {}
-  - name: copilot/scan-dockerfile-dependencies
-    rules: {}
-  - name: fix-docker-dependency-pr-workflow
-    rules: {}
   - name: latest
     rules:
       allow_deletions: false
@@ -28,8 +24,6 @@ branches:
       copilot_review:
         on_push: true
         drafts: false
-  - name: test-docker-dependency-updater-latest-20260603124036
-    rules: {}
 configuration:
   secrets:
     organization:
