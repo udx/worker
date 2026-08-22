@@ -7,8 +7,8 @@ name: udx-automation / dependency upgrade
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -84,7 +84,7 @@ jobs:
           test -n "${PROBE_DOCKERFILE}"
           test -f "${DOCKERFILE}"
           for prompt_part in ${COPILOT_PROMPT_PARTS}; do
-            test -f "${prompt_part}"
+            test -s "${prompt_part}"
           done
           echo "Dependency updater defaults loaded for ${DOCKERFILE}"
 
@@ -145,7 +145,6 @@ jobs:
 
     permissions:
       contents: write
-      issues: write
       pull-requests: write
 
     steps:
@@ -216,11 +215,41 @@ jobs:
 
           base_image="$(awk '$1 == "FROM" { print $2; exit }' "${DOCKERFILE}")"
 
+          non_apt_path="${probe_dir}/non-apt.json"
+          node <<'NODE' > "${non_apt_path}"
+          const fs = require("node:fs");
+
+          const dockerfile = fs.readFileSync(process.env.DOCKERFILE, "utf8");
+          const pins = [];
+          const urls = [];
+
+          for (const line of dockerfile.split(/\r?\n/)) {
+            const argMatch = line.match(/^ARG\s+([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
+            if (argMatch) {
+              pins.push({
+                kind: "ARG",
+                name: argMatch[1],
+                value: argMatch[2].replace(/^["']|["']$/g, "")
+              });
+            }
+
+            for (const urlMatch of line.matchAll(/https?:\/\/[^"'\s]+/g)) {
+              urls.push(urlMatch[0]);
+            }
+          }
+
+          fs.writeFileSync(
+            process.stdout.fd,
+            JSON.stringify({method: "Dockerfile ARG and URL inventory", pins, urls}, null, 2)
+          );
+          NODE
+
           jq -n \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg base_image "${base_image}" \
             --arg dockerfile "${DOCKERFILE}" \
             --arg probe_dockerfile "${PROBE_DOCKERFILE}" \
+            --slurpfile non_apt "${non_apt_path}" \
             --rawfile apt_versions "${apt_versions_path}" \
             '{
               generated_at: $generated_at,
@@ -237,7 +266,8 @@ jobs:
                   | split("\n")
                   | map(select(length > 0))
                   | map(split("\t") | {name: .[0], installed: .[1]})
-                )
+                ),
+                non_apt: $non_apt[0]
               }
             }' > "${PROBE_REPORT}"
 
@@ -273,14 +303,16 @@ jobs:
 
       - name: Update Dockerfile with Copilot CLI
         timeout-minutes: 8
-        env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          COPILOT_ALLOW_ALL: "true"
-          COPILOT_AUTO_UPDATE: "false"
-          PROMPT_PARTS: ${{ needs.config.outputs.prompt_parts }}
-          REPORT_PATH: ${{ needs.config.outputs.report_path }}
         run: |
           set -euo pipefail
+
+          test -n "${DOCKERFILE}"
+          test -n "${REPORT_PATH}"
+          test -n "${PROMPT_PARTS}"
+          test -f "${DOCKERFILE}"
+          test -s "${REPORT_PATH}"
+          jq -e '.dependencies.apt and .dependencies.non_apt' \
+            "${REPORT_PATH}" >/dev/null
 
           if [ -z "${COPILOT_GITHUB_TOKEN:-}" ]; then
             echo "COPILOT_GITHUB_TOKEN secret is required. Use a fine-grained token with Copilot Requests permission." >&2
@@ -291,30 +323,60 @@ jobs:
           mkdir -p "$(dirname "${prompt_path}")"
           : > "${prompt_path}"
           for prompt_part in ${PROMPT_PARTS}; do
-            test -f "${prompt_part}"
+            test -s "${prompt_part}"
             {
               cat "${prompt_part}"
               echo
             } >> "${prompt_path}"
           done
+          test -s "${prompt_path}"
 
-          copilot \
-            --prompt "$(cat "${prompt_path}")" \
-            --allow-all-tools \
-            --allow-all-urls \
-            --no-ask-user \
-            --no-auto-update \
-            --silent \
+          mapfile -t copilot_urls < <(
+            jq -r '.dependencies.non_apt.urls[]?' "${REPORT_PATH}" \
+              | sed -E 's#^https?://([^/]+).*$#\1#' \
+              | sort -u
+          )
+          if [ "${#copilot_urls[@]}" -eq 0 ]; then
+            echo "Copilot requires at least one Dockerfile-owned non-apt source URL." >&2
+            exit 1
+          fi
+
+          copilot_args=(
+            --prompt "$(cat "${prompt_path}")"
+            --available-tools "apply_patch,edit,view,grep,glob,web_fetch"
+            --allow-tool "write(${DOCKERFILE})"
+            --secret-env-vars "COPILOT_GITHUB_TOKEN"
+            --no-ask-user
+            --no-auto-update
+            --silent
             --share copilot-docker-dependency-session.md
+          )
+          for copilot_url in "${copilot_urls[@]}"; do
+            copilot_args+=(--allow-url "${copilot_url}")
+          done
+
+          copilot "${copilot_args[@]}"
 
           echo "Upgrade Copilot: completed; session saved to copilot-docker-dependency-session.md"
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_AUTO_UPDATE: "false"
+          DOCKERFILE: ${{ needs.config.outputs.dockerfile }}
+          PROMPT_PARTS: ${{ needs.config.outputs.prompt_parts }}
+          REPORT_PATH: ${{ needs.config.outputs.report_path }}
 
       - name: Guard Dockerfile-only changes
         timeout-minutes: 1
         run: |
           set -euo pipefail
 
-          unexpected_changes="$(git diff --name-only | awk -v dockerfile="${DOCKERFILE}" '$0 != dockerfile')"
+          changed_files="$(
+            {
+              git diff --name-only
+              git diff --cached --name-only
+            } | sort -u
+          )"
+          unexpected_changes="$(printf '%s\n' "${changed_files}" | awk -v dockerfile="${DOCKERFILE}" 'NF && $0 != dockerfile')"
           if [ -n "${unexpected_changes}" ]; then
             echo "Upgrade guard: Copilot modified tracked files outside ${DOCKERFILE}:" >&2
             printf '%s\n' "${unexpected_changes}" >&2
@@ -330,12 +392,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- "${DOCKERFILE}"; then
+          if git diff --quiet -- "${DOCKERFILE}" \
+            && git diff --cached --quiet -- "${DOCKERFILE}"; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
             echo "Upgrade changes: no ${DOCKERFILE} changes"
           else
             echo "changed=true" >> "${GITHUB_OUTPUT}"
-            git diff -- "${DOCKERFILE}" > docker-dependency-update.diff
+            {
+              git diff -- "${DOCKERFILE}"
+              git diff --cached -- "${DOCKERFILE}"
+            } > docker-dependency-update.diff
             changed_lines="$(wc -l < docker-dependency-update.diff | tr -d ' ')"
             echo "Upgrade changes: ${DOCKERFILE} changed; diff has ${changed_lines} lines"
           fi

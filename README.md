@@ -156,6 +156,13 @@ make test
 make help
 ```
 
+## Dependency updates
+
+The Docker dependency updater runs daily at 05:00 UTC and can also be started
+manually from GitHub Actions. It probes current APT versions, inventories
+Dockerfile ARG and URL pins, and opens a Dockerfile-only pull request when an
+update is available. An open updater pull request prevents duplicate runs.
+
 ## Resources
 
 - [Docker Hub](https://hub.docker.com/r/usabilitydynamics/udx-worker)
