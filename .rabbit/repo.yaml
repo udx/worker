@@ -1,0 +1,99 @@
+kind: repo
+version: udx.dev/rabbit.ci/repo/v1
+repository:
+  name: worker
+  owner: udx
+  default_branch: latest
+branches:
+  - name: ci/daily-docker-dependency-upgrades
+    rules: {}
+  - name: latest
+    rules:
+      allow_deletions: false
+      allow_force_pushes: false
+      pull_request:
+        approvals: 1
+        code_owner_review: true
+        stale_reviews: true
+        last_push_approval: false
+        conversation_resolution: true
+        merge_methods:
+          - merge
+          - squash
+          - rebase
+      copilot_review:
+        on_push: true
+        drafts: false
+configuration:
+  secrets:
+    organization:
+      - BITBUCKET_TOKEN
+      - CONTEXT7_API_KEY
+      - COPILOT_GITHUB_TOKEN
+      - DEPENDABOT_REVIEWER_TOKEN
+    repository:
+      - AZURE_CREDS
+      - DOCKER_TOKEN
+      - GH_TOKEN
+  variables:
+    organization:
+      - DOCKER_LOGIN
+      - DOCKER_ORG
+      - GCP_PROJECT_ID
+      - GCP_REGION
+      - GCP_WORKLOAD_IDENTITY_PROVIDER
+      - GH_SERVICE_ACCOUNT_EMAIL
+    repository:
+      - AZURE_APPLICATION_ID
+      - AZURE_SUBSCRIPTION_ID
+      - AZURE_TENANT_ID
+      - DOCKER_IMAGE_NAME
+      - GCP_REGISTRY_REPO
+environments:
+  - name: copilot
+    branches:
+      - "*"
+    approvals: []
+    wait_minutes: 0
+    admin_bypass: true
+    secrets: []
+    variables: []
+workflows:
+  - path: .github/workflows/codeql.yml
+    triggers:
+      push: {}
+    permissions:
+      contents: read
+  - path: .github/workflows/context7_sync.yml
+    triggers:
+      push:
+        branches:
+          - latest
+      workflow_dispatch: {}
+    permissions:
+      contents: write
+  - path: .github/workflows/docker-dependency-updater.yml
+    triggers:
+      schedule:
+        - cron: 0 5 * * *
+      workflow_dispatch: {}
+    permissions:
+      contents: read
+  - path: .github/workflows/docker-ops.yml
+    triggers:
+      push:
+        branches:
+          - "**"
+        paths:
+          - .github/workflows/docker-ops.yml
+          - .dockerignore
+          - Dockerfile
+          - bin/**
+          - lib/**
+          - src/**
+          - etc/**
+          - test/**
+          - Makefile
+          - Makefile.variables
+          - ci/**
+      workflow_dispatch: {}

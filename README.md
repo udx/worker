@@ -132,6 +132,7 @@ More examples available in [src/examples/README.md](src/examples/README.md).
 - [Deployment](docs/deployment.md) - Docker, Kubernetes, and CI usage
 - [Runtime Output](docs/runtime-output.md) - redacted runtime contract capture
 - [Development](docs/development.md) - Build, test, and child image workflow
+- [Rabbit CI repository configuration](.rabbit/README.md) - generated GitHub delivery metadata
 - [Reference Docs](docs/references/README.md) - provider auth options and container structure
 - [Examples](src/examples/README.md) - Runnable samples
 
@@ -155,6 +156,13 @@ make test
 # View all commands
 make help
 ```
+
+## Dependency updates
+
+The Docker dependency updater runs daily at 05:00 UTC and can also be started
+manually from GitHub Actions. It probes current APT versions, inventories
+Dockerfile ARG and URL pins, and opens a Dockerfile-only pull request when an
+update is available. An open updater pull request prevents duplicate runs.
 
 ## Resources
 
