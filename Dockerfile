@@ -1,5 +1,5 @@
 # Use the latest version of the Ubuntu image with a specific tag for stability
-FROM ubuntu:25.10
+FROM ubuntu:26.04
 
 # Set the maintainer of the image
 LABEL maintainer="UDX CAG Team"
@@ -42,24 +42,24 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2026b-0ubuntu0.25.10.1  \
-    curl=8.14.1-2ubuntu1.5  \
-    bash=5.2.37-2ubuntu5  \
-    apt-utils=3.1.6ubuntu2 \
-    gettext=0.23.1-2build2 \
-    gnupg2=2.4.8-2ubuntu2.1 \
-    ca-certificates=20260601~25.10.1 \
-    lsb-release=12.1-1 \
-    jq=1.8.1-3ubuntu1.1 \
-    zip=3.0-15ubuntu2 \
-    unzip=6.0-28ubuntu7 \
-    nano=8.4-1ubuntu0.1 \
-    vim=2:9.1.0967-1ubuntu6.8 \
-    python3.13=3.13.7-1ubuntu0.4 \
-    python3.13-venv=3.13.7-1ubuntu0.4 \
-    supervisor=4.2.5-3 && \
+    tzdata=2026e-0ubuntu0.26.04.1  \
+    curl=8.18.0-1ubuntu2.8  \
+    bash=5.3-2ubuntu1  \
+    apt-utils=3.2.0 \
+    gettext=0.23.2-1 \
+    gnupg2=2.4.8-4ubuntu3.1 \
+    ca-certificates=20260816ubuntu0.26.04.1 \
+    lsb-release=12.1-2build1 \
+    jq=1.8.1-4ubuntu2 \
+    zip=3.0-15ubuntu3 \
+    unzip=6.0-29ubuntu1 \
+    nano=8.7.1-1ubuntu0.1 \
+    vim=2:9.1.2141-1ubuntu4.9 \
+    python3.14=3.14.4-1ubuntu0.2 \
+    python3.14-venv=3.14.4-1ubuntu0.2 \
+    supervisor=4.3.0-1 && \
     # Install Azure CLI in venv with optimizations for scanning
-    python3.13 -m venv /opt/az && \
+    python3.14 -m venv /opt/az && \
     /opt/az/bin/pip install --no-cache-dir --upgrade pip==${PIP_VERSION} && \
     /opt/az/bin/pip install --no-cache-dir azure-cli==${AZURE_CLI_VERSION} && \
     ln -s /opt/az/bin/az /usr/local/bin/az && \
