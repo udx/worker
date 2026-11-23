@@ -42,7 +42,7 @@ USER root
 # hadolint ignore=DL3015
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    tzdata=2026e-0ubuntu0.26.04.1  \
+    tzdata=2026f-0ubuntu0.26.04.1  \
     curl=8.18.0-1ubuntu2.8  \
     bash=5.3-2ubuntu1  \
     apt-utils=3.2.1ubuntu0.1 \
